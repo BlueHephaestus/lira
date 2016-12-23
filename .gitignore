@@ -14,12 +14,14 @@ test.*
 *.JPEG
 *.png
 *.PNG
-*test*
+*test
 Lesion_Training_Set
 Lesion_Training_Set/
 documents
 documents/
 */data/*
+*/*data/*
+data/*
 */results/*
 */*results/*
 *results/
