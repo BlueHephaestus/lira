@@ -1,0 +1,14 @@
+This directory is formatted to have 
+/
+  imgs/
+  subs/
+  archive.h5
+  | other .h5 files
+  v
+
+So that:
+  imgs/ directory has all of our images that are larger than 80x145, usually 1160x640.
+  subs/ directory has all of our images that are individual subsections, 80x145 (or 145x80)
+  and finally our archive.h5 (and any other .h5 files) come from our live system, where it stores the new classifications
+
+
