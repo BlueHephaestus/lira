@@ -1,5 +1,4 @@
 *.pkl.gz
-*.pkl
 *.zip
 *.swp
 *.pyc
