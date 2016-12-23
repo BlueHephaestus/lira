@@ -1,0 +1,40 @@
+(lp0
+(lp1
+S'Healthy Tissue'
+p2
+aS'Type I - Caseum'
+p3
+aS'Type II'
+p4
+aS'Empty Slide'
+p5
+aS'Type III'
+p6
+aS'Type I - Rim'
+p7
+aa(lp8
+(I255
+I0
+I255
+tp9
+a(I0
+I0
+I255
+tp10
+a(I0
+I255
+I0
+tp11
+a(I200
+I200
+I200
+tp12
+a(I0
+I255
+I255
+tp13
+a(I255
+I0
+I0
+tp14
+aa.
