@@ -15,6 +15,7 @@ test.*
 *.png
 *.PNG
 *test
+*.tar
 Lesion_Training_Set
 Lesion_Training_Set/
 documents
