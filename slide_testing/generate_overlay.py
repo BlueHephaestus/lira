@@ -212,23 +212,8 @@ with h5py.File(img_archive_dir, "r") as img_hf:
                         our overlay due to integer division rounding, so this way we assure they match.
                     """
                     sub_img = cv2.resize(sub_img, (overlay.shape[1], overlay.shape[0]))
-                    sub_img_h = sub_img.shape[0]
-                    sub_img_w = sub_img.shape[1]
 
-                    #Set to the same type as our overlay
-                    sub_img = sub_img.astype(np.float64)
-
-                    #Replace value with scalar at the end to have a 3d matrix
-                    sub_img = sub_img.reshape(sub_img_h, sub_img_w, 1)
-
-                    #Copy value over 2nd axis to get rgb representation
-                    sub_img = np.repeat(sub_img, 3, axis=2)
-
-                    #Transparency weight of our overlay, percentage it takes up
-                    alpha = .3333333
-
-                    #Add our overlay to the sub_img
-                    cv2.addWeighted(overlay, alpha, sub_img, 1-alpha, 0, sub_img)
+                    sub_img = add_weighted_overlay(sub_img, overlay, alpha)
 
                     #Write our combined img
                     cv2.imwrite('%s/%i_%i_%i.jpg' % (results_dir, img_i, row_i, col_i), sub_img)

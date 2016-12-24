@@ -105,6 +105,27 @@ def get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divid
     sub = img[row:row+sub_img_h, col:col+sub_img_w]
     return sub
 
+def add_weighted_overlay(img, overlay, alpha)
+    """
+    Given an image and an overlay to overlay on top of it,
+        as well as a transparency weight of our overlay - alpha (percentage it takes up)
+    We overlay them and return the combined image.
+    """
+    img_h = img.shape[0]
+    img_w = img.shape[1]
+
+    #Set to the same type as our overlay
+    img = img.astype(np.float64)
+
+    #Replace value with scalar at the end to have a 3d matrix
+    img = img.reshape(img_h, img_w, 1)
+
+    #Copy value over 2nd axis to get rgb representation
+    img = np.repeat(img, 3, axis=2)
+
+    #Add our overlay to the img
+    return cv2.addWeighted(overlay, alpha, img, 1-alpha, 0, img)
+
 def pad_img(img_h, img_w, sub_h, sub_w, img):
     """
     Pads our image with enough zeros so that we never have the problem of partials
