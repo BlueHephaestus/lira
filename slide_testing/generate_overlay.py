@@ -77,8 +77,7 @@ with h5py.File(img_archive_dir, "r") as img_hf:
             start_time = time.time()
 
             """
-            Get our image, and use our dimensions to determine how big our prediction array needs to be for this image
-                After we pad it with necessary zeros so that we never have partial edge problems with the far edges
+            Get our image, and pad it with necessary zeros so that we never have partial edge problems with the far edges
             """
             img = np.array(img_hf.get(str(img_i)))
             img = pad_img(img.shape[0], img.shape[1], sub_h, sub_w, img)
@@ -93,20 +92,11 @@ with h5py.File(img_archive_dir, "r") as img_hf:
                 resize_factor = float(get_relative_factor(img_h, resize_factor))
             
             """
-            It's far easier to handle this when we start predictions as a vector, and convert it 
-                to a matrix at the end, once we have all the predictions for the entire image.
-
-            So, we store some values to help us out when we do that reshape later.
+            In order to handle everything easily and correctly, we do the following:
+                Each subsection of our image we get an overlay_predictions matrix of predictions, 
+                    which we either insert into the correct row, or concatenate onto the row's pre-existing values
             """
-            predictions_h = (img_h/sub_h)
-            predictions_w = (img_w/sub_w)
-            predictions_v_n = predictions_h*predictions_w
-            predictions = np.zeros(shape=(predictions_v_n))
-
-            """
-            So we keep track of where we left off with our last prediction.
-            """
-            prediction_i = 0
+            predictions = [np.array([]) for i in range(img_divide_factor)]
 
             """
             Divide our main image into smaller images to handle one at a time, and save memory.
@@ -122,6 +112,10 @@ with h5py.File(img_archive_dir, "r") as img_hf:
                         sys.stdout.write("\rIMAGE %i, SUBSECTION %i" % (img_i, img_sub_i))
                         sys.stdout.flush()
                         
+                    """
+                    So we keep track of where we left off with our last prediction.
+                    """
+                    overlay_prediction_i = 0
 
                     #Use these to get the next sub-image of our main image
                     sub_img = get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divide_factor)
@@ -130,6 +124,9 @@ with h5py.File(img_archive_dir, "r") as img_hf:
 
                     #Generate our overlay with the shape of our sub_img, resized down by our final resize factor so as to save memory
                     overlay = np.zeros(shape=(int(sub_img_h//resize_factor), int(sub_img_w//resize_factor), 3))
+
+                    #Generate our predictions for the overlay as a vector at first, of size h * w = sub_img_h//sub_h * sub_img_w//sub_w . We later change this to a matrix.
+                    overlay_predictions = np.zeros(((sub_img_h//sub_h)*(sub_img_w//sub_w)))
 
                     #Divide sub_img into subsections matrix to classify one at a time
                     subs = get_subsections(sub_h, sub_w, sub_img, verbose)
@@ -166,22 +163,32 @@ with h5py.File(img_archive_dir, "r") as img_hf:
                         batch = (subs[sub_i:sub_i+mb_n]*nn_classifier.stddev) + nn_classifier.mean
 
                         """
-                        Then, we classify the new batch of examples,
-                            and store it in our global vector of predictions.
+                        Then, we classify the new batch of examples and store in our temporary predictions np.array
                         """
-                        predictions[prediction_i:prediction_i+batch.shape[0]] = nn_classifier.classify(batch)
-                        prediction_i += batch.shape[0]
+                        overlay_predictions[overlay_prediction_i:overlay_prediction_i+batch.shape[0]] = nn_classifier.classify(batch)
+                        overlay_prediction_i += batch.shape[0]
                         
                     if verbose:
                         print ""#flush formatting
                     
                     """
-                    Convert our predictions for this subsection into a matrix so we can reference it to use in the overlay
-                        Since we have the same number of predictions as we have in subs, we know our predictions are from (prediction_i-subs_h*subs_w) to (prediction_i)
+                    Convert our predictions for this subsection into a matrix so we can reference it easily when making the overlay, 
+                        and can then move it appropriately into our final predictions matrix.
                     """
-                    overlay_predictions = np.reshape(predictions[(prediction_i-(subs_h*subs_w)):prediction_i], (sub_img_h//sub_h, sub_img_w//sub_w))
+                    overlay_predictions = np.reshape(overlay_predictions, (sub_img_h//sub_h, sub_img_w//sub_w))
 
-                    #Now that we have all our predictions, loop through and generate respective overlay rectangles
+                    """
+                    Move our overlay_predictions matrix into our final predictions matrix, in the correct row according to row_i.
+                        If this is the first column in a row:
+                            Insert into row_i
+                        If this is not, concatenate onto the correct row.
+                    """
+                    if col_i == 0:
+                        predictions[row_i] = overlay_predictions
+                    else:
+                        predictions[row_i] = np.concatenate((predictions[row_i], overlay_predictions), axis=1)
+
+                    #Now that we have all our predictions for this subsection, loop through and generate respective overlay rectangles
                     if verbose:
                         print "\tGenerating Overlay..."
                     for prediction_row_i, prediction_row in enumerate(overlay_predictions):
@@ -213,20 +220,24 @@ with h5py.File(img_archive_dir, "r") as img_hf:
                     """
                     sub_img = cv2.resize(sub_img, (overlay.shape[1], overlay.shape[0]))
 
-                    sub_img = add_weighted_overlay(sub_img, overlay, alpha)
+                    #Add our overlay
+                    sub_img = add_weighted_overlay(sub_img, overlay, 0.3333333)
 
                     #Write our combined img
                     cv2.imwrite('%s/%i_%i_%i.jpg' % (results_dir, img_i, row_i, col_i), sub_img)
 
                     img_sub_i +=1
 
-            """
-            Now that our entire image is done, we reshape our predictions vector back into an appropriate matrix for the image,
-                and store it in the dataset.
-            """
             if verbose:
                 print "\tSaving Predictions..."
-            predictions = np.reshape(predictions, (predictions_h, predictions_w))
+
+            """
+            Now that our entire image is done and our rows of concatenated predictions are ready,
+                we combine all the rows into a final matrix,
+                and store it in the dataset.
+            """
+            predictions = np.concatenate([prediction_row for prediction_row in predictions], axis=0)
+
             predictions_hf.create_dataset(str(img_i), data=predictions)
 
             end_time = time.time() - start_time
