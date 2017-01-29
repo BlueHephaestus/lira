@@ -23,12 +23,12 @@ from subsection_handler import *
 import interactive_gui_handler
 from interactive_gui_handler import *
 
-def main(alpha=1/3.,
-         sub_h=80, 
+def main(sub_h=80, 
          sub_w=145, 
          img_archive_dir="../lira/lira1/data/greyscales.h5",
          predictions_archive_dir="../lira/lira1/data/predictions.h5",
-         classification_metadata_dir="../slide_testing/classification_metadata.pkl"):
+         classification_metadata_dir="../slide_testing/classification_metadata.pkl",
+         interactive_session_metadata_dir="interactive_session_metadata.pkl"):
     """
     Our main execution for LIRA-Live.
 
@@ -47,6 +47,19 @@ def main(alpha=1/3.,
     """
     f = open(classification_metadata_dir, "r")
     classifications, colors = pickle.load(f)
+    f.close()
+
+    """
+    Get our metadata from any last sessions, 
+        then keep the metadata directory open for any updates to interactive ui parameters
+
+    OI FUTURE SELF
+        WE WERE WORKING ON SAVING AND LOADING METADATA, such as progress (img_i, sub_i) and values such as alpha
+            I think we have img_i and sub_i working, it's now just alpha
+    """
+    f = open(interactive_session_metadata_dir, "r")
+    prev_img_i, prev_sub_i, alpha = pickle.load(f)
+    f.close()
 
     """
     Open all our archives,
@@ -61,10 +74,11 @@ def main(alpha=1/3.,
             img_n = len(img_hf.keys())
             
             """
-            Open a new interactive session before getting our images
+            Open a new interactive session before getting our images,
+                and loop from where we left off last to our img_n
             """
             interactive_session = InteractiveGUI(classifications, colors, sub_h, sub_w, alpha)
-            for img_i in range(img_n):
+            for img_i in range(prev_img_i, img_n):
                 """
                 Get our image, and associated predictions
                 """
@@ -73,11 +87,11 @@ def main(alpha=1/3.,
 
                 """
                 Get our number of subsections for this image from our divide factor ^ 2,
-                    then start looping through.
+                    then start looping through from where we left off last to our sub_n.
                 """
                 factor = get_relative_factor(img.shape[0], None)
                 sub_n = factor**2
-                for sub_i in range(sub_n):
+                for sub_i in range(prev_sub_i, sub_n):
                     """
                     Now that we have an img_i and sub_i for each iteration, 
                         We check if this subsection is entirely empty, according to if all the predictions are empty. 
@@ -89,7 +103,7 @@ def main(alpha=1/3.,
                         Get our img for this subsection to display from get_next_overlay_subsection()
                         As well as our predictions for this subsection using get_prediction_subsection()
                         """
-                        overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=1/3., sub_h=80, sub_w=145)
+                        overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=alpha, sub_h=80, sub_w=145)
                         prediction_sub = get_prediction_subsection(sub_i, factor, img_predictions)
 
                         """
@@ -106,22 +120,31 @@ def main(alpha=1/3.,
                             if interactive_session.flag_refresh:
                                 """
                                 If our flag is set to refresh our overlay_sub with updated parameters, we:
-                                    WE NEED TO SOMEHOW UPDATE OUR IMG_PREDICTIONS FROM JUST OUR PREDICTION_SUB THAT IS STORED IN THE OVERLAY
                                     1. Update main img_predictions matrix with updated predictions subsection
                                     2. Get our new overlay subsection overlay_sub using updated img_predictions
-                                    3. Reload the interactive session with new parameters
-                                    4. Reset flag to false
                                 """
                                 img_predictions = update_prediction_subsection(sub_i, factor, img_predictions, interactive_session.predictions)
-                                overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=1/3., sub_h=80, sub_w=145)
+                                overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=alpha, sub_h=80, sub_w=145)
 
+                                """
+                                3. Get any updated values before deleting our previous session
+                                """
+                                alpha = interactive_session.alpha
                                 prediction_sub = interactive_session.predictions
+
+                                """
+                                4. Reload the interactive session with new parameters
+                                """
                                 interactive_session = InteractiveGUI(classifications, colors, sub_h, sub_w, alpha)
                                 interactive_session.np_img = overlay_sub
                                 interactive_session.predictions = prediction_sub
-                                interactive_session.start_interactive_session()
 
+                                """
+                                5. Reset flag to false
+                                6. Start the interactive session
+                                """
                                 interactive_session.flag_refresh=False
+                                interactive_session.start_interactive_session()
 
                             if interactive_session.flag_next:
                                 """
@@ -135,6 +158,7 @@ def main(alpha=1/3.,
                             if interactive_session.flag_quit:
                                 """
                                 if our flag is set to exit our session, then we also exit our main loop.
+                                    (no need to mess with flags, all is kill)
                                 """
                                 break
 
@@ -150,23 +174,18 @@ def main(alpha=1/3.,
                     Same as above. We need to exit all of our loops if we are done with our session.
                     """
                     break
-
-
-                            
-
-                """
-                start session image as nothing and set it as we go through
-                """
-
-    
     """
-    We have either gone through all of our images or quit our interactive session, continue
+    We have either gone through all of our images or quit our interactive session.
+    Now, (since we already updated our copies on disk of img_predictions) we update any metadata for this session.
     """
+    print "Session ended. Updating and storing updated metadata..."
+    f = open(interactive_session_metadata_dir, "w")
+    pickle.dump((img_i, sub_i, alpha), f)
+    f.close()
 
 
 
-main(alpha=1/3., 
-     sub_h=80, 
+main(sub_h=80, 
      sub_w=145, 
      img_archive_dir="../lira/lira1/data/smol_greyscales.h5",
      predictions_archive_dir="../lira/lira1/data/predictions.h5",
