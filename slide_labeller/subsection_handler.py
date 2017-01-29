@@ -96,9 +96,9 @@ def list_find(l, e):
             return i
     return -1
 
-def all_predictions_empty(sub_i, factor, img_predictions, classifications):
+def all_predictions_empty(prediction_sub, classifications):
     """
-    Given our subsection index, our division factor, our predictions matrix, and our classifications,
+    Given our predictions subsection, and our classifications,
         we check if all of our predictions are the "Empty Slide" classification.
         If so, we return True.
         If not, we return False.
@@ -111,16 +111,9 @@ def all_predictions_empty(sub_i, factor, img_predictions, classifications):
     if empty_i == -1: sys.exit("Classifications do not include 'Empty Slide' classification.")
 
     """
-    Now, we get the correct prediction subsection using the same technique as in get_next_overlay_subsection()
-    """
-    row_i = sub_i//factor
-    col_i = sub_i % factor
-    sub_predictions = get_next_subsection(row_i, col_i, img_predictions.shape[0], img_predictions.shape[1], 1, 1, img_predictions, factor)
-    
-    """
     Now that we have a matrix to check, and an integer value (index) to check with, we can simply return an evaluated boolean expression.
     """
-    return np.all(sub_predictions==empty_i)
+    return np.all(prediction_sub==empty_i)
 
 def get_extra_empty_samples(classification_n, empty_classification_n, classifications, sample_h, sample_w):
     """
@@ -137,12 +130,15 @@ def get_extra_empty_samples(classification_n, empty_classification_n, classifica
         and then get a number that is 1/n times that result, so that we always end up with the perfect amount
         of empty samples to add so that we don't disturb/bias our distribution of samples in our training data.
     """
-    extra_empty_sample_n = (classification_n-empty_classification_n)/float(len(classifications))
+    extra_empty_sample_n = int((classification_n-empty_classification_n)/float(len(classifications)))
 
     """
     Then, generate the empty samples using the same method we used in generate_empty_slide_data, and return.
+    """
     """
     sample_mean = 244
     sample_stddev = 0.22
 
     return np.random.randn(extra_empty_sample_n, sample_h, sample_w)*sample_stddev + sample_mean
+    """
+    return extra_empty_sample_n

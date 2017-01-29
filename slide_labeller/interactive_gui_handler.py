@@ -284,6 +284,11 @@ class InteractiveGUI(object):
         print "Refreshing / Reloading session..."
 
         """
+        We update our class variable to match whatever values we have changed during the session
+        """
+        self.alpha = self.alpha_slider.get()
+
+        """
         We destroy our window and change flag
         """
         self.window.destroy()
@@ -294,6 +299,11 @@ class InteractiveGUI(object):
         Handler for when the NEXT IMAGE button is pressed
         """
         print "Going to next image..."
+
+        """
+        We update our class variable to match whatever values we have changed during the session
+        """
+        self.alpha = self.alpha_slider.get()
 
         """
         We destroy our window and change flag
