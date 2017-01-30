@@ -11,10 +11,10 @@ import h5py
 import numpy as np
 
 class InteractiveGUI(object):
+
     """
     Our class for an interactive gui for LIRA Live.
     """
-
     def __init__(self, classifications, colors, sub_h, sub_w, alpha):
         """
         Our main image, and main predictions that we are currently working with. 
@@ -535,25 +535,6 @@ class InteractiveGUI(object):
         tool_canvas.pack(side=RIGHT)
 
         """
-        TODO
-        bulk select
-        classification keyboard shortcuts 
-        button event listeners / callbacks
-        updating metadata
-        """
-
-        """
         Initialize main window and main loop.
         """
         self.window.mainloop()
-
-"""
-with h5py.File("test.h5", "r") as img_hf:
-    with h5py.File("test_prediction.h5", "r") as prediction_hf:
-        overlay_sub = np.array(img_hf.get("0"))
-        prediction = np.array(prediction_hf.get("0"))
-        main_gui = InteractiveGUI(['Healthy Tissue', 'Type I - Caseum', 'Type II', 'Empty Slide', 'Type III', 'Type I - Rim'], [(255, 0, 255), (0, 0, 255), (0, 255, 0), (200, 200, 200), (0, 255, 255), (255, 0, 0)], 80, 145, 0.33)
-        main_gui.np_img = overlay_sub
-        main_gui.predictions = prediction
-        main_gui.start_interactive_session()
-"""

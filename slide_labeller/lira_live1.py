@@ -179,19 +179,6 @@ def main(sub_h=80,
                                 prediction_sub = interactive_session.predictions
                                 break
 
-                    """
-                    Now that we are done with classifying this subsection (or it was skipped because it was entirely empty),
-                        we increment our total_classification_n and empty_classification_n accordingly
-
-                    1. Get number of empty classifications via same method to check if they were all empty.
-                    """
-                    empty_i = list_find(classifications, "Empty Slide")
-                    empty_classification_n += np.sum(prediction_sub==empty_i)
-
-                    """
-                    2. Get number of total classifications via the raw number of items in our prediction_sub, now that we are finished with it.
-                    """
-                    total_classification_n += prediction_sub.size
 
                     """
                     Now we can continue onwards to checking if we selected quit.
@@ -202,6 +189,23 @@ def main(sub_h=80,
                         However, if we are going to quit the session, we need to exit our loops, so we break again.
                         """
                         break
+                    
+                    """
+                    Now that we are done with classifying this subsection (or it was skipped because it was entirely empty),
+                        we increment our total_classification_n and empty_classification_n accordingly
+
+                    We know that if we quit on this subsection, this code will not be executed. 
+                    It will only be executed if the user has selected to go to the next one, meaning they are done.
+
+                    1. Get number of empty classifications via same method to check if they were all empty.
+                    """
+                    empty_i = list_find(classifications, "Empty Slide")
+                    empty_classification_n += np.sum(prediction_sub==empty_i)
+
+                    """
+                    2. Get number of total classifications via the raw number of items in our prediction_sub, now that we are finished with it.
+                    """
+                    total_classification_n += prediction_sub.size
 
                 if interactive_session.flag_quit:
                     """
@@ -263,7 +267,7 @@ def main(sub_h=80,
             Once we've done that, we add it to the difference of the original total number of classifications and the original empty number of classifications,
                 to get our updated total number of classifications.
             """
-            updated_empty_classification_n = get_extra_empty_samples(total_classification_n, empty_classification_n, classifications, sub_h, sub_w)
+            updated_empty_classification_n = get_extra_empty_samples(total_classification_n, empty_classification_n, classifications)
             updated_total_classification_n = total_classification_n - empty_classification_n + updated_empty_classification_n
 
             """
@@ -330,20 +334,25 @@ def main(sub_h=80,
                         And start looping through individual subsections
                         """
                         if prediction_sub[individual_sub_i] == empty_i:
+                            if empty_classification_i >= updated_empty_classification_n:
+                                """
+                                If we have stored more than our allowed amount of empty classifications, then move on to the next one and don't store this one.
+                                """
+                                continue
                             """
-                            Increment if empty classification
+                            Otherwise, increment if empty classification
                             """
                             empty_classification_i+=1
-
-                        if empty_classification_i > updated_empty_classification_n:
-                            """
-                            If we have stored more than our allowed amount of empty classifications, then move on to the next one and don't store this one.
-                            """
-                            continue
 
                         """
                         Otherwise, we store this individual subsection as the next element in our final data array.
                         """
+                        #print greyscale_sub[individual_sub_i]
+                        #disp_img_fullscreen(greyscale_sub[individual_sub_i])
+                        import cv2
+                        cv2.imshow("asdf",greyscale_sub[individual_sub_i])
+                        cv2.waitKey(0)
+                        cv2.destroyAllWindows()
                         x[total_classification_i] = greyscale_sub[individual_sub_i]
                         y[total_classification_i] = prediction_sub[individual_sub_i]
 

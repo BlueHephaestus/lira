@@ -1,6 +1,6 @@
 """
 This file is used for handling subsections through various helper functions,
-to be used in LIRA's live implementation.
+    to be used in LIRA's live implementation.
 
 -Blake Edwards / Dark Element
 """
@@ -75,11 +75,7 @@ def update_prediction_subsection(sub_i, factor, img_predictions, prediction_sub)
 
     prediction_sub_h = prediction_sub.shape[0]
     prediction_sub_w = prediction_sub.shape[1]
-    #sub_img_h = img_predictions.shape[0]//factor
-    #sub_img_w = img_predictions.shape[0]//factor
 
-    #row = row_i * sub_img_h
-    #col = col_i * sub_img_w
     row = row_i * prediction_sub_h
     col = col_i * prediction_sub_w
 
@@ -115,14 +111,14 @@ def all_predictions_empty(prediction_sub, classifications):
     """
     return np.all(prediction_sub==empty_i)
 
-def get_extra_empty_samples(classification_n, empty_classification_n, classifications, sample_h, sample_w):
+def get_extra_empty_samples(classification_n, empty_classification_n, classifications):
     """
     Given the total number of new classifications `classifications_n`,
         and the total number of new "Empty Slide" classifications `empty_classifications_n`,
     Compute the number of extra empty samples to subsequently return.
     """
     """
-    First, compute the number of extra empty samples using the formula:
+    We compute the number of extra empty samples using the formula:
                 (C-C_e)/n
     Where C is classifications_n, C_e is empty_classifications_n, and n is the number of classes.
 
@@ -132,13 +128,4 @@ def get_extra_empty_samples(classification_n, empty_classification_n, classifica
     """
     extra_empty_sample_n = int((classification_n-empty_classification_n)/float(len(classifications)))
 
-    """
-    Then, generate the empty samples using the same method we used in generate_empty_slide_data, and return.
-    """
-    """
-    sample_mean = 244
-    sample_stddev = 0.22
-
-    return np.random.randn(extra_empty_sample_n, sample_h, sample_w)*sample_stddev + sample_mean
-    """
     return extra_empty_sample_n
