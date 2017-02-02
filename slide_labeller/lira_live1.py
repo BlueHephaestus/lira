@@ -272,9 +272,10 @@ def main(sub_h=80,
 
             """
             Initialize our final x and y arrays according to our updated_total_classification_n (the total number of individual subsection classifications), sub_h, and sub_w
+                with dtype np.uint8 so we can display them properly for testing
             """
-            x = np.zeros((updated_total_classification_n, sub_h*sub_w))
-            y = np.zeros((updated_total_classification_n,))
+            x = np.zeros((updated_total_classification_n, sub_h*sub_w), dtype=np.uint8)
+            y = np.zeros((updated_total_classification_n,), dtype=np.uint8)
 
             """
             Loop through img, large subsection, and then individual subsection. We go all the way to individual to ensure we don't add any more empty classifications than needed.
@@ -325,8 +326,16 @@ def main(sub_h=80,
 
                     """
                     We then convert greyscale_sub and prediction_sub to their final format so we can easily loop through and reference them.
+                    Note: 
+                        We can't immediately reshape our greyscale_sub, since this would not preserve our subsection positions.
+                        For an example image of shape (2960, 8140), where (2960, 8140)/(80, 145) = (37, 58),
+                            we must not immediately reshape to (37*58=2146, 80*145=11600).
+                        Instead, we get our (37, 58, 80, 145) shaped image with our iterative solution from earlier, get_subsections().
+                        And then we can reshape directly to our goal, (2146, 11600)
                     """
+                    greyscale_sub = get_subsections(sub_h, sub_w, greyscale_sub, verbose=False)
                     greyscale_sub = np.reshape(greyscale_sub, (individual_sub_n, sub_h*sub_w))
+
                     prediction_sub = prediction_sub.flatten()
 
                     for individual_sub_i in range(individual_sub_n):
@@ -347,12 +356,6 @@ def main(sub_h=80,
                         """
                         Otherwise, we store this individual subsection as the next element in our final data array.
                         """
-                        #print greyscale_sub[individual_sub_i]
-                        #disp_img_fullscreen(greyscale_sub[individual_sub_i])
-                        import cv2
-                        cv2.imshow("asdf",greyscale_sub[individual_sub_i])
-                        cv2.waitKey(0)
-                        cv2.destroyAllWindows()
                         x[total_classification_i] = greyscale_sub[individual_sub_i]
                         y[total_classification_i] = prediction_sub[individual_sub_i]
 
