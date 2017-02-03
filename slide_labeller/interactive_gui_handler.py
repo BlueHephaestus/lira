@@ -15,7 +15,7 @@ class InteractiveGUI(object):
     """
     Our class for an interactive gui for LIRA Live.
     """
-    def __init__(self, classifications, colors, sub_h, sub_w, alpha):
+    def __init__(self, classifications, colors, sub_h, sub_w, alpha, dual_monitor):
         """
         Our main image, and main predictions that we are currently working with. 
         """
@@ -68,7 +68,10 @@ class InteractiveGUI(object):
         self.main_canvas_percentage = 0.90
         self.tool_canvas_percentage = 1-self.main_canvas_percentage
         self.screen_height_padding_percentage = 0.20
-        self.screen_width_padding_percentage = 0.52
+        if dual_monitor:
+            self.screen_width_padding_percentage = 0.52
+        else:
+            self.screen_width_padding_percentage = 0.02
 
     def get_relative_coordinates(self, event):
         """

@@ -29,7 +29,9 @@ def main(sub_h=80,
          predictions_archive_dir="../lira/lira1/data/predictions.h5",
          classification_metadata_dir="../slide_testing/classification_metadata.pkl",
          interactive_session_metadata_dir="interactive_session_metadata.pkl",
-         live_archive_dir="../lira/lira1/data/samples/live_samples.h5"):
+         live_archive_dir="../lira/lira1/data/samples/live_samples.h5",
+         dual_monitor=True):
+
     """
     Our main execution for LIRA-Live.
 
@@ -85,7 +87,7 @@ def main(sub_h=80,
             Open a new interactive session before getting our images,
                 and loop from where we left off last to our img_n
             """
-            interactive_session = InteractiveGUI(classifications, colors, sub_h, sub_w, alpha)
+            interactive_session = InteractiveGUI(classifications, colors, sub_h, sub_w, alpha, dual_monitor)
             for img_i in range(prev_img_i, img_n):
                 """
                 Get our image, and associated predictions
@@ -143,7 +145,7 @@ def main(sub_h=80,
                                 """
                                 4. Reload the interactive session with new parameters
                                 """
-                                interactive_session = InteractiveGUI(classifications, colors, sub_h, sub_w, alpha)
+                                interactive_session = InteractiveGUI(classifications, colors, sub_h, sub_w, alpha, dual_monitor)
                                 interactive_session.np_img = overlay_sub
                                 interactive_session.predictions = prediction_sub
 
