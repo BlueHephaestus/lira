@@ -1,8 +1,0 @@
-README file with command pastes - added
-window size - this was just us having too huge a monitor - config option added
-shuffle the order of displaying inputs
-  deterministic shuffle?
-  nondeterministic and store order in metadata?
-  we can stop looping through them and instead just loop through the img_i sub_i pairs.
-
-  Done.
