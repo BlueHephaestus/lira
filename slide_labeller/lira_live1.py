@@ -410,7 +410,7 @@ def main(sub_h=80,
 
 main(sub_h=80, 
      sub_w=145, 
-     img_archive_dir="../lira/lira1/data/greyscales.h5",
+     img_archive_dir="../lira/lira1/data/smol_greyscales.h5",
      predictions_archive_dir="../lira/lira1/data/predictions.h5",
      classification_metadata_dir="../slide_testing/classification_metadata.pkl",
      interactive_session_metadata_dir="interactive_session_metadata.pkl",

@@ -217,6 +217,38 @@ class InteractiveGUI(object):
         self.selected_prediction_i_x2 = int(outline_rect_x2/self.sub_w)
         self.selected_prediction_i_y2 = int(outline_rect_y2/self.sub_h)
 
+    def mouse_right_click(self, event):
+        """
+        Handler for when the right click is pressed
+        """
+        """
+        We set a marker for us to use when moving the mouse later.
+        """
+        canvas = event.widget
+        canvas.scan_mark(event.x, event.y)
+
+    def mouse_right_move(self, event):
+        """
+        Handler for when the right click is moved while pressed
+        """
+        """
+        We drag the screen towards our mouse.
+        """
+        canvas = event.widget
+        canvas.scan_dragto(event.x, event.y, gain=1)
+
+    def up_arrow_key_press(self, event):
+        pass
+
+    def down_arrow_key_press(self, event):
+        pass
+
+    def left_arrow_key_press(self, event):
+        pass
+
+    def right_arrow_key_press(self, event):
+        pass
+
     def key_press(self, event):
         """
         Handler for when a key is pressed. 
@@ -525,6 +557,16 @@ class InteractiveGUI(object):
         Handler for when the left click is released
         """
         main_canvas.bind("<ButtonRelease-1>", self.mouse_left_release)
+
+        """
+        Handler for when the right click is pressed
+        """
+        main_canvas.bind("<Button 3>", self.mouse_right_click)
+
+        """
+        Handler for when the right click is moved while pressed
+        """
+        main_canvas.bind("<B3-Motion>", self.mouse_right_move)
 
         """
         Handler for when any key is pressed

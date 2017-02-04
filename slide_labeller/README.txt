@@ -7,24 +7,27 @@ Commands for using LIRA-Live in an interactive session:
     Left clicking will allow you to select subsections for classification, 
       you can also select multiple subsections with the same method as dragging the mouse allows you to do with desktop icons.
 
-  2. "Alpha Transparency" Slider:
+  2. Right Mouse Click:
+    Right clicking and moving will allow you to move the viewport / area you are currently viewing around by manipulating the scroll bars.
+
+  3. "Alpha Transparency" Slider:
     Changing the value of this parameter affects the transparency of the overlayed colored rectangles (predictions).
     0 = full transparency, rectangles/predictions not visible.
     1 = no transparency, rectangles/predictions completely opaque and lesions not visible.
     If you change this, the program will remember it, even if you quit the session. Default is 0.33 .
 
-  3. Number keys 1/2/3/.../N
+  4. Number keys 1/2/3/.../N
     Notated on the right of the window, you can see the numerical keys for classifications. 
     Pressing one of these will change the classification of the currently selected subsection(s).
 
-  4. Refresh Session button / R key
+  5. Refresh Session button / R key
     This button will refresh the displayed image, to show changes in classifications or parameters, such as the Alpha transparency.
     The changes made to either classifications or parameters do happen regardless of if refresh is pressed, it is merely a tool to show the user updates.
 
-  5. Next Image button / N key
+  6. Next Image button / N key
     This button will go to the next image, saving the new predictions and parameters.
 
-  6. Quit Session / Q key
+  7. Quit Session / Q key
     This button will end the session, saving the new predictions and parameters for all images up to, BUT NOT INCLUDING, the currently open image.
     This is true for every image but the very last one, at which point it will include the currently open image because there are no others.
 
