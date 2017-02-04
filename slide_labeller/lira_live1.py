@@ -311,8 +311,9 @@ def main(sub_h=80,
             y = np.zeros((updated_total_classification_n,), dtype=np.uint8)
 
             """
-            Loop through img, large subsection, and then individual subsection. We go all the way to individual to ensure we don't add any more empty classifications than needed.
-                Since our sub_i is only relevant for the last img we run through, we have to loop in a rather peculiar fashion.
+            Loop through large subsection, img, and then individual subsection. We go all the way to individual to ensure we don't add any more empty classifications than needed.
+                Since our img_i is only relevant for the last large subsection we run through, we have to loop in a rather peculiar fashion.
+                We also have to make sure to loop in the same manner as our original loop for the interactive session.
             """
             """
             We initialize a counter for empty classifications stored, so we know when to stop storing them.
