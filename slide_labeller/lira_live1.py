@@ -84,24 +84,55 @@ def main(sub_h=80,
             img_n = len(img_hf.keys())
             
             """
-            Open a new interactive session before getting our images,
+            Open a new interactive session before starting our loops.
                 and loop from where we left off last to our img_n
             """
             interactive_session = InteractiveGUI(classifications, colors, sub_h, sub_w, alpha, dual_monitor)
-            for img_i in range(prev_img_i, img_n):
-                """
-                Get our image, and associated predictions
-                """
-                img = img_hf.get(str(img_i))
-                img_predictions = predictions_hf.get(str(img_i))
+            """
+            Now we start looping through subsection index first, then image. 
+            We do this because much of the time images will only have one type of lesion in them, 
+                so if we loop in this way we are taking measures to avoid the bias in our data that might happen otherwise.
+            We go to a new image each time, so that we are much more likely to get large variance among our updates. 
+            This way, if we end a session and train the LIRA network, we are likely to have minimal bias in our training data,
+                as opposed to looping through image first, then subsection, which is likely to have large bias.
 
-                """
-                Get our number of subsections for this image from our divide factor ^ 2,
-                    then start looping through from where we left off last to our sub_n.
-                """
-                factor = get_relative_factor(img.shape[0], None)
-                sub_n = factor**2
-                for sub_i in range(prev_sub_i, sub_n):
+            Our images can have different numbers of subsections, anything from 1^2 to n^2. 
+            Because of this, we have to do several things:
+                1. We have to know what the maximum number of subsections we have in any given image is,
+                    in order to make sure our loop never goes below that number as we go through.
+                   Since we are going to get a new image each time we need to display a subsection, 
+                    we are not losing much efficiency compared to the ease of use it gives if 
+                    we loop through all the images in a small loop beforehand to compute the max.
+
+                2. We have to check to make sure our current sub_i is less than the sub_n for the current image,
+                    since as previously stated, our sub_n varies between images, so our sub_max_n may be greater than
+                    the sub_n for some images, so sub_i may be greater than or equal to sub_n for some images.
+            """
+            sub_max_n = get_sub_max_n(img_hf)
+            for sub_i in range(prev_sub_i, sub_max_n):
+                for img_i in range(prev_img_i, img_n):
+                    print img_i, sub_i
+                    """
+                    Get our image, and associated predictions
+                    """
+                    img = img_hf.get(str(img_i))
+                    img_predictions = predictions_hf.get(str(img_i))
+
+                    """
+                    Get our number of subsections for this image from our divide factor ^ 2
+                    """
+                    factor = get_relative_factor(img.shape[0], None)
+                    sub_n = factor**2
+
+                    """
+                    Now that we know the sub_n for this image, we check to make sure that our index
+                        (which is determined by sub_max_n, the maximum number of subsections for any given imag)
+                        is not larger than the sub_n for this image, as this would result in us looking for a 
+                        subsection that does not exist. If this is the case, we continue to the next image and skip this one.
+                    """
+                    if sub_i >= sub_n:
+                        continue
+
                     """
                     Now that we have an img_i and sub_i for each iteration, 
                         We check if this subsection is entirely empty, according to if all the predictions are empty. 
@@ -209,6 +240,11 @@ def main(sub_h=80,
                     """
                     total_classification_n += prediction_sub.size
 
+                    """
+                    3. Update main img_predictions matrix with updated predictions subsection
+                    """
+                    img_predictions = update_prediction_subsection(sub_i, factor, img_predictions, prediction_sub)
+
                 if interactive_session.flag_quit:
                     """
                     Same as above. We need to exit all of our loops if we are done with our session.
@@ -223,12 +259,7 @@ def main(sub_h=80,
             prediction_sub = interactive_session.predictions
 
             """
-            2. Update main img_predictions matrix with updated predictions subsection
-            """
-            img_predictions = update_prediction_subsection(sub_i, factor, img_predictions, prediction_sub)
-
-            """
-            3. Delete our interactive session to save memory, we will need as much memory as we can get for the next part.
+            2. Delete our interactive session to save memory, we will need as much memory as we can get for the next part.
             """
             del interactive_session
 
@@ -255,7 +286,7 @@ def main(sub_h=80,
             """
             print "Updating live_samples.h5 archive for training..."
             if img_i != img_n-1 or sub_i != sub_n-1:
-                sub_i -= 1
+                img_i -= 1
 
             """
             Add 1 to our final end indices, so we can use them inclusively in loop splicing.
@@ -293,23 +324,27 @@ def main(sub_h=80,
                 so we can insert them into our x and y arrays correctly as we go along.
             """
             total_classification_i = 0
-            for img_i in range(updated_img_n):
-                img = img_hf.get(str(img_i))
-                img_predictions = predictions_hf.get(str(img_i))
-                factor = get_relative_factor(img.shape[0], None)
-                if img_i != updated_img_n-1:
-                    """
-                    If this is not the last image, we loop through all the subsections.
-                    """
-                    sub_n = factor**2
+            for sub_i in range(updated_sub_n):
+                for img_i in range(updated_img_n):
 
-                else:
-                    """
-                    If this is the last image, we loop through only until our last subsection we encountered during the interactive session.
-                    """
-                    sub_n = updated_sub_n
+                    img = img_hf.get(str(img_i))
+                    img_predictions = predictions_hf.get(str(img_i))
+                    factor = get_relative_factor(img.shape[0], None)
 
-                for sub_i in range(sub_n):
+                    if sub_i != updated_sub_n-1:
+                        """
+                        If this is not the last subsection, we loop through all the images.
+                        """
+                        sub_n = factor**2
+
+                    else:
+                        """
+                        If this is the last subsection, we loop through only until our last image we encountered during the interactive session.
+                        """
+                        sub_n = updated_sub_n
+
+                    if sub_i >= sub_n:
+                        continue
                     """
                     Now we know this loop will only loop through classified subsections, so we can just start looping through individual subsections.
                         (after we get the subsections)
@@ -375,7 +410,7 @@ def main(sub_h=80,
 
 main(sub_h=80, 
      sub_w=145, 
-     img_archive_dir="../lira/lira1/data/smol_greyscales.h5",
+     img_archive_dir="../lira/lira1/data/greyscales.h5",
      predictions_archive_dir="../lira/lira1/data/predictions.h5",
      classification_metadata_dir="../slide_testing/classification_metadata.pkl",
      interactive_session_metadata_dir="interactive_session_metadata.pkl",

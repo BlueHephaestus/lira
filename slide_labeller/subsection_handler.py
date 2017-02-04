@@ -92,6 +92,21 @@ def list_find(l, e):
             return i
     return -1
 
+def get_sub_max_n(img_hf):
+    """
+    Loop through all of our images to get the max number of subsections for any given image, 
+        and return this number.
+    """
+    img_n = len(img_hf.keys())
+    sub_max_n = 0
+    for img_i in range(img_n):
+        img = img_hf.get(str(img_i))
+        factor = get_relative_factor(img.shape[0], None)
+        sub_n = factor**2
+        if sub_max_n < sub_n:
+            sub_max_n = sub_n
+    return sub_max_n
+
 def all_predictions_empty(prediction_sub, classifications):
     """
     Given our predictions subsection, and our classifications,
