@@ -57,7 +57,7 @@ def main(sub_h=80,
         then keep the metadata directory open for any updates to interactive ui parameters
     """
     f = open(interactive_session_metadata_dir, "r")
-    prev_img_i, prev_sub_i, alpha = pickle.load(f)
+    prev_img_i, prev_sub_i, alpha, zoom = pickle.load(f)
     f.close()
 
     """
@@ -87,7 +87,7 @@ def main(sub_h=80,
             Open a new interactive session before starting our loops.
                 and loop from where we left off last to our img_n
             """
-            interactive_session = InteractiveGUI(classifications, colors, sub_h, sub_w, alpha, dual_monitor)
+            interactive_session = InteractiveGUI(classifications, colors, sub_h, sub_w, alpha, zoom, dual_monitor)
             """
             Now we start looping through subsection index first, then image. 
             We do this because much of the time images will only have one type of lesion in them, 
@@ -148,6 +148,29 @@ def main(sub_h=80,
                         overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=alpha, sub_h=80, sub_w=145)
 
                         """
+                        Get the appropriate zoom percentage, 
+                            convert it to a scale factor,
+                            then apply it to our overlay_sub as well as sub_h and sub_w,
+                            since we need to scale the sizes appropriately.
+
+                        The reason we only use 20/100/200 is because other sizes would not give integer results when multiplying
+                            their scale factor counterparts to sub_h and sub_w
+                        """
+                        if zoom == 1:
+                            resize_factor = 20
+                        elif zoom == 2:
+                            resize_factor = 100
+                        elif zoom == 3:
+                            resize_factor = 200
+                        else:
+                            sys.exit("Invalid zoom percentage metadata")
+                        resize_factor /= 100.0
+
+                        overlay_sub = cv2.resize(overlay_sub, (0,0), fx=resize_factor, fy=resize_factor)
+                        interactive_session.sub_h *= resize_factor
+                        interactive_session.sub_w *= resize_factor
+
+                        """
                         Set our interactive UI's predictions and image before starting the session and our main ui loop
                         """
                         interactive_session.np_img = overlay_sub
@@ -164,6 +187,7 @@ def main(sub_h=80,
                                     1. Get any updated values before deleting our previous session
                                 """
                                 alpha = interactive_session.alpha
+                                zoom = interactive_session.zoom
                                 prediction_sub = interactive_session.predictions
 
                                 """
@@ -174,15 +198,38 @@ def main(sub_h=80,
                                 overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=alpha, sub_h=80, sub_w=145)
 
                                 """
-                                4. Reload the interactive session with new parameters
+                                4. Get the appropriate zoom percentage, 
+                                    convert it to a scale factor,
+                                    then apply it to our overlay_sub as well as sub_h and sub_w,
+                                    since we need to scale the sizes appropriately.
+
+                                The reason we only use 20/100/200 is because other sizes would not give integer results when multiplying
+                                    their scale factor counterparts to sub_h and sub_w
                                 """
-                                interactive_session = InteractiveGUI(classifications, colors, sub_h, sub_w, alpha, dual_monitor)
+                                if zoom == 1:
+                                    resize_factor = 20
+                                elif zoom == 2:
+                                    resize_factor = 100
+                                elif zoom == 3:
+                                    resize_factor = 200
+                                else:
+                                    sys.exit("Invalid zoom percentage metadata")
+                                resize_factor /= 100.0
+
+                                overlay_sub = cv2.resize(overlay_sub, (0,0), fx=resize_factor, fy=resize_factor)
+
+                                """
+                                5. Reload the interactive session with new parameters
+                                """
+                                interactive_session = InteractiveGUI(classifications, colors, sub_h, sub_w, alpha, zoom, dual_monitor)
+                                interactive_session.sub_h *= resize_factor
+                                interactive_session.sub_w *= resize_factor
                                 interactive_session.np_img = overlay_sub
                                 interactive_session.predictions = prediction_sub
 
                                 """
-                                5. Reset flag to false
-                                6. Start the interactive session
+                                6. Reset flag to false
+                                7. Start the interactive session
                                 """
                                 interactive_session.flag_refresh=False
                                 interactive_session.start_interactive_session()
@@ -193,6 +240,7 @@ def main(sub_h=80,
                                     1. Get any updated values before deleting our previous session
                                 """
                                 alpha = interactive_session.alpha
+                                zoom = interactive_session.zoom
                                 prediction_sub = interactive_session.predictions
                                 
                                 """
@@ -209,6 +257,7 @@ def main(sub_h=80,
                                 We do get any updated values before deleting our previous session, however.
                                 """
                                 alpha = interactive_session.alpha
+                                zoom = interactive_session.zoom
                                 prediction_sub = interactive_session.predictions
                                 break
 
@@ -256,6 +305,7 @@ def main(sub_h=80,
             1. Get any updated values before leaving the session
             """
             alpha = interactive_session.alpha
+            zoom = interactive_session.zoom
             prediction_sub = interactive_session.predictions
 
             """
@@ -270,7 +320,7 @@ def main(sub_h=80,
             """
             print "Session ended. Updating and storing updated metadata..."
             f = open(interactive_session_metadata_dir, "w")
-            pickle.dump((img_i, sub_i, alpha), f)
+            pickle.dump((img_i, sub_i, alpha, zoom), f)
             f.close()
 
             """

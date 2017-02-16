@@ -6,8 +6,6 @@ from PIL import Image, ImageTk
 
 import cv2
 
-import h5py
-
 import numpy as np
 
 class InteractiveGUI(object):
@@ -15,7 +13,7 @@ class InteractiveGUI(object):
     """
     Our class for an interactive gui for LIRA Live.
     """
-    def __init__(self, classifications, colors, sub_h, sub_w, alpha, dual_monitor):
+    def __init__(self, classifications, colors, sub_h, sub_w, alpha, zoom, dual_monitor):
         """
         Our main image, and main predictions that we are currently working with. 
         """
@@ -34,6 +32,7 @@ class InteractiveGUI(object):
         Metadata variables to use after closing our session.
         """
         self.alpha = alpha
+        self.zoom = zoom
 
         """
         Indicator / Flag values for the status of the session, 
@@ -119,6 +118,7 @@ class InteractiveGUI(object):
               1
             """
             return x2, y2, x1, y1
+
     def get_outline_rectangle_coordinates(self, rect_x1, rect_y1, rect_x2, rect_y2, sub_h, sub_w):
         """
         Given two pairs of coordinates for the top left and bottom right corners of a rectangle,
@@ -237,18 +237,6 @@ class InteractiveGUI(object):
         canvas = event.widget
         canvas.scan_dragto(event.x, event.y, gain=1)
 
-    def up_arrow_key_press(self, event):
-        pass
-
-    def down_arrow_key_press(self, event):
-        pass
-
-    def left_arrow_key_press(self, event):
-        pass
-
-    def right_arrow_key_press(self, event):
-        pass
-
     def key_press(self, event):
         """
         Handler for when a key is pressed. 
@@ -322,6 +310,7 @@ class InteractiveGUI(object):
         We update our class variable to match whatever values we have changed during the session
         """
         self.alpha = self.alpha_slider.get()
+        self.zoom = self.zoom_slider.get()
 
         """
         We destroy our window and change flag
@@ -339,6 +328,7 @@ class InteractiveGUI(object):
         We update our class variable to match whatever values we have changed during the session
         """
         self.alpha = self.alpha_slider.get()
+        self.zoom = self.zoom_slider.get()
 
         """
         We destroy our window and change flag
@@ -356,6 +346,7 @@ class InteractiveGUI(object):
         We update our class variable to match whatever values we have changed during the session
         """
         self.alpha = self.alpha_slider.get()
+        self.zoom = self.zoom_slider.get()
 
         """
         Then we destroy our window and change flag
@@ -490,6 +481,15 @@ class InteractiveGUI(object):
         self.alpha_slider = Scale(tool_canvas, from_=0, to=1, resolution=0.01, length=tool_canvas_width, orient=HORIZONTAL, label="Alpha / Overlay Transparency")
         self.alpha_slider.set(self.alpha)
         self.alpha_slider.pack()
+
+        """
+        Initialize our slider to change the zoom of the image
+            Tkinter does not allow manual setting of ticks, like 20/100/200. 
+            So while this is the zoom we are doing, the values are 1,2,3. This is so that I can look at what value is chosen, and change accordingly.
+        """
+        self.zoom_slider = Scale(tool_canvas, from_=1, to=3, showvalue=0, length=tool_canvas_width, orient=HORIZONTAL, label="Zoom Percentage (%)")
+        self.zoom_slider.set(self.zoom)
+        self.zoom_slider.pack()
 
         """
         Generate a header for our classifications, then display them with a color key
