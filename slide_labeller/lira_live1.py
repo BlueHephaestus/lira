@@ -109,14 +109,27 @@ def main(sub_h=80,
                     the sub_n for some images, so sub_i may be greater than or equal to sub_n for some images.
             """
             sub_max_n = get_sub_max_n(img_hf)
-            for sub_i in range(prev_sub_i, sub_max_n):
-                for img_i in range(prev_img_i, img_n):
-                    print img_i, sub_i
+            for sub_i in range(0, sub_max_n):
+                for img_i in range(0, img_n):
                     """
                     Get our image, and associated predictions
                     """
                     img = img_hf.get(str(img_i))
                     img_predictions = predictions_hf.get(str(img_i))
+
+                    """
+                    Make sure we never get an image s.t. 
+                        (img_h-img_h%80)/80 < pred_h
+                        (img_w-img_w%145)/145 < pred_w
+
+                        If we do, then we cut off some of our predictions to change this.
+                        Specifically, we set the prediction dimension equal to our shorter image dimension.
+                    """
+                    if ((img.shape[0] - img.shape[0] % sub_h)/sub_h < img_predictions.shape[0]):
+                        img_predictions = img_predictions[0:((img.shape[0] - img.shape[0] % sub_h)/sub_h)]
+                        
+                    if ((img.shape[1] - img.shape[1] % sub_w)/sub_w < img_predictions.shape[1]):
+                        img_predictions = img_predictions[:, 0:((img.shape[1] - img.shape[1] % sub_w)/sub_w)]
 
                     """
                     Get our number of subsections for this image from our divide factor ^ 2
@@ -139,6 +152,20 @@ def main(sub_h=80,
                         This is based on the computation-saving assumption that if all our predictions for a subsection are empty, then we have an empty subsection.
                     """
                     prediction_sub = get_prediction_subsection(sub_i, factor, img_predictions)
+
+                    """
+                    We don't start if we are not yet to our last stopping point, however.
+                    If we aren't there yet, we skip all the unnecessary stuff, only adding our classification data.
+                    Then, we go to the next one.
+                    """
+                    if img_i < prev_img_i or sub_i < prev_sub_i:
+                        empty_i = list_find(classifications, "Empty Slide")
+                        empty_classification_n += np.sum(prediction_sub==empty_i)
+                        total_classification_n += prediction_sub.size
+                        continue
+
+                    print "Image #%i, Subsection #%i" % (img_i, sub_i)
+
                     if not all_predictions_empty(prediction_sub, classifications):
                         """
                         If it is not empty, we continue!
@@ -191,14 +218,20 @@ def main(sub_h=80,
                                 prediction_sub = interactive_session.predictions
 
                                 """
-                                    2. Update main img_predictions matrix with updated predictions subsection
-                                    3. Get our new overlay subsection overlay_sub using updated img_predictions
+                                    2. Update metadata
+                                    3. Update main img_predictions matrix with updated predictions subsection
+                                    4. Get our new overlay subsection overlay_sub using updated img_predictions
+                                """
+                                """
+                                f = open(interactive_session_metadata_dir, "w")
+                                pickle.dump((img_i, sub_i, alpha, zoom), f)
+                                f.close()
                                 """
                                 img_predictions = update_prediction_subsection(sub_i, factor, img_predictions, interactive_session.predictions)
                                 overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=alpha, sub_h=80, sub_w=145)
 
                                 """
-                                4. Get the appropriate zoom percentage, 
+                                5. Get the appropriate zoom percentage, 
                                     convert it to a scale factor,
                                     then apply it to our overlay_sub as well as sub_h and sub_w,
                                     since we need to scale the sizes appropriately.
@@ -244,9 +277,18 @@ def main(sub_h=80,
                                 prediction_sub = interactive_session.predictions
                                 
                                 """
-                                2. Update main img_predictions matrix with updated predictions subsection
+                                2. Update metadata
+                                3. Update main img_predictions matrix with updated predictions subsection
                                 """
                                 interactive_session.flag_next=False
+
+                                """
+                                f = open(interactive_session_metadata_dir, "w")
+                                pickle.dump((img_i, sub_i, alpha, zoom), f)
+                                f.close()
+
+                                img_predictions = update_prediction_subsection(sub_i, factor, img_predictions, prediction_sub)
+                                """
                                 break
 
                             if interactive_session.flag_quit:
@@ -382,6 +424,21 @@ def main(sub_h=80,
                     img_predictions = predictions_hf.get(str(img_i))
                     factor = get_relative_factor(img.shape[0], None)
 
+                    """
+                    (repeat this)
+                    Make sure we never get an image s.t. 
+                        (img_h-img_h%80)/80 < pred_h
+                        (img_w-img_w%145)/145 < pred_w
+
+                        If we do, then we cut off some of our predictions to change this.
+                        Specifically, we set the prediction dimension equal to our shorter image dimension.
+                    """
+                    if ((img.shape[0] - img.shape[0] % sub_h)/sub_h < img_predictions.shape[0]):
+                        img_predictions = img_predictions[0:((img.shape[0] - img.shape[0] % sub_h)/sub_h)]
+                        
+                    if ((img.shape[1] - img.shape[1] % sub_w)/sub_w < img_predictions.shape[1]):
+                        img_predictions = img_predictions[:, 0:((img.shape[1] - img.shape[1] % sub_w)/sub_w)]
+
                     if sub_i != updated_sub_n-1:
                         """
                         If this is not the last subsection, we loop through all the images.
@@ -411,7 +468,6 @@ def main(sub_h=80,
                         of total predictions and subsequently individual subsections we have in this subsection.
                     """
                     individual_sub_n = prediction_sub.size
-
                     """
                     We then convert greyscale_sub and prediction_sub to their final format so we can easily loop through and reference them.
                     Note: 
@@ -423,7 +479,6 @@ def main(sub_h=80,
                     """
                     greyscale_sub = get_subsections(sub_h, sub_w, greyscale_sub, verbose=False)
                     greyscale_sub = np.reshape(greyscale_sub, (individual_sub_n, sub_h*sub_w))
-
                     prediction_sub = prediction_sub.flatten()
 
                     for individual_sub_i in range(individual_sub_n):
@@ -461,7 +516,7 @@ def main(sub_h=80,
 
 main(sub_h=80, 
      sub_w=145, 
-     img_archive_dir="../lira/lira1/data/smol_greyscales.h5",
+     img_archive_dir="../lira/lira1/data/greyscales.h5",
      predictions_archive_dir="../lira/lira1/data/predictions.h5",
      classification_metadata_dir="../slide_testing/classification_metadata.pkl",
      interactive_session_metadata_dir="interactive_session_metadata.pkl",
