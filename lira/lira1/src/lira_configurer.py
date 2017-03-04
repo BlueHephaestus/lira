@@ -22,7 +22,7 @@ from lira_optimization_input_handler import handle_raw_hps
 #Global config settings
 global_config= {
     'input_dims': [80,145],
-    'output_dims': 6,
+    'output_dims': 7,
     'run_count': 3,
     'epochs': 40,
     'archive_dir': os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira/lira1/data/samples.h5"),
