@@ -9,7 +9,7 @@ from static_config import StaticConfig
 import img_handler
 from img_handler import *
 
-def main(nn):
+def generate_predictions(nn):
     #Directories
     #nn = "current_best_setup"
     nn_dir = "../lira/lira1/src"
