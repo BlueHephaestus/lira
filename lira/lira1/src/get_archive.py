@@ -17,6 +17,10 @@ Where:
     and the live_samples.h5 contains all the samples we've obtained from our live system.
 
 With this, it creates the final samples h5 archive in the archive_dir directory
+
+TODO:
+    Should we modify this to no longer use hard images, but only use our live_samples.h5?
+    This would significantly shorten the code both here and in dataset_obj.py, if we choose to.
 """
 
 import os, sys
@@ -230,7 +234,7 @@ def get_archive(data_dir):
     try:
         #We add these to the remaining locations
         with h5py.File(live_archive_dir,'r') as hf:
-            data[0][sample_i:] = np.array(hf.get("x")).flatten()
+            data[0][sample_i:] = np.array(hf.get("x"))
             data[1][sample_i:] = np.array(hf.get("y"))
     except:
         pass
