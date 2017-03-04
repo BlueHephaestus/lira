@@ -1,6 +1,6 @@
 """
 This script goes through our samples_dir, which is formatted as such:
-$samples_dir/
+samples_dir/
     imgs/
         class_1
         ...
@@ -9,12 +9,14 @@ $samples_dir/
         class_1
         ...
         class_n
-    samples.h5
+    live_samples.h5
 
 Where:
     the imgs/ directory contains all the whole images,
     the subs/ directory contains all the individual subsections,
-    and the samples.h5 contains all the samples we've obtained from our live system.
+    and the live_samples.h5 contains all the samples we've obtained from our live system.
+
+With this, it creates the final samples h5 archive in the archive_dir directory
 """
 
 import os, sys
@@ -116,7 +118,7 @@ def get_archive(data_dir):
 
     whole_img_dir = os.path.join(data_dir, "imgs")
     individual_sub_dir = os.path.join(data_dir, "subs")
-    live_archive_dir = os.path.join(data_dir, "live_archive.h5")
+    live_archive_dir = os.path.join(data_dir, "live_samples.h5")
 
 
     #DENNIS takes vectors as inputs, so we convert our matrices accordingly
