@@ -17,135 +17,136 @@ import dataset_obj
 from dataset_obj import *
 
 #Global config settings
-global_config= {
-    'input_dims': [80, 145],
-    'output_dims': 6,
-    'run_count': 1,
-    'epochs': 40,
-    'archive_dir': os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira/lira1/data/samples.h5"),
-    'p_training': 0.7,
-    'p_validation': 0.15,
-    'p_test': 0.15,
-    'lira_data': True,
-    'output_title': "Current Best Setup",
-    'graph_output': True,
-    'update_output': True,
-    'subplot_seperate_models': False,
-    'print_times': False,
-    'save_net': True,
-    'output_cost' : True,
-    'output_training_accuracy' : True,
-    'output_validation_accuracy' : True,
-    'output_test_accuracy' : True,
-    'bbho_optimizing': False,
-}
+def train_model():
+    global_config = {
+        'input_dims': [80, 145],
+        'output_dims': 7,#We have added another class, so you should not train the model until you've generated a new archive with the live_samples.h5 archive, which should contain the new classification's training data.
+        'run_count': 1,
+        'epochs': 40,
+        'archive_dir': os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira/lira1/data/samples.h5"),
+        'p_training': 0.7,
+        'p_validation': 0.15,
+        'p_test': 0.15,
+        'lira_data': True,
+        'output_title': "Current Best Setup",
+        'graph_output': True,
+        'update_output': True,
+        'subplot_seperate_models': False,
+        'print_times': False,
+        'save_net': True,
+        'output_cost' : True,
+        'output_training_accuracy' : True,
+        'output_validation_accuracy' : True,
+        'output_test_accuracy' : True,
+        'bbho_optimizing': False,
+    }
 
-#Models to compare
-"""
-                    [
+    #Models to compare
+    """
                         [
-                            [Sequential(),
-                            Convolution2D(20, 7, 12, border_mode="valid", input_shape=(80, 145, 1), W_regularizer=l2(1.77828e-5)),
-                                Activation("sigmoid"),
-                                MaxPooling2D(),
+                            [
+                                [Sequential(),
+                                Convolution2D(20, 7, 12, border_mode="valid", input_shape=(80, 145, 1), W_regularizer=l2(1.77828e-5)),
+                                    Activation("sigmoid"),
+                                    MaxPooling2D(),
 
-                            Convolution2D(40, 6, 10, border_mode="valid", W_regularizer=l2(1.77828e-5)),
-                                Activation("sigmoid"),
-                                MaxPooling2D(),
+                                Convolution2D(40, 6, 10, border_mode="valid", W_regularizer=l2(1.77828e-5)),
+                                    Activation("sigmoid"),
+                                    MaxPooling2D(),
 
-                            Flatten(),
+                                Flatten(),
 
-                            Dense(1024, W_regularizer=l2(1.77828e-5)),
-                                Activation("sigmoid"),
+                                Dense(1024, W_regularizer=l2(1.77828e-5)),
+                                    Activation("sigmoid"),
 
-                            Dense(100, W_regularizer=l2(1.77828e-5)),
-                                Activation("sigmoid"),
+                                Dense(100, W_regularizer=l2(1.77828e-5)),
+                                    Activation("sigmoid"),
 
-                            #Dropout(0.0),
+                                #Dropout(0.0),
 
-                            Dense(global_config["output_dims"], W_regularizer=l2(1.77828e-5)),
-                                Activation("softmax")],
+                                Dense(global_config["output_dims"], W_regularizer=l2(1.77828e-5)),
+                                    Activation("softmax")],
 
-                            {    
-                                'cost': "categorical_crossentropy", 
-                                'mb_n': 74,
-                                'optimizer': Adam(1e-4),
-                                'data_normalization': True,
-                                'label': "",
-                            }
-                        ] for run in range(global_config["run_count"])
-                    ],
-"""
-model_configs = [
-                    [
+                                {    
+                                    'cost': "categorical_crossentropy", 
+                                    'mb_n': 74,
+                                    'optimizer': Adam(1e-4),
+                                    'data_normalization': True,
+                                    'label': "",
+                                }
+                            ] for run in range(global_config["run_count"])
+                        ],
+    """
+    model_configs = [
                         [
-                            [Sequential(),
-                            Convolution2D(20, 7, 12, border_mode="valid", input_shape=(80, 145, 1), W_regularizer=l2(0.0158489)),
-                                Activation("tanh"),
-                                MaxPooling2D(),
+                            [
+                                [Sequential(),
+                                Convolution2D(20, 7, 12, border_mode="valid", input_shape=(80, 145, 1), W_regularizer=l2(0.0158489)),
+                                    Activation("tanh"),
+                                    MaxPooling2D(),
 
-                            Convolution2D(40, 6, 10, border_mode="valid", W_regularizer=l2(0.0158489)),
-                                Activation("tanh"),
-                                MaxPooling2D(),
+                                Convolution2D(40, 6, 10, border_mode="valid", W_regularizer=l2(0.0158489)),
+                                    Activation("tanh"),
+                                    MaxPooling2D(),
 
-                            Flatten(),
+                                Flatten(),
 
-                            Dense(1024, W_regularizer=l2(0.0158489)),
-                                Activation("tanh"),
+                                Dense(1024, W_regularizer=l2(0.0158489)),
+                                    Activation("tanh"),
 
-                            Dense(100, W_regularizer=l2(0.0158489)),
-                                Activation("tanh"),
+                                Dense(100, W_regularizer=l2(0.0158489)),
+                                    Activation("tanh"),
 
-                            Dropout(0.92),
+                                Dropout(0.92),
 
-                            Dense(global_config["output_dims"], W_regularizer=l2(0.0158489)),
-                                Activation("softmax")],
+                                Dense(global_config["output_dims"], W_regularizer=l2(0.0158489)),
+                                    Activation("softmax")],
 
-                            {    
-                                'cost': "categorical_crossentropy", 
-                                'mb_n': 44,
-                                'optimizer': Adam(1e-4),
-                                'data_normalization': True,
-                                'label': "",
-                            }
-                        ] for run in range(global_config["run_count"])
-                    ],
-                ]
-"""
-[
+                                {    
+                                    'cost': "categorical_crossentropy", 
+                                    'mb_n': 44,
+                                    'optimizer': Adam(1e-4),
+                                    'data_normalization': True,
+                                    'label': "",
+                                }
+                            ] for run in range(global_config["run_count"])
+                        ],
+                    ]
+    """
     [
-        [Sequential(),
-        Convolution2D(20, 7, 12, border_mode="valid", input_shape=(80, 145, 1), W_regularizer=l2(1e-4)),
-            Activation("sigmoid"),
-            MaxPooling2D(),
+        [
+            [Sequential(),
+            Convolution2D(20, 7, 12, border_mode="valid", input_shape=(80, 145, 1), W_regularizer=l2(1e-4)),
+                Activation("sigmoid"),
+                MaxPooling2D(),
 
-        Convolution2D(40, 6, 10, border_mode="valid", W_regularizer=l2(1e-4)),
-            Activation("sigmoid"),
-            MaxPooling2D(),
+            Convolution2D(40, 6, 10, border_mode="valid", W_regularizer=l2(1e-4)),
+                Activation("sigmoid"),
+                MaxPooling2D(),
 
-        Flatten(),
+            Flatten(),
 
-        Dense(1024, W_regularizer=l2(1e-4)),
-            Activation("sigmoid"),
+            Dense(1024, W_regularizer=l2(1e-4)),
+                Activation("sigmoid"),
 
-        Dense(100, W_regularizer=l2(1e-4)),
-            Activation("sigmoid"),
+            Dense(100, W_regularizer=l2(1e-4)),
+                Activation("sigmoid"),
 
-        Dropout(.175),
+            Dropout(.175),
 
-        Dense(global_config["output_dims"], W_regularizer=l2(1e-4)),
-            Activation("softmax")],
+            Dense(global_config["output_dims"], W_regularizer=l2(1e-4)),
+                Activation("softmax")],
 
-        {    
-            'cost': "categorical_crossentropy", 
-            'mb_n': 50,
-            'optimizer': Adam(1e-4),
-            'data_normalization': True,
-            'label': "Original Parameters",
-        }
-    ] for run in range(global_config["run_count"])
-],
-"""
+            {    
+                'cost': "categorical_crossentropy", 
+                'mb_n': 50,
+                'optimizer': Adam(1e-4),
+                'data_normalization': True,
+                'label': "Original Parameters",
+            }
+        ] for run in range(global_config["run_count"])
+    ],
+    """
 
-#Handle our models with DENNIS MK 6
-output_dict = handle_models(global_config, model_configs)
+    #Handle our models with DENNIS MK 6
+    output_dict = handle_models(global_config, model_configs)
