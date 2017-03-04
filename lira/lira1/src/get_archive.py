@@ -254,4 +254,4 @@ def regenerate_archive(archive_dir="../data/samples.h5", data_dir="../data/sampl
         hf.create_dataset("y", data=data[1])
         hf.create_dataset("metadata", data=metadata)
 
-regenerate_archive()
+#regenerate_archive()

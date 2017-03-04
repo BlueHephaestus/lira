@@ -43,4 +43,4 @@ def load_greyscales(data_dir, archive_dir):
 
     print ""#flush formatting
 
-load_greyscales("../data/test_slides", "../data/greyscales.h5")
+#load_greyscales("../data/test_slides", "../data/greyscales.h5")

@@ -129,5 +129,6 @@ def concatenate_results(results_dir, concatenated_results_dir, classification_me
 
         #Finally, write our result_img
         cv2.imwrite("%s/%i.jpg" % (concatenated_results_dir, img_i), result_img)
+    print ""#Flush print formatting
                 
-concatenate_results("results/", "concatenated_results/", classification_metadata_dir="classification_metadata.pkl")
+#concatenate_results("results/", "concatenated_results/", classification_metadata_dir="classification_metadata.pkl")
