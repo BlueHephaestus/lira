@@ -17,7 +17,7 @@ import dataset_obj
 from dataset_obj import *
 
 #Global config settings
-def train_model():
+def train_model(nn):
     global_config = {
         'input_dims': [80, 145],
         'output_dims': 7,#We have added another class, so you should not train the model until you've generated a new archive with the live_samples.h5 archive, which should contain the new classification's training data.
@@ -28,7 +28,7 @@ def train_model():
         'p_validation': 0.15,
         'p_test': 0.15,
         'lira_data': True,
-        'output_title': "Current Best Setup",
+        'output_title': nn,
         'graph_output': True,
         'update_output': True,
         'subplot_seperate_models': False,
