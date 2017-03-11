@@ -125,11 +125,12 @@ def main(sub_h=80,
                         If we do, then we cut off some of our predictions to change this.
                         Specifically, we set the prediction dimension equal to our shorter image dimension.
                     """
-                    if ((img.shape[0] - img.shape[0] % sub_h)/sub_h < img_predictions.shape[0]):
-                        img_predictions = img_predictions[0:((img.shape[0] - img.shape[0] % sub_h)/sub_h)]
-                        
-                    if ((img.shape[1] - img.shape[1] % sub_w)/sub_w < img_predictions.shape[1]):
-                        img_predictions = img_predictions[:, 0:((img.shape[1] - img.shape[1] % sub_w)/sub_w)]
+                    if sub_i == 0:
+                        if ((img.shape[0] - img.shape[0] % sub_h)/sub_h < img_predictions.shape[0]):
+                            img_predictions = img_predictions[0:((img.shape[0] - img.shape[0] % sub_h)/sub_h)]
+                            
+                        if ((img.shape[1] - img.shape[1] % sub_w)/sub_w < img_predictions.shape[1]):
+                            img_predictions = img_predictions[:, 0:((img.shape[1] - img.shape[1] % sub_w)/sub_w)]
 
                     """
                     Get our number of subsections for this image from our divide factor ^ 2
