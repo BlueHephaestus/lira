@@ -13,6 +13,15 @@ import cv2
 import h5py
 
 def recursive_get_paths(img_dir):
+    """
+    Arguments:
+        img_dir : directory to recursively traverse. Should be a string.
+
+    Returns:
+        A list of tuples, where each tuple is of the form
+            (path and filename str, filename str), e.g.
+            ("/home/darkelement/test.txt", "test.txt")
+    """
     paths = []
     for (path, dirs, fnames) in os.walk(img_dir):
         for fname in fnames:
@@ -20,6 +29,17 @@ def recursive_get_paths(img_dir):
     return paths
 
 def load_greyscales(data_dir, archive_dir):
+    """
+    Arguments:
+        data_dir: string directory where all greyscale image files are stored. 
+            All files here should be images, that are readable by OpenCV
+        archive_dir: string directory of a .h5 file to store greyscale images once loaded.
+    
+    Returns:
+        After iterating through each image, stores each image at the archive_dir location, 
+            according to each image's index.
+        Otherwise does not return anything.
+    """
 
     print "Getting Image Paths..."
     sample_path_infos = recursive_get_paths(data_dir)
