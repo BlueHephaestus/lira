@@ -17,19 +17,20 @@ import dataset_obj
 from dataset_obj import *
 
 #Global config settings
-def train_model(nn):
+def train_model(nn, nn_dir="../saved_networks"):
     global_config = {
         'input_dims': [80, 145],
-        'output_dims': 7,#We have added another class, so you should not train the model until you've generated a new archive with the live_samples.h5 archive, which should contain the new classification's training data.
-        'run_count': 1,
-        'epochs': 40,
+        'output_dims': 7,
+        'run_count': 3,
+        'epochs': 50,
         'archive_dir': os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira/lira1/data/samples.h5"),
         'p_training': 0.7,
         'p_validation': 0.15,
         'p_test': 0.15,
         'lira_data': True,
         'output_title': nn,
-        'graph_output': True,
+        'output_dir': nn_dir,
+        'graph_output': False,
         'update_output': True,
         'subplot_seperate_models': False,
         'print_times': False,
@@ -81,30 +82,30 @@ def train_model(nn):
                         [
                             [
                                 [Sequential(),
-                                Convolution2D(20, 7, 12, border_mode="valid", input_shape=(80, 145, 1), W_regularizer=l2(0.0158489)),
-                                    Activation("tanh"),
+                                Convolution2D(20, 7, 12, border_mode="valid", input_shape=(80, 145, 1), W_regularizer=l2(0.000016)),
+                                    Activation("sigmoid"),
                                     MaxPooling2D(),
 
-                                Convolution2D(40, 6, 10, border_mode="valid", W_regularizer=l2(0.0158489)),
-                                    Activation("tanh"),
+                                Convolution2D(40, 6, 10, border_mode="valid", W_regularizer=l2(0.000016)),
+                                    Activation("sigmoid"),
                                     MaxPooling2D(),
 
                                 Flatten(),
 
-                                Dense(1024, W_regularizer=l2(0.0158489)),
-                                    Activation("tanh"),
+                                Dense(1024, W_regularizer=l2(0.000016)),
+                                    Activation("sigmoid"),
 
-                                Dense(100, W_regularizer=l2(0.0158489)),
-                                    Activation("tanh"),
+                                Dense(100, W_regularizer=l2(0.000016)),
+                                    Activation("sigmoid"),
 
-                                Dropout(0.92),
+                                Dropout(0.0),
 
-                                Dense(global_config["output_dims"], W_regularizer=l2(0.0158489)),
+                                Dense(global_config["output_dims"], W_regularizer=l2(0.000016)),
                                     Activation("softmax")],
 
                                 {    
-                                    'cost': "categorical_crossentropy", 
-                                    'mb_n': 44,
+                                    'cost': "binary_crossentropy", 
+                                    'mb_n': 96,
                                     'optimizer': Adam(1e-4),
                                     'data_normalization': True,
                                     'label': "",
