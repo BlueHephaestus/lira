@@ -21,6 +21,15 @@ With this, it creates the final samples h5 archive in the archive_dir directory
 TODO:
     Should we modify this to no longer use hard images, but only use our live_samples.h5?
     This would significantly shorten the code both here and in dataset_obj.py, if we choose to.
+
+DEPRECATED
+
+This script used to go through the hand-picked samples as well as individual subsections,
+    however with the advent of LIRA-Live, which saves data in the correct format into live_samples.h5,
+    as well as the fact that we now only use the data from LIRA-Live,
+This script is no longer necessary.
+
+-Blake Edwards / Dark Element
 """
 
 import os, sys
