@@ -3,7 +3,7 @@ import sys, os
 import numpy as np
 import cv2
 
-def get_subsections(sub_h, sub_w, img, verbose):
+def get_subsections(sub_h, sub_w, img, verbose=False):
     """
     Divide our given img into subsections of width sub_w and height sub_h
     """
@@ -16,8 +16,8 @@ def get_subsections(sub_h, sub_w, img, verbose):
     sub_total = ((img.shape[0]//sub_h)+1)*((img.shape[1]//sub_w)+1)-1
     for row in range(0, img.shape[0], sub_h):
         for col in range(0, img.shape[1], sub_w):
+
             #Get the subsection specified by our loops
-            
             sub = img[row:row+sub_h, col:col+sub_w]
 
             """
@@ -27,13 +27,14 @@ def get_subsections(sub_h, sub_w, img, verbose):
             col_i = col/sub_w
 
             subs[row_i][col_i] = sub
-
             if verbose:
                 sys.stdout.write("\r\tSubsection #%i / %i" % (sub_i, sub_total))
 
             sub_i += 1
+
     if verbose:
         print ""#For flush print formatting
+
     return subs
 
 def get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divide_factor):
@@ -56,38 +57,6 @@ def get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divid
     col = col_i * sub_img_w
 
     """
-    Now set it to a size that is %sub_h and %sub_w == 0
-        We have to handle this differently if sub_img_h < sub_h or sub_img_w < sub_w,
-            because e.g. 70 % 80 = 70
-    Now we have to handle for several cases here.
-        If either dimension is less than the subsection dimension, e.g. sub_img_h < sub_h,
-            we just set it equal to the dimension of the subsection if it's not an edge.
-            Otherwise we leave it be.
-        If it's not,
-            We check if it's != 0 because if it is already divisible this will pointlessly use up more space.
-                Otherwise, we only add on our extra subsection if it's not an edge. 
-                This is because if it's an edge, we don't have any data to add to it.
-    """
-    """
-    if sub_img_h < sub_h:
-        if row_i < img_divide_factor-1:
-            sub_img_h = sub_h
-    else:
-        sub_img_h = sub_img_h - sub_img_h % sub_h
-        if sub_img_h % sub_h != 0:
-            if row_i < img_divide_factor-1:
-                sub_img_h += sub_h
-
-    if sub_img_w < sub_w:
-        if row_i < img_divide_factor-1:
-            sub_img_w = sub_w
-    else:
-        sub_img_w = sub_img_w - sub_img_w % sub_w
-        if sub_img_w % sub_w != 0:
-            if row_i < img_divide_factor-1:
-                sub_img_w += sub_w
-    """
-    """
     We check if it's != 0 because if it is already divisible this will pointlessly use up more space.
         Otherwise, we only add on our extra subsection if it's not an edge. 
         This is because if it's an edge, we don't have any data to add to it.
@@ -105,23 +74,22 @@ def get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divid
     sub = img[row:row+sub_img_h, col:col+sub_img_w]
     return sub
 
-def add_weighted_overlay(img, overlay, alpha)
+def add_weighted_overlay(img, overlay, alpha):
     """
-    Given an image and an overlay to overlay on top of it,
+    Given an image of shape (h, w) and an overlay of shape (h, w, 3) to overlay on top of it,
         as well as a transparency weight of our overlay - alpha (percentage it takes up)
     We overlay them and return the combined image.
+    Since they are different dimension (image - 2D, overlay - 3D)
     """
     img_h = img.shape[0]
     img_w = img.shape[1]
 
-    #Set to the same type as our overlay
-    img = img.astype(np.float64)
+    #Use our handy existing cv2 method to convert our gray 2d image into a 3d bgr one
+    #Note: Since it is greyscale, it doesn't matter if we go to RGB OR BGR
+    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
-    #Replace value with scalar at the end to have a 3d matrix
-    img = img.reshape(img_h, img_w, 1)
-
-    #Copy value over 2nd axis to get rgb representation
-    img = np.repeat(img, 3, axis=2)
+    #Set our overlay to np.uint8 if it isn't already.
+    overlay = overlay.astype(np.uint8)
 
     #Add our overlay to the img
     return cv2.addWeighted(overlay, alpha, img, 1-alpha, 0, img)
@@ -193,9 +161,9 @@ def get_relative_factor(img_h, factor, threshold=3000, default_factor=8):
 
     return factor
 
-def disp_img_fullscreen(img):
-    cv2.namedWindow("test", cv2.WND_PROP_FULLSCREEN)          
-    cv2.setWindowProperty("test", cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
-    cv2.imshow("test",img)
+def disp_img_fullscreen(img, name="test"):
+    cv2.namedWindow(name, cv2.WND_PROP_FULLSCREEN)          
+    cv2.setWindowProperty(name, cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
+    cv2.imshow(name,img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
