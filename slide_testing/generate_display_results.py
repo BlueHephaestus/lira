@@ -5,12 +5,12 @@ Further documentation can be found in each method.
 
 -Blake Edwards / Dark Element
 """
-import sys, h5py, pickle, cv2
+import os, sys, h5py, pickle, cv2
 
 import img_handler
 from img_handler import get_relative_factor
 
-sys.path.append("../slide_labeller/")
+sys.path.append(os.path.expanduser("~/programming/machine_learning/tuberculosis_project/slide_labeller/"))
 
 import subsection_handler
 from subsection_handler import get_next_overlay_subsection
@@ -71,6 +71,9 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
                 Start looping through subsections
                 """
                 for sub_i in range(sub_n):
+                    sys.stdout.write("\rIMAGE %i, SUBSECTION %i" % (img_i, sub_i))
+                    sys.stdout.flush()
+
                     """
                     Get row index and column index given our subsection index and factor
                     """
