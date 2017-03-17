@@ -14,13 +14,6 @@ sys.path.append(os.path.expanduser("~/programming/machine_learning/markov_random
 import mrf_denoiser
 
 def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", results_dir = "results"):
-    #Directories
-    #nn = "current_best_setup"
-    #nn_dir = "../lira/lira1/src"
-    #img_archive_dir = "../lira/lira1/data/greyscales.h5"
-    #predictions_archive_dir = "../lira/lira1/data/predictions.h5"
-    #classification_metadata_dir = "classification_metadata.pkl"
-    #results_dir = "results"
 
     #Mostly static, not open for easy change yet.
     sub_h = 80
@@ -191,7 +184,8 @@ def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "..
                         if col_i == 0:
                             predictions[row_i] = overlay_predictions
                         else:
-                            predictions[row_i] = np.concatenate((predictions[row_i], overlay_predictions), axis=1)
+                            #predictions[row_i] = np.concatenate((predictions[row_i], overlay_predictions), axis=1)
+                            predictions[row_i] = get_concatenated_row((predictions[row_i], overlay_predictions))
 
                         """
                         #Now that we have all our predictions for this subsection, loop through and generate respective overlay rectangles
@@ -240,17 +234,26 @@ def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "..
 
                 """
                 Now that our entire image is done and our rows of concatenated predictions are ready,
-                    we combine all the rows into a final matrix.
+                    we combine all the rows into a final matrix by concatenating into a column.
                 """
-                predictions = np.concatenate([prediction_row for prediction_row in predictions], axis=0)
+                #predictions = np.concatenate([prediction_row for prediction_row in predictions], axis=0)
+                predictions = get_concatenated_col(predictions)
 
                 """
-                We then denoise our predictions using Markov Random Fields, and store it in our dataset.
+                Now that all the predictions are together in one matrix, we can properly "view" them all, 
+                    and use them with our denoisers.
+                We then denoise our predictions using Markov Random Fields.
                 """
                 predictions = mrf_denoiser.denoise(predictions, len(classifications))
 
+                """
+                Then we store it in our dataset
+                """
                 predictions_hf.create_dataset(str(img_i), data=predictions)
 
+                """
+                Print how long this took, if you want to show off.
+                """
                 end_time = time.time() - start_time
                 if print_times:
                     if not verbose:
