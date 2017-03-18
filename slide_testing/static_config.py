@@ -1,40 +1,66 @@
-import os, sys
-import pickle, gzip
+import os
+import pickle
 import numpy as np
-#import tensorflow as tf
 import keras
 from keras.models import load_model
 
 class StaticConfig(object):
-    def __init__(self, nn, archive_dir):
+    def __init__(self, model, model_dir):
+        """
+        Arguments:
+            model: filename of our model to load (no .h5 included)
+            model_dir: filepath of our model
 
-        #Get directories
-        nn_dir = "%s/../saved_networks/%s.h5" % (archive_dir, nn)
-        metadata_dir = "%s/../saved_networks/%s_metadata.pkl.gz" % (archive_dir, nn)
+        Returns:
+            Initialises class variables mean, std, and model.
+            We load the metadata for mean and std,
+            Then initialise the model using our Keras method.
+        """
 
-        f = gzip.open(metadata_dir, 'rb')
-        metadata = pickle.load(f)
-        f.close()
+        """
+        Get our absolute filepaths for model and metadata from our filename and source filepath
+        """
+        model_dir = "%s%s%s.h5" % (model_dir, os.sep, model)
+        metadata_dir = "%s%s%s_metadata.pkl" % (model_dir, os.sep, model)
 
-        #Assign metadata values
+        """
+        Load metadata from .pkl file
+        """
+        with open(metadata_dir, 'rb') as f:
+            metadata = pickle.load(f)
+
+        """
+        Assign class attributes to necessary metadata
+        """
         self.mean = metadata[0]
-        self.stddev = metadata[1]
-        model_layers = metadata[2]
-        input_dims = metadata[3]
-        output_dims = metadata[4]
+        self.std = metadata[1]
         
-        self.model = load_model(nn_dir)
+        """
+        Finally, load our Keras model.
+        """
+        self.model = load_model(model_dir)
 
     def classify(self, x):
-        #predictions = np.argmax(self.model.predict_on_batch(x), axis=1)
         """
-        Added to have a different color when we are less than 50% confident in our results
+        Arguments:
+            x: a np array of the shape that the given model expects as input.
+
+        Returns:
+            Gets one-hot predictions from the input given, of shape (n, class_n)
+            Then argmaxes, and returns a vector of shape (n,)
         """
-        raw_predictions = self.model.predict_on_batch(x)
-        predictions = np.zeros(shape=raw_predictions.shape[0])
+        """
+        Get predictions on batch with our given mini batch x
+        """
+        predictions = self.model.predict_on_batch(x)
 
-        for raw_prediction_i, raw_prediction in enumerate(raw_predictions):
-            predictions[raw_prediction_i] = np.argmax(raw_prediction)
+        """
+        Get the argmax of these predictions, so as to get a classification instead of a one-hot vector
+        """
+        predictions = np.argmax(predictions, axis=1)
 
+        """
+        Return these.
+        """
         return predictions
 
