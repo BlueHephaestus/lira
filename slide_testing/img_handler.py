@@ -29,9 +29,6 @@ def get_subsections(sub_h, sub_w, img):
             subs[row_i][col_i] = sub
             sub_i += 1
 
-    if verbose:
-        print ""#For flush print formatting
-
     return subs
 
 def get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divide_factor):
