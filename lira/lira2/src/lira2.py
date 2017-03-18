@@ -187,7 +187,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     Since we might be running this without a graphical interface, which would cause an error,
         we surround this in a try-except so we don't break execution.
     """
-    if graph_results:
+    if graph_output:
         try:
             graph_results(results)
         except:
