@@ -14,7 +14,7 @@ After building the model, it trains a changable amount of times to reduce varian
 
 -Blake Edwards / Dark Element
 """
-import pickle
+import pickle, os
 
 import keras
 from keras.models import Sequential
@@ -169,7 +169,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     Save our model to an h5 file with our output filename
     """
     print "Saving Model..."
-    model.save("%s.h5" % output_filename)
+    model.save("%s%s%s.h5" % (model_dir, os.sep, output_filename)
 
     """
     Save our extra model metadata:
@@ -178,7 +178,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     """
     print "Saving Model Metadata..."
     metadata = whole_normalization_data
-    metadata_filename = "%s_metadata.pkl" % output_filename
+    metadata_filename = "%s%s%s_metadata.pkl" % (model_dir, os.sep, output_filename)
     with open(metadata_filename, "wb") as f:
         pickle.dump((metadata), f, protocol=-1)
 
