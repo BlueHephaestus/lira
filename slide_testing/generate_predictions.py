@@ -16,16 +16,39 @@ import mrf_denoiser
 def whole_normalize_data(data, mean, std):
     return data * std + mean
 
-def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", results_dir = "results"):
+def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl"):
+    """
+    Arguments:
+        nn: String containing the filename of where our model is stored, to be used for classifying images and obtaining predictions
+        nn_dir: Filepath of where the code for the model is stored, and where it was trained. Will be used with `nn` to obtain where the model is now located 
+        img_archive_dir: a string filepath of the .h5 file where the images / greyscales are stored.
+        predictions_archive_dir: a string filepath of the .h5 file where the model's predictions on the images/greyscales will be stored.
+        classification_metadata_dir: a string filepath of the .pkl file where the model's classification strings and color key for each classification will be stored.
 
-    #Mostly static, not open for easy change yet.
+    Returns:
+        Goes through each image, divides them into smaller subsections so as not to classify the entire image at once,
+        Then goes through the subsections of our image, and divides into our sub_hxsub_w subsections, 
+        then classifies each of these using our model stored in the nn and nn_dir filepaths.
+        Then, it stores the predictions into a matrix of integers, or concatenates them onto the pre-existing predictions from previous subsections.
+        Once completed with all subsections, these predictions are combined to get one 2d matrix of predictions, which is written to `predictions_archive_dir`.
+
+        Has no return value.
+    """
+
+    """
+    This is untested with other sizes of subsections.
+    """
     sub_h = 80
     sub_w = 145
 
-    #Parameters
+    """
+    Mini batch size, arbitrarily chosen to be 100 because we have enough memory to handle it efficiently
+    """
     mb_n = 100
 
     """
+    Our factors to resize our image by, or divide it into subsections.
+
     Set this to None to have a dynamic divide factor.
         the threshold is only relevant if it is None.
 
@@ -37,26 +60,33 @@ def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "..
     dynamic_resize_factor = True
     resize_factor = None
 
-    #Output options
-    verbose = False
+    """
+    Enable this if you want to see how long it took to classify each image
+        *cough* if you want to show off *cough*
+    """
     print_times = False
 
-    #Classifications to give to each classification index
-    #Unfortunately, we need to assign these colors specific to classification, so we can't use the metadata from our samples.h5 archive
+    """
+    Classifications to give to each classification index
+    Unfortunately, we need to assign these colors specific to classification, so we can't use the metadata from our samples.h5 archive
+    """
     classifications = ["Healthy Tissue", "Type I - Caseum", "Type II", "Empty Slide", "Type III", "Type I - Rim", "Unknown/Other"]
 
-    #BGR Colors to give to each classification index
-    #         Pink,          Red,         Green,       Light Grey,      Yellow,        Blue         Purple
+    """
+    BGR Colors to give to each classification index
+              Pink,          Red,         Green,       Light Grey,      Yellow,        Blue         Purple
+    """
     colors = [(255, 0, 255), (0, 0, 255), (0, 255, 0), (200, 200, 200), (0, 255, 255), (255, 0, 0), (244,66,143)]
 
-    #Clear our results directory of any pre-existing images
-    clear_dir(results_dir)
-
-    #Write our classification - color matchup metadata for future use
+    """
+    Write our classification - color matchup metadata for future use
+    """
     f = open(classification_metadata_dir, "w")
     pickle.dump(([classifications, colors]), f)
 
-    #Initialise net
+    """
+    Open our saved model
+    """
     nn_classifier = StaticConfig(nn, nn_dir)
 
     """
@@ -86,10 +116,15 @@ def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "..
                 img = np.array(img_hf.get(str(img_i)))
                 img = pad_img(img.shape[0], img.shape[1], sub_h, sub_w, img)
 
+                """
+                Get these for easy reference later, now that our image's dimensions aren't changing
+                """
                 img_h = img.shape[0]
                 img_w = img.shape[1]
 
-                #Get our img_divide_factor and resize_factor variables
+                """
+                Get our img_divide_factor and resize_factor variables from the dimensions of our image
+                """
                 if dynamic_img_divide_factor:
                     img_divide_factor = get_relative_factor(img_h, img_divide_factor)
                 if dynamic_resize_factor:
@@ -103,12 +138,12 @@ def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "..
                 predictions = [np.array([]) for i in range(img_divide_factor)]
 
                 """
-                Divide our main image into smaller images to handle one at a time, and save memory.
+                Here we start looping through rows and columns in our image, 
+                and divide our main image into smaller images to handle one at a time, and save memory.
                 """
                 img_sub_i = 0
                 for row_i in range(img_divide_factor):
                     for col_i in range(img_divide_factor):
-
                         sys.stdout.write("\rIMAGE %i, SUBSECTION %i" % (img_i, img_sub_i))
                         sys.stdout.flush()
                             
@@ -117,21 +152,32 @@ def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "..
                         """
                         overlay_prediction_i = 0
 
-                        #Use these to get the next sub-image of our main image
+                        """
+                        Get the next sub-image of our main image
+                        """
                         sub_img = get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divide_factor)
                         sub_img_h = sub_img.shape[0]
                         sub_img_w = sub_img.shape[1]
 
-                        #Generate our overlay with the shape of our sub_img, resized down by our final resize factor so as to save memory
+                        """
+                        Generate our overlay using the shape of our sub_img, resized down by our final resize factor so as to save memory
+                        """
                         overlay = np.zeros(shape=(int(sub_img_h//resize_factor), int(sub_img_w//resize_factor), 3))
 
-                        #Generate our predictions for the overlay as a vector at first, of size h * w = sub_img_h//sub_h * sub_img_w//sub_w . We later change this to a matrix.
+                        """
+                        Generate vector to store predictions as we loop through our subsections, which we can later reshape to a matrix.
+                        """
                         overlay_predictions = np.zeros(((sub_img_h//sub_h)*(sub_img_w//sub_w)))
 
-                        #Divide sub_img into subsections matrix to classify one at a time
-                        subs = get_subsections(sub_h, sub_w, sub_img, verbose)
+                        """
+                        From our sub_img, get a matrix of subsections in this sub_img.
+                        """
+                        subs = get_subsections(sub_h, sub_w, sub_img)
 
-                        #First, convert to vector of subsections, with each cell being the vectorized subsection
+                        """
+                        Convert this matrix of subsections to a vector of subsections, with each entry being a subsection.
+                            This way, we can easily loop through them.
+                        """
                         subs = np.reshape(subs, (-1, sub_h, sub_w, 1))
 
                         """
@@ -153,8 +199,7 @@ def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "..
                             overlay_prediction_i += batch.shape[0]
                             
                         """
-                        Convert our predictions for this subsection into a matrix so we can reference it easily when making the overlay, 
-                            and can then move it appropriately into our final predictions matrix.
+                        Convert our predictions for this subsection into a matrix so we can then concatenate it easily into our final predictions matrix.
                         """
                         overlay_predictions = np.reshape(overlay_predictions, (sub_img_h//sub_h, sub_img_w//sub_w))
 
