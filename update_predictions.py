@@ -61,7 +61,7 @@ def main(nn_title):
     From our saved model and greyscales, generate new predictions.h5 file
     """
     print "Generating Predictions..."
-    generate_predictions.generate_predictions(nn, nn_dir = "lira/lira1/src", img_archive_dir = "lira/lira1/data/greyscales.h5", predictions_archive_dir = "lira/lira1/data/predictions.h5", classification_metadata_dir = "slide_testing/classification_metadata.pkl", results_dir = "slide_testing/results")
+    generate_predictions.generate_predictions(nn, nn_dir = "lira/lira1/src", img_archive_dir = "lira/lira1/data/greyscales.h5", predictions_archive_dir = "lira/lira1/data/predictions.h5", classification_metadata_dir = "slide_testing/classification_metadata.pkl")
 
     """
     From our new predictions.h5 and greyscales, generate human accessible images for viewing.
