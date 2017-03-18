@@ -3,7 +3,7 @@ import sys, os
 import numpy as np
 import cv2
 
-def get_subsections(sub_h, sub_w, img, verbose=False):
+def get_subsections(sub_h, sub_w, img):
     """
     Divide our given img into subsections of width sub_w and height sub_h
     """
@@ -27,9 +27,6 @@ def get_subsections(sub_h, sub_w, img, verbose=False):
             col_i = col/sub_w
 
             subs[row_i][col_i] = sub
-            if verbose:
-                sys.stdout.write("\r\tSubsection #%i / %i" % (sub_i, sub_total))
-
             sub_i += 1
 
     if verbose:
@@ -163,7 +160,21 @@ def get_relative_factor(img_h, factor, threshold=3000, default_factor=8):
 
 def disp_img_fullscreen(img, name="test"):
     cv2.namedWindow(name, cv2.WND_PROP_FULLSCREEN)          
-    cv2.setWindowProperty(name, cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
+    cv2.setWindowProperty(name, cv2.WND_PROP_FULLSCREEN, 1)
     cv2.imshow(name,img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+def get_concatenated_row(samples):
+    """
+    Concatenate each sample in samples horizontally, along axis 1.
+    Return the resulting array.
+    """
+    return np.concatenate([sample for sample in samples], axis=1)
+
+def get_concatenated_col(samples):
+    """
+    Concatenate each sample in samples vertically, along axis 0.
+    Return the resulting array.
+    """
+    return np.concatenate([sample for sample in samples], axis=0)
