@@ -169,7 +169,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     Save our model to an h5 file with our output filename
     """
     print "Saving Model..."
-    model.save("%s%s%s.h5" % (model_dir, os.sep, output_filename)
+    model.save("%s%s%s.h5" % (model_dir, os.sep, output_filename))
 
     """
     Save our extra model metadata:
