@@ -1,23 +1,40 @@
+"""
+Numerous functions for handling images and subsections in our LIRA programs,
+    as well as a few for debugging said programs.
 
+Further documentation found in each function.
+
+-Blake Edwards / Dark Element
+"""
 import sys, os
 import numpy as np
 import cv2
 
 def get_subsections(sub_h, sub_w, img):
     """
-    Divide our given img into subsections of width sub_w and height sub_h
-    """
-  
-    #Set it to resulting size
-    subs = np.zeros(shape=(img.shape[0]//sub_h, img.shape[1]//sub_w, sub_h, sub_w))#Final array of subsections
+    Arguments:
+        sub_h, sub_w: The size of each subsection that our image will be divided into when finished
+        img: a np array of shape (h, w, ...) where h % sub_h == 0 and w % sub_w == 0
 
-    #Use stride length to get our subsections to splice on
-    sub_i = 0
-    sub_total = ((img.shape[0]//sub_h)+1)*((img.shape[1]//sub_w)+1)-1
+    Returns:
+        Loops through the img by row and column according to the sizes of our subsection,
+            and places (sub_h, sub_w) size subsections into the resulting subs array.
+        Returns a subs array of shape (h//sub_h, w//sub_w, sub_h, sub_w), 
+            a matrix where each entry is the subsection at that location in the image.
+    """
+    """
+    Initialize our subs array to size (h//sub_h, w//sub_w, sub_h, sub_w) for storing our subsections
+    """
+    subs = np.zeros(shape=(img.shape[0]//sub_h, img.shape[1]//sub_w, sub_h, sub_w))
+
+    """
+    Use python's step in the range function to loop through our rows and columns by subsection height and width
+    """
     for row in range(0, img.shape[0], sub_h):
         for col in range(0, img.shape[1], sub_w):
-
-            #Get the subsection specified by our loops
+            """
+            Get the subsection specified by our loops
+            """
             sub = img[row:row+sub_h, col:col+sub_w]
 
             """
@@ -26,27 +43,41 @@ def get_subsections(sub_h, sub_w, img):
             row_i = row/sub_h
             col_i = col/sub_w
 
+            """
+            Place our subsection at our new row_i and col_i in our subs array
+            """
             subs[row_i][col_i] = sub
-            sub_i += 1
 
     return subs
 
 def get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divide_factor):
-
     """
-    Get the subsection specified by our loops.
+    Arguments:
+        row_i, col_i: The row and column coordinates to get our big subsection from.
+        img_h, img_w: The h and w of our img argument.
+        sub_h, sub_w: The size of our individual subsections.
+        img: a np array of shape (h, w, ...) where h % sub_h == 0 and w % sub_w == 0, our original main image
+        img_divide_factor: The factor to divide our image by, to be used when determining the size of our return subsection.
 
-    Our sub_img_h and sub_img_w are the resulting dimensions for the overrall new big subsection, 
-        since we are using this to separate the massive images into more manageable subsection images.
-
-    We calculate the remaining space and add it to our sub_img_h and sub_img_w so that we always get full subsections.
-        Since we previously pad the image with zeros, we should never get problems, even on the far edges.
+    Returns:
+        We use this to get big subsections from our (usually) massive img argument. 
+            e.g. if img is size (24000, 40000), and img_divide_factor = 8, we would return a subsection of size (3000, 5000)
+        This is so that we don't have to hold massive data structures in memory to accomodate for our usually massive img argument,
+            and can instead hold something that is 1/img_divide_factor**2 the size.
+        So, we determine the h and w of our new sub_img using this method, 
+        then we get the absolute coordinates of where this sub_img is in our main img, 
+        Make sure we get full subsections along the edges, 
+        and then reference the full subsection and return it.
     """
-    #Calculate initial sizes
+    """
+    Calculate initial h and w of our new sub_img
+    """
     sub_img_h = img_h//img_divide_factor
     sub_img_w = img_w//img_divide_factor
 
-    #Get cords
+    """
+    We get the absolute coordinates of where this sub_img is in our main img
+    """
     row = row_i * sub_img_h
     col = col_i * sub_img_w
 
@@ -54,10 +85,17 @@ def get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divid
     We check if it's != 0 because if it is already divisible this will pointlessly use up more space.
         Otherwise, we only add on our extra subsection if it's not an edge. 
         This is because if it's an edge, we don't have any data to add to it.
+
+    Using this method, we can get the entire edge subsections, and classify them correctly when feeding them into our model.
     """
     sub_img_h = sub_img_h - sub_img_h % sub_h
     sub_img_w = sub_img_w - sub_img_w % sub_w
 
+    """
+    So we check to make sure we don't already have the entire edge, and then we add on padding if not.
+    Then, we finally check to make sure this big subsection is not at the edge of the full image, 
+        so that we actually can pad without referencing outside the bounds of our image.
+    """
     if sub_img_h % sub_h != 0:
         if row_i < img_divide_factor-1:
             sub_img_h += sub_h
@@ -65,42 +103,82 @@ def get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divid
         if row_i < img_divide_factor-1:
             sub_img_w += sub_w
 
+    """
+    Finally, get our sub img with our coordinates now that they are ready, and return.
+    """
     sub = img[row:row+sub_img_h, col:col+sub_img_w]
     return sub
 
 def add_weighted_overlay(img, overlay, alpha):
     """
-    Given an image of shape (h, w) and an overlay of shape (h, w, 3) to overlay on top of it,
-        as well as a transparency weight of our overlay - alpha (percentage it takes up)
-    We overlay them and return the combined image.
-    Since they are different dimension (image - 2D, overlay - 3D)
+    Arguments:
+        img: np array of shape (h, w), our original image
+        overlay: np array of shape (h, w, 3), a BGR colored overlay to put on top of our original image.
+        alpha: transparency weight of our overlay, percentage b/w 0 and 1, with 0 being no overlay and 1 being only overlay.
+
+    Returns:
+        A new image, created by converting our img from greyscale to BGR, so that it goes from shape (h, w) to (h, w, 1) to (h, w, 3),
+            the same shape as our overlay argument.
+        The overlay is then added onto the new (h, w, 3) img argument, with the alpha passed into opencv's addWeighted function.
+        The result of this operation is returned, a combined image created by adding the overlay argument, weighted by alpha.
     """
     img_h = img.shape[0]
     img_w = img.shape[1]
 
-    #Use our handy existing cv2 method to convert our gray 2d image into a 3d bgr one
-    #Note: Since it is greyscale, it doesn't matter if we go to RGB OR BGR
+    """
+    Use our handy existing cv2 method to convert our gray 2d image into a 3d bgr one
+    Note: Since it is greyscale, it doesn't matter if we go to RGB OR BGR
+    """
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
-    #Set our overlay to np.uint8 if it isn't already.
+    """
+    Set our overlay to np.uint8 if it isn't already, to have matching dtypes
+    """
     overlay = overlay.astype(np.uint8)
 
-    #Add our overlay to the img
+    """
+    Add our overlay to the img
+    """
     return cv2.addWeighted(overlay, alpha, img, 1-alpha, 0, img)
 
 def pad_img(img_h, img_w, sub_h, sub_w, img):
     """
-    Pads our image with enough zeros so that we never have the problem of partials
-        on the far edges.
+    Arguments:
+        img_h, img_w: The h and w of our img argument.
+        sub_h, sub_w: The size of our individual subsections.
+        img: a np array of shape (img_h, img_w, ...) where img_h % sub_h may not == 0, and img_w % sub_w may not == 0, our original main image.
+
+    Returns:
+        Computes the necessary dimensions to pad to our img_h and img_w of our img, so that
+            img_h % sub_h == 0 and img_w % sub_w.
+        Then pads our original image to match these dimensions, by adding zeros.
+        Returns this padded image.
+
+        This is very useful for remaining functions in generate_overlay, where having an image that satisfies the img_h % sub_h == 0 and img_w % sub_w == 0
+            is very helpful.
+    """
+    """
+    Computes necessary new image dimensions
     """
     new_img_h = img_h - img_h % sub_h + sub_h
     new_img_w = img_w - img_w % sub_w + sub_w
 
+    """
+    Then pads our image with zeros to match these new dims, and returns
+    """
     img = np.lib.pad(img, ((0, new_img_h-img_h), (0, new_img_w-img_w)), 'constant', constant_values = 0) 
     return img
 
 
 def clear_dir(dir):
+    """
+    Arguments:
+        dir: A string directory to clear of all files and sub-directories.
+
+    Returns:
+        Clears/Deletes all files and sub-directories in the given dir, using python's os methods
+        Has no return value.
+    """
     for fname in os.listdir(dir):
         fpath = os.path.join(dir, fname)
         try: 
@@ -111,39 +189,47 @@ def clear_dir(dir):
 
 def get_relative_factor(img_h, factor, threshold=3000, default_factor=8):
     """
-    This will use the equation x/r = threshold,
-        and return an integer representing the new factor to use.
+    Arguments:
+        img_h: Height of our image, used to compute our factor.
+        factor: Usually not used in execution, however supplied for possibilities of modifications in the future, where a dynamic factor is not always viable/desirable.
+        threshold: The default max size you expect the img_h argument to be in the result divided image.
+        default_factor: The default factor to use, will be returned at the end if this is smaller than our computed value. Defaults to 8
 
-    This is to tackle the problem of having really small images (e.g. 512x369) along with really big images (30kx67k),  
-        since if we have such a small image our methods tend to mess up or be completely unnecessary, we can often
-        have the entire thing in memory and save it entirely without need of splitting into subsections or resizing before saving(i.e. set r = 1)
+    Returns:
+        This will use the equation x/r = threshold,
+            and return an integer representing the new factor to use.
 
-    Using this equation, we can dynamically change the factor for each image, depending on the dimensions.
-        Example with threshold = 3000:
-            (512, 369), 
-                512/r = 3000
-                512 = 3000r
-                512/3000 = r
-                ~0.1666 = r
-                In this case we'd set r = 1, since we can't have < 1
-                We don't bother with the other dimension
-            (30835, 65686)
-                30835/3000 = r
-                10.27 = r
-                So we'd set r = 8, our default max
-            (16800, 33600)
-                16800/3000 = r
-                5.6 = r
-                (taking ceil)
-                6 = r
-                So in this case we'd return r = 6 as our factor.
+        This is to tackle the problem of having really small images (e.g. 512x369) along with really big images (30kx67k),  
+            since if we have such a small image our methods tend to mess up or be completely unnecessary, we can often
+            have the entire thing in memory and save it entirely without need of splitting into subsections or resizing before saving(i.e. set r = 1)
 
-    In summary, it uses the result of the equation to determine if it should choose a value less than the default factor.
-        Using this, our big images will still be above the range enough to not bother it, but our small images will get the r=1 that they need.
+        Using this equation, we can dynamically change the factor for each image, depending on the dimensions.
+            Examples with threshold = 3000:
+                (512, 369), 
+                    512/r = 3000
+                    512 = 3000r
+                    512/3000 = r
+                    ~0.1666 = r
+                    In this case we'd set r = 1, since we can't have < 1
+                    We don't bother with the other dimension
+                (30835, 65686)
+                    30835/3000 = r
+                    10.27 = r
+                    So we'd set r = 8, our default max
+                (16800, 33600)
+                    16800/3000 = r
+                    5.6 = r
+                    (taking ceil)
+                    6 = r
+                    So in this case we'd return r = 6 as our factor.
 
-    r is limited to the range [1, default_factor]
+        In summary, it uses the result of the equation to determine if it should choose a value less than the default factor.
+            Using this, our really big images will still be above the range enough to not bother it, but our really small images will get the r=1 that they need.
+
+        r is limited to the range [1, default_factor]
+
+        We return this result r, the factor.
     """
-
     #Get our factor
     factor = img_h/float(threshold)
 
@@ -156,6 +242,10 @@ def get_relative_factor(img_h, factor, threshold=3000, default_factor=8):
     return factor
 
 def disp_img_fullscreen(img, name="test"):
+    """
+    Displays the given image full screen. 
+    Usually used for debugging, uses opencv's display methods.
+    """
     cv2.namedWindow(name, cv2.WND_PROP_FULLSCREEN)          
     cv2.setWindowProperty(name, cv2.WND_PROP_FULLSCREEN, 1)
     cv2.imshow(name,img)
