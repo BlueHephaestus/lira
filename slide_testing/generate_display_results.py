@@ -8,7 +8,7 @@ Further documentation can be found in each method.
 import os, sys, h5py, pickle, cv2
 
 import img_handler
-from img_handler import get_relative_factor
+from img_handler import get_relative_factor, clear_dir
 
 sys.path.append(os.path.expanduser("~/programming/machine_learning/tuberculosis_project/slide_labeller/"))
 
@@ -32,6 +32,11 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
 
         Has no return values.
     """
+
+    """
+    Clear our results directory of any pre-existing images/data
+    """
+    clear_dir(results_dir)
 
     """
     Open our image and prediction files for iteration
