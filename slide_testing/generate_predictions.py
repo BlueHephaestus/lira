@@ -190,7 +190,7 @@ def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "..
                                 then normalize the data with our nn_classifiers mean and stddev.
                             Note: This does get any extra samples, even if len(subs) % mb_n != 0
                             """
-                            batch = whole_normalize_data(subs[sub_i:sub_i+mb_n], nn_classifer.mean, nn_classifier.stddev)
+                            batch = whole_normalize_data(subs[sub_i:sub_i+mb_n], nn_classifier.mean, nn_classifier.stddev)
 
                             """
                             Then, we classify the new batch of examples and store in our temporary overlay_predictions array
