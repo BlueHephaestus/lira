@@ -20,8 +20,8 @@ class StaticConfig(object):
         """
         Get our absolute filepaths for model and metadata from our filename and source filepath
         """
-        model_dir = "%s%s%s.h5" % (model_dir, os.sep, model)
         metadata_dir = "%s%s%s_metadata.pkl" % (model_dir, os.sep, model)
+        model_dir = "%s%s%s.h5" % (model_dir, os.sep, model)
 
         """
         Load metadata from .pkl file
