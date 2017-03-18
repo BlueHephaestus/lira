@@ -16,18 +16,23 @@ Commands for using LIRA-Live in an interactive session:
     1 = no transparency, rectangles/predictions completely opaque and lesions not visible.
     If you change this, the program will remember it, even if you quit the session. Default is 0.33 .
 
-  4. Number keys 1/2/3/.../N
+  4. "Zoom Percentage" Slider:
+    Percentages are 20%, 100%, and 200%
+    Changes the zoom just like a web browser.
+    Same behavior as previous slider.
+
+  5. Number keys 1/2/3/.../N
     Notated on the right of the window, you can see the numerical keys for classifications. 
     Pressing one of these will change the classification of the currently selected subsection(s).
 
-  5. Refresh Session button / R key
+  6. Refresh Session button / R key
     This button will refresh the displayed image, to show changes in classifications or parameters, such as the Alpha transparency.
     The changes made to either classifications or parameters do happen regardless of if refresh is pressed, it is merely a tool to show the user updates.
 
-  6. Next Image button / N key
+  7. Next Image button / N key
     This button will go to the next image, saving the new predictions and parameters.
 
-  7. Quit Session / Q key
+  8. Quit Session / Q key
     This button will end the session, saving the new predictions and parameters for all images up to, BUT NOT INCLUDING, the currently open image.
     This is true for every image but the very last one, at which point it will include the currently open image because there are no others.
 
