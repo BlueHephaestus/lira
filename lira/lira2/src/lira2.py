@@ -32,11 +32,12 @@ from results_grapher import graph_results
 import keras_test_callback
 from keras_test_callback import TestCallback
 
-def train_model(model_title, model_dir):
+def train_model(model_title, model_dir="../saved_networks", archive_dir="../data/live_samples.h5"):
     """
     Arguments:
         model_title: String to be converted to file name for saving our model
         model_dir: Filepath to store our model
+        archive_dir: Filepath and filename for h5 file to load our samples from, for training
 
     Returns:
         After setting up and training our model on `run_count` independent training iterations, it then
@@ -51,7 +52,6 @@ def train_model(model_title, model_dir):
     p_training = 0.7
     p_validation = 0.15
     p_test = 0.15
-    archive_dir = "../data/live_samples.h5"
     input_dims = [80,145]
     output_dims = 7
 
@@ -68,7 +68,7 @@ def train_model(model_title, model_dir):
     """
     Amount of times we train our model to remove possible variance in the results
     """
-    run_count = 3
+    run_count = 1
 
     """
     Output Parameters
@@ -96,12 +96,6 @@ def train_model(model_title, model_dir):
         Get our dataset object for easy reference of data subsets (training, validation, and test) from our archive_dir.
         """
         dataset, whole_normalization_data = load_dataset_obj(p_training, p_validation, p_test, archive_dir, output_dims, whole_data_normalization=True)
-
-        """
-        Temporary
-        """
-        dataset.training.x = dataset.training.x[:1000]
-        dataset.training.y = dataset.training.y[:1000]
 
         """
         Get properly formatted input dimensions for our convolutional layer, so that we go from [h, w] to [-1, h, w, 1]
