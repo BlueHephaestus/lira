@@ -48,7 +48,8 @@ def unison_shuffle(a, b):
     np.random.shuffle(b)
 
 def whole_normalize_data(data, mean, std):
-    data[0] = data[0]*std + mean
+    #data[0] = data[0]*std + mean
+    data[0] = (data[0]-mean)/std
     return data
 
 def get_data_subsets(archive_dir, p_training=0.8, p_validation=0.1, p_test=0.1):
