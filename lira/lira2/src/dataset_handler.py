@@ -48,7 +48,18 @@ def unison_shuffle(a, b):
     np.random.shuffle(b)
 
 def whole_normalize_data(data, mean, std):
-    #data[0] = data[0]*std + mean
+    """
+    Whole normalize our data to the standard normal distribution, via
+        x-mean
+        ------
+         std
+    Which we get from basic gaussian distribution statistics.
+    If you don't want to normalize, just set mean = 0 and std = 1, which results in 
+        x - 0
+    y = -----
+          1
+    y = x
+    """
     data[0] = (data[0]-mean)/std
     return data
 
