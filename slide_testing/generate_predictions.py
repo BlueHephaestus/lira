@@ -14,13 +14,14 @@ sys.path.append(os.path.expanduser("~/programming/machine_learning/markov_random
 import mrf_denoiser
 
 def whole_normalize_data(data, mean, std):
-    return data * std + mean
+    #return data * std + mean
+    return (data-mean)/std
 
-def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl"):
+def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl"):
     """
     Arguments:
-        nn: String containing the filename of where our model is stored, to be used for classifying images and obtaining predictions
-        nn_dir: Filepath of where the code for the model is stored, and where it was trained. Will be used with `nn` to obtain where the model is now located 
+        model: String containing the filename of where our model is stored, to be used for classifying images and obtaining predictions
+        model_dir: Filepath of where the code for the model is stored, and where it was trained. Will be used with `model` to obtain where the model is now located 
         img_archive_dir: a string filepath of the .h5 file where the images / greyscales are stored.
         predictions_archive_dir: a string filepath of the .h5 file where the model's predictions on the images/greyscales will be stored.
         classification_metadata_dir: a string filepath of the .pkl file where the model's classification strings and color key for each classification will be stored.
@@ -28,7 +29,7 @@ def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "..
     Returns:
         Goes through each image, divides them into smaller subsections so as not to classify the entire image at once,
         Then goes through the subsections of our image, and divides into our sub_hxsub_w subsections, 
-        then classifies each of these using our model stored in the nn and nn_dir filepaths.
+        then classifies each of these using our model stored in the model and model_dir filepaths.
         Then, it stores the predictions into a matrix of integers, or concatenates them onto the pre-existing predictions from previous subsections.
         Once completed with all subsections, these predictions are combined to get one 2d matrix of predictions, which is written to `predictions_archive_dir`.
 
@@ -87,7 +88,7 @@ def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "..
     """
     Open our saved model
     """
-    nn_classifier = StaticConfig(nn, nn_dir)
+    classifier = StaticConfig(model, model_dir)
 
     """
     We open our image file, where each image is stored as a dataset with a key of it's index (e.g. '0', '1', ...)
@@ -186,16 +187,15 @@ def generate_predictions(nn, nn_dir = "../lira/lira1/src", img_archive_dir = "..
                         for sub_i in xrange(0, len(subs), mb_n):
 
                             """
-                            Get our batch by referencing the right location in our subs with sub_i and mb_n,
-                                then normalize the data with our nn_classifiers mean and stddev.
+                            Get our batch by referencing the right location in our subs with sub_i and mb_n
                             Note: This does get any extra samples, even if len(subs) % mb_n != 0
                             """
-                            batch = whole_normalize_data(subs[sub_i:sub_i+mb_n], nn_classifier.mean, nn_classifier.stddev)
+                            batch = subs[sub_i:sub_i+mb_n]
 
                             """
                             Then, we classify the new batch of examples and store in our temporary overlay_predictions array
                             """
-                            overlay_predictions[overlay_prediction_i:overlay_prediction_i+batch.shape[0]] = nn_classifier.classify(batch)
+                            overlay_predictions[overlay_prediction_i:overlay_prediction_i+batch.shape[0]] = classifier.classify(batch)
                             overlay_prediction_i += batch.shape[0]
                             
                         """
