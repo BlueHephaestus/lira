@@ -62,7 +62,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     mini_batch_size = 96
     loss = "binary_crossentropy"
     optimizer = Adam(1e-4)
-    dropout_p = 0.0
+    dropout_p = 0.5
     regularization_rate = 0.000016
 
     """
