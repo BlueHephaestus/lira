@@ -58,7 +58,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     """
     Model Hyper Parameters
     """
-    epochs = 10
+    epochs = 100
     mini_batch_size = 96
     loss = "binary_crossentropy"
     optimizer = Adam(1e-4)
@@ -76,7 +76,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     output_title = model_title
     output_dir = model_dir
     output_filename = output_title.lower().replace(" ", "_")
-    graph_output = False
+    graph_output = True
 
     """
     We train our model independently `run_count` times, 
@@ -95,7 +95,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         """
         Get our dataset object for easy reference of data subsets (training, validation, and test) from our archive_dir.
         """
-        dataset, whole_normalization_data = load_dataset_obj(p_training, p_validation, p_test, archive_dir, output_dims, whole_data_normalization=True)
+        dataset, whole_normalization_data = load_dataset_obj(p_training, p_validation, p_test, archive_dir, output_dims, whole_data_normalization=False)
 
         """
         Get properly formatted input dimensions for our convolutional layer, so that we go from [h, w] to [-1, h, w, 1]
@@ -161,7 +161,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         We then save the results to a pkl file of format "`output_filename`_results.pkl"
     """
     print "Saving Results..."
-    results_filename = "%s_results.pkl" % output_filename
+    results_filename = "%s%s%s_results.pkl" % (model_dir, os.sep, output_filename)
     with open(results_filename, "wb") as f:
         pickle.dump((results), f, protocol=-1)
 
