@@ -13,10 +13,6 @@ sys.path.append(os.path.expanduser("~/programming/machine_learning/markov_random
 
 import mrf_denoiser
 
-def whole_normalize_data(data, mean, std):
-    #return data * std + mean
-    return (data-mean)/std
-
 def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl"):
     """
     Arguments:
