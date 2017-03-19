@@ -29,7 +29,7 @@ def main(sub_h=80,
          predictions_archive_dir="../lira/lira1/data/predictions.h5",
          classification_metadata_dir="../slide_testing/classification_metadata.pkl",
          interactive_session_metadata_dir="interactive_session_metadata.pkl",
-         live_archive_dir="../lira/lira1/data/samples/live_samples.h5",
+         live_archive_dir="../lira/lira2/data/live_samples.h5",
          dual_monitor=True):
 
     """
