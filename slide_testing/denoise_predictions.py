@@ -15,9 +15,9 @@ def denoise_predictions(src, class_n, epochs):
         Each loop, reset our destination image, which will contain the new denoised image.
         """
         dst = np.zeros_like(src)
+        sys.stdout.write("\rDenoising Image... %i%%"%(int(float(epoch)/epochs*100)))
+        sys.stdout.flush()
         for i in range(h):
-            sys.stdout.write("\rDenoising Image... %i%%"%(int(float(i)/h*100)))
-            sys.stdout.flush()
             for j in range(w):
 
                 """
