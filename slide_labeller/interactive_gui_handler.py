@@ -15,6 +15,25 @@ class InteractiveGUI(object):
     """
     def __init__(self, classifications, colors, sub_h, sub_w, alpha, zoom, dual_monitor):
         """
+        Arguments:
+            classifications: List of strings mapping our class indices to string values, 
+                e.g. ["Apple", "Orange", "Banana"...] for 0 -> "Apple", 1 -> "Orange", 2 -> "Banana"
+            colors: List of tuples of 3 elements, detailing BGR (B, G, R) colors for each of our 
+                class indices / classifications, in the same manner that classifications does.
+                -We have to do BGR because that is how OpenCV displays them.
+            sub_h, sub_w: The size of our individual subsections in our image.
+            alpha: Number between 0 and 1, amount of transparency on our overlayed predictions. 
+                0 = full transparency of overlay, 
+                1 = no transparency of overlay
+            zoom: Value to set our zoom slider to.
+            dual_monitor: Boolean for if we are using two monitors or not. 
+                Shrinks the width of our display if we are, and leaves normal if not.
+
+        Returns:
+            Initialises all of our necessary values and methods for our interactive GUI. 
+                There is too much to include here, view individual documentation below.
+        """
+        """
         Our main image, and main predictions that we are currently working with. 
         """
         self.np_img = np.array([-1])
@@ -74,19 +93,24 @@ class InteractiveGUI(object):
 
     def get_relative_coordinates(self, event):
         """
-        Given an event with an x and y coordinate, return the coordinates relative to their parent widget/canvas.
+        Arguments:
+            event: A tkinter event
+        Returns:
+            (x, y): the x and y coordinates of our event on our parent canvas
         """
         canvas = event.widget
         return canvas.canvasx(event.x), canvas.canvasy(event.y)
 
     def get_rectangle_coordinates(self, x1, y1, x2, y2):
         """
-        Given two sets of coordinates defining a rectangle between them,
-            return two sets of coordinates for the top-left and bottom-right corner of the rectangle,
-            respectively
+        Arguments:
+            (x1, y1), (x2, y2): Two sets of coordinates defining a rectangle between the two sets.
+        
+        Returns:
+            Two new sets of coordinates for the top-left and bottom-right corner of the rectangle defined by the input coordinates.
 
-        We do this by simply handling each possible orientation of the points relative to each other,
-            and returning the correct combination of the points
+            We do this by simply handling each possible orientation of the points relative to each other,
+                and returning the correct combination of the points.
         """
         if x1 <= x2 and y1 <= y2:
             """
@@ -121,10 +145,13 @@ class InteractiveGUI(object):
 
     def get_outline_rectangle_coordinates(self, rect_x1, rect_y1, rect_x2, rect_y2, sub_h, sub_w):
         """
-        Given two pairs of coordinates for the top left and bottom right corners of a rectangle,
-            as well as our subsection height and width,
-        We return two new pairs of coordinates for a new rectangle, 
-            which outlines all the subsections the given rectangle encompasses.
+        Arguments:
+            rect_x1, rect_y1, rect_x2, rect_y2: Two pairs of coordinates for the top left and bottom right corners of a rectangle
+            sub_h, sub_w: The size of our individual subsections in our image.
+
+        Returns:
+            Two new pairs of coordinates for a new rectangle, 
+                which outlines all the subsections the original rectangle touches.
 
         Luckily, this is easily done with a simple modular arithmetic formula I made up.
         """
@@ -140,12 +167,15 @@ class InteractiveGUI(object):
         Handler for when the left click is pressed
         """
         """
-        This function / event listener starts our bulk select rectangle for the user to select multiple classifications at once.
+        Arguments:
+            event: The event that triggered this function.
 
-        We clear our previously made bulk select outline rectangle, and then:
-
-        Since we've just pressed down the button, we store the relative coordinates into our class variables for future events 
-            to use in computing where to display the rectangle.
+        Returns:
+            Deletes the outline rectangle on our canvas if it exists,
+            Starts our bulk select rectangle for the user to select multiple classifications at once,
+                by setting the initial x and y coordinates of our bulk select rectangle.
+:           Since we've just pressed down the button, we store the relative coordinates into our class variables for future events 
+                to use in computing where to display the rectangle.
         """
         print "Left Mouse clicked, opening bulk select rectangle..."
         canvas = event.widget 
@@ -157,7 +187,12 @@ class InteractiveGUI(object):
         Handler for when the left click is moved while pressed
         """
         """
-        First, we get the relative coordinates given our event.
+        Arguments:
+            event: The event that triggered this function.
+
+        Returns:
+            Gets the relative coordinates given our event,
+            Then updates our bulk selection rectangle to our current x and y coordinates.
         """
         rel_x, rel_y = self.get_relative_coordinates(event)
 
@@ -179,7 +214,15 @@ class InteractiveGUI(object):
         Handler for when the left click is released
         """
         """
-        We get the relative coordinates given our event.
+        Arguments:
+            event: The event that triggered this function.
+
+        Returns:
+            Gets the relative coordinates given our event,
+            Then gets our new outline rectangle coordinates from our current rectangle coordinates,
+            Draws our full outline rectangle,
+            And gets the appropriate prediction index coordinates
+
         """
         print "Left Mouse released, selecting subsections inside bulk select rectangle..."
         canvas = event.widget
@@ -222,7 +265,11 @@ class InteractiveGUI(object):
         Handler for when the right click is pressed
         """
         """
-        We set a marker for us to use when moving the mouse later.
+        Arguments:
+            event: The event that triggered this function.
+
+        Returns:
+            We set a marker for us to use when moving the mouse later.
         """
         canvas = event.widget
         canvas.scan_mark(event.x, event.y)
@@ -232,7 +279,11 @@ class InteractiveGUI(object):
         Handler for when the right click is moved while pressed
         """
         """
-        We drag the screen towards our mouse.
+        Arguments:
+            event: The event that triggered this function.
+
+        Returns:
+            We drag the screen towards our mouse.
         """
         canvas = event.widget
         canvas.scan_dragto(event.x, event.y, gain=1)
@@ -240,11 +291,18 @@ class InteractiveGUI(object):
     def key_press(self, event):
         """
         Handler for when a key is pressed. 
-        Depending on the key pressed, we may either:
-            1. classify the currently bulk-selected section if we have selected a classification keyboard shortcut,
-            2. call another event handler if we call a command shortcut, or
-            3. we may do nothing if we have not selected a classification keyboard shortcut
+        """
+        """
+        Arguments:
+            event: The event that triggered this function.
 
+        Returns:
+            Depending on the key pressed, we may either:
+                1. Classify the currently bulk-selected section if we have selected a classification keyboard shortcut,
+                2. Call another event handler if we call a command shortcut, or
+                3. We may do nothing if we have not selected a classification keyboard shortcut
+        """
+        """
         So we first check if the key pressed is one of our classification keyboard shortcut keys
             by checking if it is a number key within the range of 1-len(classifications) (inclusive)
         """
@@ -304,6 +362,14 @@ class InteractiveGUI(object):
         """
         Handler for when the REFRESH IMAGE button is pressed
         """
+        """
+        Arguments:
+            (none)
+
+        Returns:
+            We handle our flags and metadata values for when our refresh button is pressed.
+        """
+
         print "Refreshing / Reloading session..."
 
         """
@@ -321,6 +387,13 @@ class InteractiveGUI(object):
     def next_img_button_press(self):
         """
         Handler for when the NEXT IMAGE button is pressed
+        """
+        """
+        Arguments:
+            (none)
+
+        Returns:
+            We handle our flags and metadata values for when our next button is pressed.
         """
         print "Going to next image..."
 
@@ -340,6 +413,13 @@ class InteractiveGUI(object):
         """
         Handler for when the QUIT SESSION button is pressed
         """
+        """
+        Arguments:
+            (none)
+
+        Returns:
+            We handle our flags and metadata values for when our quit button is pressed.
+        """
         print "Ending session..."
 
         """
@@ -357,8 +437,17 @@ class InteractiveGUI(object):
     @staticmethod
     def get_relative_canvas_dimensions(screen_width, screen_height, main_canvas_percentage, tool_canvas_percentage, screen_width_padding_percentage, screen_height_padding_percentage, relative_dim):
         """
-        Given our percentage for main canvas's size and tool canvas's size, as well as the padding for any canvas and the dimension to divide into portions,
-            we return the height and width dimensions for both main and tool canvas.
+        Arguments:
+            screen_width, screen_height: The width and height of our screen
+            main_canvas_percentage, tool_canvas_percentage: The percentages to give to each of our canvases. 
+                Should both be >= 0 and <= 1 and sum to <= 1, if you want to retain sanity.
+            screen_width_padding_percentage, screen_height_padding_percentage: Percentage of screen_width / screen_height to pad in each direction.
+            relative_dim: "w" or "h", Dimension to split up into portions so we can fit our main_canvas and tool_canvas in it. 
+                e.g. if "h", we stack them on top of each other, if "w", we put them side-to-side
+
+        Returns:
+            We pad our screen w and h the necessary padding amount,
+            Get the height and widths of our canvases wrt our relative dim, and return these.
         """
         """
         First, pad both the necessary screen padding amount.
@@ -373,7 +462,7 @@ class InteractiveGUI(object):
         tool_canvas_percentage = 1-tool_canvas_percentage
 
         """
-        Then we give each section it's corresponding percentage of the padded screen width.
+        Then we give each section it's corresponding percentage of the padded relative dim 
         """
         if relative_dim == "w":
             """
@@ -407,6 +496,14 @@ class InteractiveGUI(object):
         return main_canvas_width, main_canvas_height, tool_canvas_width, tool_canvas_height
 
     def start_interactive_session(self):
+        """
+        Arguments:
+            (none)
+
+        Returns:
+            Starts all our window objects and initialises all necessary values and methods for our interactive GUI.
+                There is too much to include here, view individual documentation below.
+        """
         """
         Check if we have an image to display and predictions to update, otherwise exit.
         """

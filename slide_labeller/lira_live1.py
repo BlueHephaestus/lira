@@ -3,6 +3,7 @@ This file is our main file for LIRA-Live,
     where all of our child classes/functions get referenced and used for the entire process 
     of loading, displaying, updating, saving, and retraining.
 
+Further documentation can be found below throughout the file.
 -Blake Edwards / Dark Element
 """
 
@@ -33,16 +34,29 @@ def main(sub_h=80,
          dual_monitor=True):
 
     """
-    Our main execution for LIRA-Live.
+    Arguments:
+        sub_h, sub_w: The size of our individual subsections in our images.
+        img_archive_dir: Filepath of our greyscale images. Will have predictions overlaid for Interactive GUI.
+        predictions_archive_dir: Filepath of our predictions. Will be overlaid on greyscales for Interactive GUI.
+        classification_metadata_dir: Filepath of our classification metadata. Will be used for handling our predictions / classifications properly.
+        interactive_session_metadata_dir: Filepath of our interactive session metadata. 
+            Will be used for loading/storing user-modifiable parameters in Interactive GUI.
+        live_archive_dir: Filepath of our live samples archive. Will be used to store the samples obtained through our interactive session. Updated completely at the end of each session.
+        dual_monitor: Boolean for if we are using two monitors or not. 
+            Shrinks the width of our display if we are, and leaves normal if not.
 
-    After opening our archives,
-    1. We loop through each image index, with which we can get the entire image and the assorted predictions.
-    2. As we loop through our images, we don't yet know the number of subsections (sub_n) each has. 
-    3. However, we can use get_relative_factor to get our division factor, since it is the same method we used
-        when we generated the predictions and overlay. 
-    4. Once we do that, we can loop through the number of subsections we should have, so we only go to the next image in the archive once we are done with the current one.
-    5. As we loop through with our img_i and sub_i, we can then get our next overlay subsection with subsection_handler.py 's get_next_overlay_subsection(), 
-        which we pass all the necessary values
+    Returns:
+        This is our main execution for LIRA-Live. Here, we handle all our sub-programs and scripts for LIRA-Live.
+        After opening our archives,
+        1. We loop through each image index, with which we can get the entire image and the assorted predictions.
+        2. As we loop through our images, we don't yet know the number of subsections (sub_n) each has. 
+        3. However, we can use get_relative_factor to get our division factor, since it is the same method we used
+            when we generated the predictions and overlay. 
+        4. Once we do that, we can loop through the number of subsections we should have, so we only go to the next image in the archive once we are done with the current one.
+        5. As we loop through with our img_i and sub_i, we can then get our next overlay subsection with subsection_handler.py 's get_next_overlay_subsection(), 
+            which we pass all the necessary values
+
+        There is too much to include here, view individual further documentation below.
     """
 
     """

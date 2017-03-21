@@ -15,8 +15,25 @@ from img_handler import *
 
 def get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=1/3., sub_h=80, sub_w=145):
     """
-    Given our image index and subsection index, as well as our image and predictions and metadata, 
-        we return the corresponding subsection from the corresponding image, with the overlay overlaid with `alpha` transparency.
+    Arguments:
+        img_i: Index of our img argument in the greyscales archive
+        sub_i: Index of our subsection in the img
+        factor: Factor to divide our img by
+        img: np array of shape (h, w, ...). To reference for obtaining a greyscale subsection for generating our overlay subsection with.
+        img_predictions: np array of shape (h//sub_h, w//sub_w). To reference for obtaining a predictions subsection for generating our overlay subsection with.
+        classifications: List of strings mapping our class indices to string values, 
+            e.g. ["Apple", "Orange", "Banana"...] for 0 -> "Apple", 1 -> "Orange", 2 -> "Banana"
+        colors: List of tuples of 3 elements, detailing BGR (B, G, R) colors for each of our 
+            class indices / classifications, in the same manner that classifications does.
+            -We have to do BGR because that is how OpenCV displays them.
+        alpha: Number between 0 and 1, amount of transparency on our overlayed predictions. 
+            0 = full transparency of overlay, 
+            1 = no transparency of overlay
+        sub_h, sub_w: The size of our individual subsections in our image.
+
+    Returns:
+        Returns an overlay subsection at the location specified by our factor and sub_i, 
+            with the greyscale having colored prediction rectangles of transparency alpha overlaid on top of them.
     """
     """
     Using our division factor, get the row_i and col_i.
@@ -53,8 +70,13 @@ def get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, clas
 
 def get_prediction_subsection(sub_i, factor, img_predictions):
     """
-    Given the subsection index, the division factor, and predictions for an image
-        we return the predictions from the correct location in the image.
+    Arguments:
+        sub_i: Index of our subsection in the img
+        factor: Factor to divide our img by
+        img_predictions: np array of shape (h//sub_h, w//sub_w). To reference for obtaining a predictions subsection for generating our overlay subsection with.
+
+    Returns:
+        Gets subsection of predictions from the location in img_predictions specified by sub_i and factor. Returns this.
     """
     row_i = sub_i//factor
     col_i = sub_i % factor
@@ -63,9 +85,17 @@ def get_prediction_subsection(sub_i, factor, img_predictions):
 
 def update_prediction_subsection(sub_i, factor, img_predictions, prediction_sub):
     """
-    Given the subsection index, the division factor, predictions for an image, and a subsection of predictions
-        we update the subsection of predictions inside the main predictions for the entire image, 
-        using the same technique (albeit simplified) from inside get_next_subsection()
+    Arguments:
+        sub_i: Index of our subsection in the img
+        factor: Factor to divide our img by
+        img_predictions: np array of shape (h//sub_h, w//sub_w). To reference for obtaining a predictions subsection for generating our overlay subsection with.
+        prediction_sub: Subsection of predictions, usually obtained from get_prediction_subsection. Size may vary depending on factor.
+
+    Returns:
+        img_predictions, with the subsection specified by sub_i and factor replaced with prediction_sub.
+        Use this for updating only a subsection of our big img_predictions matrix with the new, updated subsection.
+
+        Note: We use the same technique (albeit simplified) from inside get_next_subsection()
     """
     row_i = sub_i//factor
     col_i = sub_i % factor
@@ -84,8 +114,13 @@ def update_prediction_subsection(sub_i, factor, img_predictions, prediction_sub)
     
 def list_find(l, e):
     """
-    Given a list l find index of element e, return -1 if not found.
-        This is just a small, super helpful function for all_predictions_empty to use.
+    Arguments:
+        l: a list
+        e: an element to be searched for.
+
+    Returns:
+        The index of the element e in the list, if found,
+        And -1 if not found.
     """
     for i in range(len(l)):
         if e == l[i]:
@@ -94,8 +129,12 @@ def list_find(l, e):
 
 def get_sub_max_n(img_hf):
     """
-    Loop through all of our images to get the max number of subsections for any given image, 
-        and return this number.
+    Arguments:
+        img_hf: A dataset to open and iterate through the images in it.
+
+    Returns:
+        Loops through all of our images in img_hf to get the max number of subsections for any given image, 
+            and returns this number.
     """
     img_n = len(img_hf.keys())
     sub_max_n = 0
@@ -109,10 +148,16 @@ def get_sub_max_n(img_hf):
 
 def all_predictions_empty(prediction_sub, classifications):
     """
-    Given our predictions subsection, and our classifications,
-        we check if all of our predictions are the "Empty Slide" classification.
-        If so, we return True.
-        If not, we return False.
+    Arguments:
+        prediction_sub: A subsection of predictions, however could be the entire predictions array. A matrix/np array of integers for classifications/predictions.
+        classifications: List of strings mapping our class indices to string values, 
+            e.g. ["Apple", "Orange", "Banana"...] for 0 -> "Apple", 1 -> "Orange", 2 -> "Banana"
+            Where one of them is "Empty Slide", our empty classification.
+
+    Returns:
+        We check if all of our predictions are the "Empty Slide" classification.
+            If so, we return True.
+            If not, we return False.
     """
     """
     We first find the prediction index to check for, by looking for what classification in our list is the "Empty Slide" classification.
@@ -128,9 +173,14 @@ def all_predictions_empty(prediction_sub, classifications):
 
 def get_extra_empty_samples(classification_n, empty_classification_n, classifications):
     """
-    Given the total number of new classifications `classifications_n`,
-        and the total number of new "Empty Slide" classifications `empty_classifications_n`,
-    Compute the number of extra empty samples to subsequently return.
+    Arguments:
+        classification_n: Total number of classifications we have.
+        empty_classification_n: Total number of empty classifications we have.
+        classifications: List of strings mapping our class indices to string values, 
+            e.g. ["Apple", "Orange", "Banana"...] for 0 -> "Apple", 1 -> "Orange", 2 -> "Banana"
+            Where one of them is "Empty Slide", our empty classification.
+    Returns:
+        Using our formula detailed below, we return the number of extra empty samples to subsequently return.
     """
     """
     We compute the number of extra empty samples using the formula:

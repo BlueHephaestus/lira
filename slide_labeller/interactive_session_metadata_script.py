@@ -1,5 +1,5 @@
 """
-Quick script to modify our .pkl file for our interactive sessions
+Quick script to modify our .pkl file for our interactive sessions, if we need to.
 """
 import pickle
 interactive_session_metadata_dir="interactive_session_metadata.pkl"
