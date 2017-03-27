@@ -93,7 +93,7 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
                     """
                     Get our overlay subsection
                     """
-                    overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=0.0, sub_h=80, sub_w=145)
+                    overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=0.33, sub_h=80, sub_w=145)
 
                     """
                     Resize the overlay subsection with our resize_factor
