@@ -9,9 +9,7 @@ from static_config import StaticConfig
 import img_handler
 from img_handler import *
 
-sys.path.append(os.path.expanduser("~/programming/machine_learning/markov_random_fields/MRF/"))
-
-import mrf_denoiser
+import denoise_predictions
 
 def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl"):
     """
@@ -226,7 +224,7 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
                     and use them with our denoisers.
                 We then denoise our predictions using Markov Random Fields.
                 """
-                predictions = mrf_denoiser.denoise(predictions, len(classifications))
+                predictions = denoise_predictions.denoise_predictions(predictions, len(classifications), 2)
 
                 """
                 Then we store it in our dataset
