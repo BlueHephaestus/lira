@@ -42,6 +42,11 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
     mb_n = 100
 
     """
+    Epochs, the number of iterations to run our denoising algorithm on each full predictions matrix                                                                                                                                      
+    """
+    epochs = 2
+
+    """
     Our factors to resize our image by, or divide it into subsections.
 
     Set this to None to have a dynamic divide factor.
@@ -224,7 +229,7 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
                     and use them with our denoisers.
                 We then denoise our predictions using Markov Random Fields.
                 """
-                predictions = denoise_predictions.denoise_predictions(predictions, len(classifications), 2)
+                predictions = denoise_predictions.denoise_predictions(predictions, len(classifications), epochs)
 
                 """
                 Then we store it in our dataset
