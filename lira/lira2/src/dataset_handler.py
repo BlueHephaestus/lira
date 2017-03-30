@@ -8,26 +8,7 @@ As many of the methods vary in their functionality, they each have their own doc
 import sys, os, gzip, cPickle, json
 import h5py
 import numpy as np
-
-def get_one_hot_m(v, width):
-    """
-    Arguments: 
-        v: Vector of indices to go through when creating our one-hot matrix
-        width: The width to make each one-hot vector in our resulting matrix
-
-    Returns:
-        A matrix, where each ith row in the matrix is a one-hot vector of width `width` according to the ith index in `v`.
-        e.g. v = [0,3,2], width=5 
-            returns [1 0 0 0 0]
-                    [0 0 0 1 0]
-                    [0 0 1 0 0]
-        So that the final matrix is of shape (len(v), width)
-
-    Further documentation of this method can be found in keras's np_utils.to_categorical method.
-    """
-    m = np.zeros(shape=(len(v), width))
-    m[np.arange(len(v)), v] = 1
-    return m
+from keras.utils import np_utils
 
 def unison_shuffle(a, b):
     """
@@ -157,9 +138,9 @@ def load_dataset_obj(p_training, p_validation, p_test, archive_dir, output_dims,
     whole_normalization_data = [training_data_mean, training_data_std]
 
     #Convert ys in each to one hot vectors
-    training_data[1] = get_one_hot_m(training_data[1], output_dims)
-    validation_data[1] = get_one_hot_m(validation_data[1], output_dims)
-    test_data[1] = get_one_hot_m(test_data[1], output_dims)
+    training_data[1] = np_util.to_categorical(training_data[1], output_dims)
+    validation_data[1] = np_util.to_categorical(validation_data[1], output_dims)
+    test_data[1] = np_util.to_categorical(test_data[1], output_dims)
 
     return Dataset(training_data, validation_data, test_data), whole_normalization_data
 
