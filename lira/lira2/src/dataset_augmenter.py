@@ -20,7 +20,7 @@ import dataset_handler
 from dataset_handler import *
 
 
-def balance_dataset(x, y, class_n):
+def undersample_dataset(x, y, class_n):
     """
     Arguments:
         x, y: Our dataset, x is input data and y is output data. Both are np arrays.
@@ -37,19 +37,19 @@ def balance_dataset(x, y, class_n):
     """
     Array for our numbers of each class's labeled samples, we assign accordingly
     """
-    class_samples = np.zeros((class_n))
+    class_sample_nums = np.zeros((class_n))
     for class_i in range(class_n):
-        class_samples[class_i] = np.sum(y==class_i)
+        class_sample_nums[class_i] = np.sum(y==class_i)
 
     """
-    We then get the minority class number
+    We then get the minority / smallest class number
     """
-    class_sample_minority = np.min(class_samples)
+    class_sample_minority = np.min(class_sample_nums)
 
     """
     Then we get a zeroed array to keep track of each class as we add it to our balanced dataset
     """
-    class_sample_incrementer = np.zeros_like(class_samples)
+    class_sample_incrementer = np.zeros_like(class_sample_nums)
 
     """
     We then get our dimensions accordingly, and initialise each to zeros
@@ -74,7 +74,64 @@ def balance_dataset(x, y, class_n):
     """
     return balanced_x, balanced_y
 
-def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, minority_balance_dataset=False):
+def oversample_dataset(x, y, class_n):
+    """
+    Arguments:
+        x, y: Our dataset, x is input data and y is output data. Both are np arrays.
+        class_n: Integer number of classes we have for our model.
+
+    Returns:
+        Use this if your dataset is very biased, e.g. 95% one classification, 5% another classification.
+        We balance the dataset by creating copy data for all classifications but the classification with the highest number of labeled samples,
+        so that all classifications have the same number at the end and thus get represented equally.
+    """
+
+    """
+    Array for our numbers of each class's labeled samples, we assign accordingly
+    """
+    class_sample_nums = np.zeros((class_n))
+    for class_i in range(class_n):
+        class_sample_nums[class_i] = np.sum(y==class_i)
+
+    """
+    We then get the majority / largest class number
+    """
+    class_sample_majority = np.max(class_sample_nums)
+
+    """
+    We then get our dimensions accordingly, and initialise each to zeros
+    """
+    balanced_x_dims = [int(class_sample_majority*class_n)]
+    balanced_x_dims.extend(x.shape[1:])
+    balanced_x = np.zeros((balanced_x_dims))
+    balanced_y = np.zeros((int(class_sample_majority*class_n)))
+
+    """
+    Then we get a zeroed array to keep track of each class as we add it to our balanced dataset
+    """
+    class_sample_incrementer = np.zeros_like(class_sample_nums)
+
+    """
+    We then loop through and add each to our new array,
+        repeatedly looping through our dataset until we have added enough to have the same number of samples for all classes.
+    That is, until we don't correct any, at which point we know it is balanced.
+    """
+    balanced = False
+    balanced_i = 0
+    while not balanced:
+        for sample_i, sample in enumerate(x):
+            if class_sample_incrementer[y[sample_i]] < class_sample_majority:
+                class_sample_incrementer[y[sample_i]]+=1
+                balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
+                balanced_i += 1
+        else:
+            balanced = True
+    """
+    We then return our new dataset
+    """
+    return balanced_x, balanced_y
+
+def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, undersample_balance_dataset=False, oversample_balance_dataset=False):
     """
     Arguments:
         archive_dir: String where .h5 file is stored containing model's data.
@@ -85,8 +142,9 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         sigma: Variance parameter to control how large our applied transformations are. Defaults to 0.1
         random_transformation_n: Number of random transformations to generate. Defaults to 0
         border_value: Value to pad missing parts of our image if we transform it off the viewport, 0-255
-        static_transformations: Boolean to decide if we want to use our 5 preset transformations for augmentation or not.
-        minority_balance_dataset: Boolean to decide if we want to balance our dataset by removing enough of our majority samples to make all the classes have the same # of labeled classes
+        static_transformations: Boolean to decide if we want to use our 5 preset transformations for augmentation or not. Defaults to True.
+        undersample_balance_dataset: Boolean to decide if we want to balance our dataset by removing enough of our majority samples to make all the classes have the same # of labeled classes. Defaults to False.
+        oversample_balance_dataset: Boolean to decide if we want to balance our dataset by copying enough of our minority samples to make all the classes have the same # of labeled classes. Defaults to False.
 
     Returns:
         After opening our samples from archive_dir, and initialising and normalising our static transformations if enabled,
@@ -101,12 +159,19 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
     with h5py.File(archive_dir, "r") as hf:
         x = np.array(hf.get("x"))
         y = np.array(hf.get("y"))
+        print x.shape
+        print y.shape
 
-    """
-    Balance our dataset if our option is enabled.
-    """
-    if minority_balance_dataset:
-        x, y = balance_dataset(x, y, class_n)
+    if undersample_balance_dataset:
+        """
+        Undersample our dataset if our option is enabled.
+        """
+        x, y = undersample_dataset(x, y, class_n)
+    elif oversample_balance_dataset:
+        """
+        Oversample our dataset if our option is enabled.
+        """
+        x, y = oversample_dataset(x, y, class_n)
 
     """
     Since our samples are only 2 dimensional, 
@@ -198,6 +263,11 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
     y = generate_transformed_references(y, len(transformation_matrices))
 
     """
+    We then reshape to our flattened dimension as we had originally
+    """
+    x = np.reshape(x, (-1, h*w))
+
+    """
     We are now done augmenting our dataset,
         We now save our transformation matrices to the metadata_dir,
     """
@@ -212,4 +282,9 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         hf.create_dataset("x", data=x)
         hf.create_dataset("y", data=y)
 
-generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.2, random_transformation_n=5)
+        print x.shape
+        for i in range(class_n):
+            print i, np.sum(y==i)
+        print y.shape
+
+generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.2, random_transformation_n=1, static_transformations=False, oversample_balance_dataset=True)
