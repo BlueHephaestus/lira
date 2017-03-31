@@ -74,7 +74,7 @@ def balance_dataset(x, y, class_n):
     """
     return balanced_x, balanced_y
 
-def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True):
+def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, minority_balance_dataset=False):
     """
     Arguments:
         archive_dir: String where .h5 file is stored containing model's data.
@@ -86,6 +86,7 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         random_transformation_n: Number of random transformations to generate. Defaults to 0
         border_value: Value to pad missing parts of our image if we transform it off the viewport, 0-255
         static_transformations: Boolean to decide if we want to use our 5 preset transformations for augmentation or not.
+        minority_balance_dataset: Boolean to decide if we want to balance our dataset by removing enough of our majority samples to make all the classes have the same # of labeled classes
 
     Returns:
         After opening our samples from archive_dir, and initialising and normalising our static transformations if enabled,
@@ -102,8 +103,10 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         y = np.array(hf.get("y"))
 
     """
+    Balance our dataset if our option is enabled.
     """
-    x, y = balance_dataset(x, y, class_n)
+    if minority_balance_dataset:
+        x, y = balance_dataset(x, y, class_n)
 
     """
     Since our samples are only 2 dimensional, 
