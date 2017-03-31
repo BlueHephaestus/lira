@@ -131,7 +131,7 @@ def oversample_dataset(x, y, class_n):
     """
     return balanced_x, balanced_y
 
-def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, undersample_balance_dataset=False, oversample_balance_dataset=False):
+def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, static_transformation_n=5, undersample_balance_dataset=False, oversample_balance_dataset=False):
     """
     Arguments:
         archive_dir: String where .h5 file is stored containing model's data.
@@ -143,6 +143,7 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         random_transformation_n: Number of random transformations to generate. Defaults to 0
         border_value: Value to pad missing parts of our image if we transform it off the viewport, 0-255
         static_transformations: Boolean to decide if we want to use our 5 preset transformations for augmentation or not. Defaults to True.
+        static_transformation_n: Integer number of our static transformations to use, 0-5, defaults to 5.
         undersample_balance_dataset: Boolean to decide if we want to balance our dataset by removing enough of our majority samples to make all the classes have the same # of labeled classes. Defaults to False.
         oversample_balance_dataset: Boolean to decide if we want to balance our dataset by copying enough of our minority samples to make all the classes have the same # of labeled classes. Defaults to False.
 
@@ -159,20 +160,19 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
     with h5py.File(archive_dir, "r") as hf:
         x = np.array(hf.get("x"))
         y = np.array(hf.get("y"))
-        print x.shape
-        for i in range(class_n):
-            print i, np.sum(y==i)
-        print y.shape
 
     if undersample_balance_dataset:
         """
         Undersample our dataset if our option is enabled.
         """
+        print "Balancing Dataset..."
         x, y = undersample_dataset(x, y, class_n)
+
     elif oversample_balance_dataset:
         """
         Oversample our dataset if our option is enabled.
         """
+        print "Balancing Dataset..."
         x, y = oversample_dataset(x, y, class_n)
 
     """
@@ -216,6 +216,7 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
                      [0., 0., 1.]]
                 ]
              )
+        transformation_matrices = transformation_matrices[:static_transformation_n]
 
         """
         Initialize our normalization matrices.
@@ -261,6 +262,7 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
     """
     Use the functions in our transformation_handler to handle our x and y parts of our dataset.
     """
+    print "Augmenting Dataset..."
     x, transformation_matrices = generate_2d_transformed_data(x, sigma, random_transformation_n, transformation_matrices, border_value)
     y = generate_transformed_references(y, len(transformation_matrices))
 
@@ -284,9 +286,4 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         hf.create_dataset("x", data=x)
         hf.create_dataset("y", data=y)
 
-        print x.shape
-        for i in range(class_n):
-            print i, np.sum(y==i)
-        print y.shape
-
-generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.2, random_transformation_n=1, static_transformations=False, oversample_balance_dataset=True)
+generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=True, static_transformation_n=4, oversample_balance_dataset=True)
