@@ -119,13 +119,13 @@ def oversample_dataset(x, y, class_n):
     balanced = False
     balanced_i = 0
     while not balanced:
+        balanced = True
         for sample_i, sample in enumerate(x):
             if class_sample_incrementer[y[sample_i]] < class_sample_majority:
                 class_sample_incrementer[y[sample_i]]+=1
                 balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
                 balanced_i += 1
-        else:
-            balanced = True
+                balanced = False
     """
     We then return our new dataset
     """
@@ -160,6 +160,8 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         x = np.array(hf.get("x"))
         y = np.array(hf.get("y"))
         print x.shape
+        for i in range(class_n):
+            print i, np.sum(y==i)
         print y.shape
 
     if undersample_balance_dataset:
