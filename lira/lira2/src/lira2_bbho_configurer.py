@@ -172,5 +172,5 @@ class Configurer(object):
         """
         Then flatten it if needed, to remove any extraneous (1,) dimensions.
         """
-        avg_validation_acc = np.flatten(validation_acc)
+        avg_validation_acc = validation_acc.flatten()
         return avg_validation_acc
