@@ -40,13 +40,13 @@ Features:
 
 *I have not yet added BBHO compatibility, will come in the future.
 
-#### slide_testing/
+#### lira_static/
 
   This section of the project is in charge of classifying our test slides, using our network once it is finished training. All of the files here are devoted to loading the network, generating results, and storing and prettifying those results. 
 
-#### slide_labeller/
+#### lira_live/
 
-  This section of the project is in charge of a new system of obtaining data. The labelled data this project started with was insufficient to train our initial model as well as desired, so we designed this system to use the model's predictions for iterative improvement. Since we have plenty of predictions on test images from our slide_testing/, this section presents these classifications to the user. As these classifications are presented to the user, the mistakes are corrected using an interactive gui. Once the user is finished classifying images in their interactive session, quitting the system saves all the newly obtained labelled data. 
+  This section of the project is in charge of a new system of obtaining data. The labelled data this project started with was insufficient to train our initial model as well as desired, so we designed this system to use the model's predictions for iterative improvement. Since we have plenty of predictions on test images from our lira_static/, this section presents these classifications to the user. As these classifications are presented to the user, the mistakes are corrected using an interactive gui. Once the user is finished classifying images in their interactive session, quitting the system saves all the newly obtained labelled data. 
 
   This new labelled data can then be used to train again, improving the results that are presented with each iteration of additional training data. Because of this iterative improvement, there were fewer mistakes to correct, resulting in quicker production of more labelled data.
 

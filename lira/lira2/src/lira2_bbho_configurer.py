@@ -47,6 +47,7 @@ class Configurer(object):
 
         """
         Data Parameters
+            (optimizer is initialized in each run)
         """
         self.p_training = 0.7
         self.p_validation = 0.15
@@ -153,22 +154,6 @@ class Configurer(object):
             """
             Get our outputs by training on training data and evaluating on validation and test accuracy each epoch,
                 as well as with our previously defined hyper-parameters
-            """
-            """
-            TEMP
-            """
-            print dataset.training.x.shape
-            print dataset.training.y.shape
-            print dataset.validation.x.shape
-            print dataset.validation.y.shape
-            print test_callback
-            print self.epochs
-            dataset.training.x = dataset.training.x[:100]
-            dataset.training.y = dataset.training.y[:100]
-            dataset.validation.x = dataset.validation.x[:100]
-            dataset.validation.y = dataset.validation.y[:100]
-            """
-            END TEMP
             """
             outputs = model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], nb_epoch=self.epochs, batch_size=mini_batch_size)
 

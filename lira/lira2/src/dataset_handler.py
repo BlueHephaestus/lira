@@ -138,9 +138,9 @@ def load_dataset_obj(p_training, p_validation, p_test, archive_dir, output_dims,
     whole_normalization_data = [training_data_mean, training_data_std]
 
     #Convert ys in each to one hot vectors
-    training_data[1] = np_util.to_categorical(training_data[1], output_dims)
-    validation_data[1] = np_util.to_categorical(validation_data[1], output_dims)
-    test_data[1] = np_util.to_categorical(test_data[1], output_dims)
+    training_data[1] = np_utils.to_categorical(training_data[1], output_dims)
+    validation_data[1] = np_utils.to_categorical(validation_data[1], output_dims)
+    test_data[1] = np_utils.to_categorical(test_data[1], output_dims)
 
     return Dataset(training_data, validation_data, test_data), whole_normalization_data
 

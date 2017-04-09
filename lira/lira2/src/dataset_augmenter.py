@@ -286,4 +286,4 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         hf.create_dataset("x", data=x)
         hf.create_dataset("y", data=y)
 
-generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=True, static_transformation_n=4, oversample_balance_dataset=True)
+generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=True, static_transformation_n=2, oversample_balance_dataset=True)

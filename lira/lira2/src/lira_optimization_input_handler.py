@@ -25,6 +25,7 @@ def handle_raw_hps(hps):
     """
     Make sure we don't have a mini batch size of 0, as that would break things and not make sense.
     """
+    mb_n = int(mb_n)
     if mb_n < 1:
         mb_n = 1
     
