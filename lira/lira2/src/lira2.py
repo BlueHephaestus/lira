@@ -22,6 +22,7 @@ from keras.layers import Dense, Activation, Dropout, Flatten
 from keras.layers import Convolution2D, MaxPooling2D
 from keras.optimizers import Adam
 from keras.regularizers import l2
+from keras.preprocessing.image import ImageDataGenerator
 
 import dataset_handler
 from dataset_handler import *
@@ -56,6 +57,16 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     input_dims = [80,145]
     output_dims = 7
 
+    datagen = ImageDataGenerator(
+        rescale=1./255.,
+        rotation_range=20,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+        fill_mode="constant",
+        cval=244,
+        horizontal_flip=True,
+        vertical_flip=True)
+
     """
     Model Hyper Parameters
         (optimizer is initialized in each run)
@@ -69,7 +80,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     """
     Amount of times we train our model to remove possible variance in the results
     """
-    run_count = 1
+    run_count = 3
 
     """
     Output Parameters
@@ -124,7 +135,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         Define our model
         """
         model = Sequential()
-        model.add(Convolution2D(20, 7, 12, border_mode="valid", input_shape=(80, 145, 1), W_regularizer=l2(regularization_rate)))
+        model.add(Convolution2D(20, (7, 12), padding="valid", input_shape=(80, 145, 1), W_regularizer=l2(regularization_rate)))
         model.add(Activation("sigmoid"))
         model.add(MaxPooling2D())
 
@@ -160,7 +171,9 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         Get our outputs by training on training data and evaluating on validation and test accuracy each epoch,
             as well as with our previously defined hyper-parameters
         """
-        outputs = model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], nb_epoch=epochs, batch_size=mini_batch_size)
+        #outputs = model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], nb_epoch=epochs, batch_size=mini_batch_size)
+        #datagen.fit(dataset.training.x)
+        outputs = model.fit_generator(datagen.flow(dataset.training.x, dataset.training.y, batch_size=mini_batch_size), validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], steps_per_epoch=len(dataset.training.x), epochs=epochs)
 
         """
         Stack and transpose our results to get a matrix of size epochs x 4, where each row contains the statistics for that epoch.
