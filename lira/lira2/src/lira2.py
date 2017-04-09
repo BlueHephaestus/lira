@@ -58,11 +58,11 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
 
     """
     Model Hyper Parameters
+        (optimizer is initialized in each run)
     """
     epochs = 100
-    mini_batch_size = 96
+    mini_batch_size = 100
     loss = "binary_crossentropy"
-    optimizer = Adam(1e-4)
     dropout_p = 0.5
     regularization_rate = 0.000016
 
@@ -93,6 +93,16 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     """
     results = np.zeros((run_count, epochs, 4))
     for run_i in range(run_count):
+        """
+        Since Keras was breaking on the second run when experimenting with lira2_bbho_configurer, it
+            brought to my attention that Keras might be storing the past gradients within the Adam object,
+            so when we tried to use the Adam object from our last run, it tries to use the data it stored there from the last run,
+            and breaks. 
+        
+        So, while Keras doesn't break during the execution of this file, we initialize this here for each run to ensure test independence.
+        """
+        optimizer = Adam(1e-4)
+
         """
         Get our dataset object for easy reference of data subsets (training, validation, and test) from our archive_dir.
         """
