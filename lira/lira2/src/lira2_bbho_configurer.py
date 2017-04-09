@@ -55,11 +55,6 @@ class Configurer(object):
         self.output_dims = 7
         self.archive_dir=os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira/lira2/data/live_samples.h5")
 
-        """
-        Static Model Hyper Parameters
-        """
-        self.optimizer = Adam(1e-4)
-
     def run_config(self, hps):
         """
         Arguments:
@@ -76,6 +71,7 @@ class Configurer(object):
             and get closer to the true accuracy of our model.
             We have to include a lot in this loop unfortunately, since keras will start training on the model where it left off from the last run if not.
         """
+
         """
         Our given hyper parameters are problem specific, and are parsed (i.e. edge cases handled, converted to logarithmic scale, etc) in our lira_optimization_input_handler.py file.
         """
@@ -91,6 +87,16 @@ class Configurer(object):
         results = np.zeros((self.run_count, self.epochs, 4))
 
         for run_i in range(self.run_count):
+            """
+            Keras breaks on the second run if we don't initialize our optimizer each time we run this.
+                I'm not exactly sure why, but my theory is that it is storing the past gradients within the Adam object,
+                so when we try to use the Adam object from our last run, it tries to use the data it stored there from the last run,
+                and breaks. 
+            
+            So, we gotta initialize this for each run to both ensure test independence and to ensure keras doesn't die on us.
+            """
+            optimizer = Adam(1e-4)
+
             """
             Get our dataset object for easy reference of data subsets (training, validation, and test) from our archive_dir.
             """
@@ -136,7 +142,7 @@ class Configurer(object):
             """
             Compile our model with our previously defined loss and optimizer, and recording the accuracy on the training data.
             """
-            model.compile(loss=loss, optimizer=self.optimizer, metrics=["accuracy"])
+            model.compile(loss=loss, optimizer=optimizer, metrics=["accuracy"])
 
             """
             Get our test data callback with our previously imported class from keras_test_callback.py
@@ -147,6 +153,22 @@ class Configurer(object):
             """
             Get our outputs by training on training data and evaluating on validation and test accuracy each epoch,
                 as well as with our previously defined hyper-parameters
+            """
+            """
+            TEMP
+            """
+            print dataset.training.x.shape
+            print dataset.training.y.shape
+            print dataset.validation.x.shape
+            print dataset.validation.y.shape
+            print test_callback
+            print self.epochs
+            dataset.training.x = dataset.training.x[:100]
+            dataset.training.y = dataset.training.y[:100]
+            dataset.validation.x = dataset.validation.x[:100]
+            dataset.validation.y = dataset.validation.y[:100]
+            """
+            END TEMP
             """
             outputs = model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], nb_epoch=self.epochs, batch_size=mini_batch_size)
 
