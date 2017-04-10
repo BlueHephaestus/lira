@@ -82,9 +82,9 @@ def generate_2d_transformed_data(data, sigma=0.1, transformation_n=9, static_tra
     """
     if transformation_n == 0 and static_transformation_matrices == []:
         """
-        One of these needs to be set, and if neither are, then we halt execution.
+        One of these needs to be set, and if neither are, then we halt execution by returning.
         """
-        sys.exit("Either transformation_n must be > 0, or static transformation matrices must be supplied. They can not both be neglected. Halting Execution.")
+        return data, []
 
     if transformation_n > 0:
         """
