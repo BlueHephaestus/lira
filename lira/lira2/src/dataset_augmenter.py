@@ -49,7 +49,7 @@ def undersample_dataset(x, y, class_n):
     """
     Then we get a zeroed array to keep track of each class as we add it to our balanced dataset
     """
-    class_sample_incrementer = np.zeros_like(class_sample_nums)
+    class_sample_counter = np.zeros_like(class_sample_nums)
 
     """
     We then get our dimensions accordingly, and initialise each to zeros
@@ -65,8 +65,8 @@ def undersample_dataset(x, y, class_n):
     """
     balanced_i = 0
     for sample_i, sample in enumerate(x):
-        if class_sample_incrementer[y[sample_i]] < class_sample_minority:
-            class_sample_incrementer[y[sample_i]]+=1
+        if class_sample_counter[y[sample_i]] > class_sample_minority:
+            class_sample_counter[y[sample_i]]-=1
             balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
             balanced_i += 1
     """
@@ -109,7 +109,7 @@ def oversample_dataset(x, y, class_n):
     """
     Then we get a zeroed array to keep track of each class as we add it to our balanced dataset
     """
-    class_sample_incrementer = np.zeros_like(class_sample_nums)
+    class_sample_counter = np.zeros_like(class_sample_nums)
 
     """
     We then loop through and add each to our new array,
@@ -121,11 +121,86 @@ def oversample_dataset(x, y, class_n):
     while not balanced:
         balanced = True
         for sample_i, sample in enumerate(x):
-            if class_sample_incrementer[y[sample_i]] < class_sample_majority:
-                class_sample_incrementer[y[sample_i]]+=1
+            if class_sample_counter[y[sample_i]] < class_sample_majority:
+                class_sample_counter[y[sample_i]]+=1
                 balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
                 balanced_i += 1
                 balanced = False
+    """
+    We then return our new dataset
+    """
+    return balanced_x, balanced_y
+
+def custom_sample_dataset(x, y, class_n):
+    """
+    Arguments:
+        x, y: Our dataset, x is input data and y is output data. Both are np arrays.
+        class_n: Integer number of classes we have for our model.
+
+    Returns:
+        We balance the dataset in a hard coded way.
+    """
+
+    """
+    Array for our numbers of each class's labeled samples, we assign accordingly
+    """
+    class_sample_nums = np.zeros((class_n))
+    for class_i in range(class_n):
+        class_sample_nums[class_i] = np.sum(y==class_i)
+
+    """
+    We then get the boundary number, to undersample a class to if above, or oversample if below.
+    """
+    class_sample_boundary = np.max(class_sample_nums)
+
+    """
+    We then get our dimensions accordingly, and initialise each to zeros
+    """
+    """
+    Since we are not going to mess with our last class, we include an outlier number for the number of samples in this class.
+        We then get our dimensions as our boundary * other classes, and add our outlier number to this.
+    """
+    outlier_num = np.sum(y==class_n-1)
+    balanced_x_dims = [int(class_sample_boundary*class_n-1 + outlier_num)]
+    balanced_x_dims.extend(x.shape[1:])
+    balanced_x = np.zeros((balanced_x_dims))
+    balanced_y = np.zeros((int(class_sample_boundary*class_n-1 + outlier_num)))
+
+    """
+    Then we get a zeroed array to keep track of each class as we add it to our balanced dataset
+    """
+    class_sample_counter = np.zeros_like(class_sample_nums)
+
+    """
+    We then loop through and add each to our new array,
+        repeatedly looping through our dataset until we have added enough to have the same number of samples for all classes.
+    That is, until we don't correct any, at which point we know it is balanced.
+    """
+    balanced = False
+    balanced_i = 0
+    while not balanced:
+        balanced = True
+        for sample_i, sample in enumerate(x):
+            """
+            First check if this is not the outlier class, because if it is the outlier class, we don't mess with it.
+            """
+            if y[sample_i] != len(class_sample_incrementer)-1:
+                """
+                Then, check if it is below our boundary, and if so, oversample it.
+                """
+                if class_sample_counter[y[sample_i]] < class_sample_boundary:
+                    class_sample_incrementer[y[sample_i]]+=1
+                    balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
+                    balanced_i += 1
+                    balanced = False
+                """
+                Then, check if it is above our boundary, and if so, undersample it.
+                """
+                if class_sample_counter[y[sample_i]] > class_sample_boundary:
+                    class_sample_incrementer[y[sample_i]]-=1
+                    balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
+                    balanced_i += 1
+                    balanced = False
     """
     We then return our new dataset
     """
@@ -286,4 +361,4 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         hf.create_dataset("x", data=x)
         hf.create_dataset("y", data=y)
 
-generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=True, static_transformation_n=2, oversample_balance_dataset=True)
+generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, oversample_balance_dataset=True)
