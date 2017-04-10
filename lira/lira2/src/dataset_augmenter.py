@@ -206,7 +206,7 @@ def custom_sample_dataset(x, y, class_n):
     """
     return balanced_x, balanced_y
 
-def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, static_transformation_n=5, undersample_balance_dataset=False, oversample_balance_dataset=False):
+def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, static_transformation_n=5, undersample_balance_dataset=False, oversample_balance_dataset=False, custom_sample_consistent_dataset=False):
     """
     Arguments:
         archive_dir: String where .h5 file is stored containing model's data.
@@ -221,6 +221,7 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         static_transformation_n: Integer number of our static transformations to use, 0-5, defaults to 5.
         undersample_balance_dataset: Boolean to decide if we want to balance our dataset by removing enough of our majority samples to make all the classes have the same # of labeled classes. Defaults to False.
         oversample_balance_dataset: Boolean to decide if we want to balance our dataset by copying enough of our minority samples to make all the classes have the same # of labeled classes. Defaults to False.
+        custom_sample_balance_dataset: Boolean to decide if we want to balance our dataset via a hard-coded custom technique. Defaults to False.
 
     Returns:
         After opening our samples from archive_dir, and initialising and normalising our static transformations if enabled,
@@ -248,7 +249,14 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         Oversample our dataset if our option is enabled.
         """
         print "Balancing Dataset..."
+
         x, y = oversample_dataset(x, y, class_n)
+    elif custom_sample_balance_dataset:
+        """
+        Custom sample our dataset if our option is enabled.
+        """
+        print "Balancing Dataset..."
+        x, y = custom_sample_dataset(x, y, class_n)
 
     """
     Since our samples are only 2 dimensional, 
@@ -361,4 +369,4 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         hf.create_dataset("x", data=x)
         hf.create_dataset("y", data=y)
 
-generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, oversample_balance_dataset=True)
+generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True)
