@@ -15,11 +15,12 @@ After building the model, it trains a changable amount of times to reduce varian
 -Blake Edwards / Dark Element
 """
 import pickle, os
+import tensorflow
 
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, Flatten
-from keras.layers import Convolution2D, MaxPooling2D
+from keras.layers import Conv2D, MaxPooling2D
 from keras.optimizers import Adam
 from keras.regularizers import l2
 from keras.preprocessing.image import ImageDataGenerator
@@ -80,7 +81,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     """
     Amount of times we train our model to remove possible variance in the results
     """
-    run_count = 3
+    run_count = 1
 
     """
     Output Parameters
@@ -135,26 +136,21 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         Define our model
         """
         model = Sequential()
-        model.add(Convolution2D(20, (7, 12), padding="valid", input_shape=(80, 145, 1), W_regularizer=l2(regularization_rate)))
-        model.add(Activation("sigmoid"))
-        model.add(MaxPooling2D())
+        model.add(Conv2D(20, (7, 12), padding="valid", input_shape=(80, 145, 1), data_format="channels_last", activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
+        model.add(MaxPooling2D(data_format="channels_last"))
 
-        model.add(Convolution2D(40, 6, 10, border_mode="valid", W_regularizer=l2(regularization_rate)))
-        model.add(Activation("sigmoid"))
-        model.add(MaxPooling2D())
+        model.add(Conv2D(40, (6, 10), padding="valid", data_format="channels_last", activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
+        model.add(MaxPooling2D(data_format="channels_last"))
 
         model.add(Flatten())
 
-        model.add(Dense(1024, W_regularizer=l2(regularization_rate)))
-        model.add(Activation("sigmoid"))
+        model.add(Dense(1024, activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
         model.add(Dropout(dropout_p))
 
-        model.add(Dense(100, W_regularizer=l2(regularization_rate)))
-        model.add(Activation("sigmoid"))
+        model.add(Dense(100, activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
         model.add(Dropout(dropout_p))
 
-        model.add(Dense(output_dims, W_regularizer=l2(regularization_rate)))
-        model.add(Activation("softmax"))
+        model.add(Dense(output_dims, activation="softmax", kernel_regularizer=l2(regularization_rate)))
 
         """
         Compile our model with our previously defined loss and optimizer, and recording the accuracy on the training data.
@@ -171,9 +167,9 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         Get our outputs by training on training data and evaluating on validation and test accuracy each epoch,
             as well as with our previously defined hyper-parameters
         """
-        #outputs = model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], nb_epoch=epochs, batch_size=mini_batch_size)
+        #outputs = model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], epochs=epochs, batch_size=mini_batch_size)
         #datagen.fit(dataset.training.x)
-        outputs = model.fit_generator(datagen.flow(dataset.training.x, dataset.training.y, batch_size=mini_batch_size), validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], steps_per_epoch=len(dataset.training.x), epochs=epochs)
+        outputs = model.fit_generator(datagen.flow(dataset.training.x, dataset.training.y, batch_size=mini_batch_size), validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], steps_per_epoch=len(dataset.training.x)/float(mini_batch_size), epochs=epochs, workers=8)
 
         """
         Stack and transpose our results to get a matrix of size epochs x 4, where each row contains the statistics for that epoch.
