@@ -210,7 +210,6 @@ def custom_sample_dataset(x, y, class_n):
                     balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
                     balanced_i += 1
                     balanced=False
-                    print y[sample_i]
                 
     """
     We then return our new dataset
