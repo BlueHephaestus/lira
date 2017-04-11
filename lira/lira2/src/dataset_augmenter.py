@@ -161,10 +161,10 @@ def custom_sample_dataset(x, y, class_n):
         We then get our dimensions as our boundary * other classes, and add our outlier number to this.
     """
     outlier_num = np.sum(y==class_n-1)
-    balanced_x_dims = [int(class_sample_boundary*class_n-1 + outlier_num)]
+    balanced_x_dims = [int(class_sample_boundary*(class_n-1) + outlier_num)]
     balanced_x_dims.extend(x.shape[1:])
     balanced_x = np.zeros((balanced_x_dims))
-    balanced_y = np.zeros((int(class_sample_boundary*class_n-1 + outlier_num)))
+    balanced_y = np.zeros((int(class_sample_boundary*(class_n-1) + outlier_num)))
 
     """
     Then we get a zeroed array to keep track of each class as we add it to our balanced dataset
