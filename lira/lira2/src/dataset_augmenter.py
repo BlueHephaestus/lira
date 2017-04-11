@@ -184,12 +184,12 @@ def custom_sample_dataset(x, y, class_n):
             """
             First check if this is not the outlier class, because if it is the outlier class, we don't mess with it.
             """
-            if y[sample_i] != len(class_sample_incrementer)-1:
+            if y[sample_i] != class_n-1:
                 """
                 Then, check if it is below our boundary, and if so, oversample it.
                 """
                 if class_sample_counter[y[sample_i]] < class_sample_boundary:
-                    class_sample_incrementer[y[sample_i]]+=1
+                    class_sample_counter[y[sample_i]]+=1
                     balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
                     balanced_i += 1
                     balanced = False
@@ -197,7 +197,7 @@ def custom_sample_dataset(x, y, class_n):
                 Then, check if it is above our boundary, and if so, undersample it.
                 """
                 if class_sample_counter[y[sample_i]] > class_sample_boundary:
-                    class_sample_incrementer[y[sample_i]]-=1
+                    class_sample_counter[y[sample_i]]-=1
                     balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
                     balanced_i += 1
                     balanced = False
@@ -206,7 +206,7 @@ def custom_sample_dataset(x, y, class_n):
     """
     return balanced_x, balanced_y
 
-def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, static_transformation_n=5, undersample_balance_dataset=False, oversample_balance_dataset=False, custom_sample_consistent_dataset=False):
+def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, static_transformation_n=5, undersample_balance_dataset=False, oversample_balance_dataset=False, custom_sample_balance_dataset=False):
     """
     Arguments:
         archive_dir: String where .h5 file is stored containing model's data.
