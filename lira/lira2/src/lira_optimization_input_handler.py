@@ -16,7 +16,7 @@ def handle_raw_hps(hps):
 
     After parsing all the parameters in the ways specified above, a hyper parameter string is generated, and printed.
     """
-    mb_n, regularization_rate, dropout_perc, activation_fn_i, cost_i = hps
+    mb_n, regularization_rate, dropout_perc = hps
     """
     Handle all of our raw inputs as given by an optimizer, and return the resulting parsed values,
         as well as a string detailing the hyper parameters
@@ -48,12 +48,15 @@ def handle_raw_hps(hps):
         get the respective activation/cost/optimizer from a list according to this index.
     Note: We floor() our indices and convert to integers first
     """
+    """
     activation_fn_i = int(activation_fn_i//1)
     cost_i = int(cost_i//1)
+    """
     """
     optimizer_i = int(optimizer_i//1)
     """
     
+    """
     activation_fns = [
                         "softplus",
                         "softsign",
@@ -74,6 +77,7 @@ def handle_raw_hps(hps):
                         "categorical_crossentropy",
             ]
 
+    """
     """
     optimizers = [
                         SGD(),
@@ -96,8 +100,10 @@ def handle_raw_hps(hps):
                      ]
     """
 
+    """
     activation_fn = activation_fns[activation_fn_i]
     cost = costs[cost_i]
+    """
     """
     optimizer = optimizers[optimizer_i]
     optimizer_str = optimizer_strs[optimizer_i]
@@ -106,10 +112,11 @@ def handle_raw_hps(hps):
     """
     Finally, print our resulting hyper parameter string.
     """
-    hp_str = "\nHYPER PARAMETERS: \nMini Batch Size: %f\nRegularization Rate: %f\nDropout Percentage: %f\nActivation: %s\nCost: %s\n\n" % (mb_n, regularization_rate, dropout_perc, activation_fn, cost)
+    #hp_str = "\nHYPER PARAMETERS: \nMini Batch Size: %f\nRegularization Rate: %f\nDropout Percentage: %f\nActivation: %s\nCost: %s\n\n" % (mb_n, regularization_rate, dropout_perc, activation_fn, cost)
+    hp_str = "\nHYPER PARAMETERS: \nMini Batch Size: %f\nRegularization Rate: %f\nDropout Percentage: %f\n\n" % (mb_n, regularization_rate, dropout_perc)
     print hp_str
 
     """
     And return everything.
     """
-    return mb_n, regularization_rate, dropout_perc, activation_fn, cost, hp_str
+    return mb_n, regularization_rate, dropout_perc, hp_str

@@ -46,6 +46,11 @@ class Configurer(object):
         self.run_count = run_count 
 
         """
+        Static Hyperparameters
+        """
+        self.loss = "binary_crossentropy"
+
+        """
         Data Parameters
             (optimizer is initialized in each run)
         """
@@ -76,7 +81,7 @@ class Configurer(object):
         """
         Our given hyper parameters are problem specific, and are parsed (i.e. edge cases handled, converted to logarithmic scale, etc) in our lira_optimization_input_handler.py file.
         """
-        mini_batch_size, regularization_rate, dropout_p, activation_fn, loss, hp_str = handle_raw_hps(hps)
+        mini_batch_size, regularization_rate, dropout_p, hp_str = handle_raw_hps(hps)
 
         """
         Since each run we train for `epochs` epochs, and each epoch produces 
@@ -119,26 +124,26 @@ class Configurer(object):
             Define our model
             """
             model = Sequential()
-            model.add(Conv2D(20, (7, 12), padding="valid", input_shape=(80, 145, 1), data_format="channels_last", activation=activation_fn, kernel_regularizer=l2(regularization_rate)))
+            model.add(Conv2D(20, (7, 12), padding="valid", input_shape=(80, 145, 1), data_format="channels_last", activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
             model.add(MaxPooling2D(data_format="channels_last"))
 
-            model.add(Conv2D(40, (6, 10), padding="valid", data_format="channels_last", activation=activation_fn, kernel_regularizer=l2(regularization_rate)))
+            model.add(Conv2D(40, (6, 10), padding="valid", data_format="channels_last", activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
             model.add(MaxPooling2D(data_format="channels_last"))
 
             model.add(Flatten())
 
-            model.add(Dense(1024, activation=activation_fn, kernel_regularizer=l2(regularization_rate)))
+            model.add(Dense(1024, activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
             model.add(Dropout(dropout_p))
 
-            model.add(Dense(100, activation=activation_fn, kernel_regularizer=l2(regularization_rate)))
+            model.add(Dense(100, activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
             model.add(Dropout(dropout_p))
 
-            model.add(Dense(self.output_dims, activation=activation_fn, kernel_regularizer=l2(regularization_rate)))
+            model.add(Dense(self.output_dims, activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
 
             """
             Compile our model with our previously defined loss and optimizer, and recording the accuracy on the training data.
             """
-            model.compile(loss=loss, optimizer=optimizer, metrics=["accuracy"])
+            model.compile(loss=self.loss, optimizer=optimizer, metrics=["accuracy"])
 
             """
             Get our test data callback with our previously imported class from keras_test_callback.py
