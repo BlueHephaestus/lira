@@ -12,7 +12,7 @@ import pickle, os
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, Flatten
-from keras.layers import Convolution2D, MaxPooling2D
+from keras.layers import Conv2D, MaxPooling2D
 from keras.optimizers import Adam
 from keras.regularizers import l2
 
@@ -119,26 +119,21 @@ class Configurer(object):
             Define our model
             """
             model = Sequential()
-            model.add(Convolution2D(20, 7, 12, border_mode="valid", input_shape=(80, 145, 1), W_regularizer=l2(regularization_rate)))
-            model.add(Activation(activation_fn))
-            model.add(MaxPooling2D())
+            model.add(Conv2D(20, (7, 12), padding="valid", input_shape=(80, 145, 1), data_format="channels_last", activation=activation_fn, kernel_regularizer=l2(regularization_rate)))
+            model.add(MaxPooling2D(data_format="channels_last"))
 
-            model.add(Convolution2D(40, 6, 10, border_mode="valid", W_regularizer=l2(regularization_rate)))
-            model.add(Activation(activation_fn))
-            model.add(MaxPooling2D())
+            model.add(Conv2D(40, (6, 10), padding="valid", data_format="channels_last", activation=activation_fn, kernel_regularizer=l2(regularization_rate)))
+            model.add(MaxPooling2D(data_format="channels_last"))
 
             model.add(Flatten())
 
-            model.add(Dense(1024, W_regularizer=l2(regularization_rate)))
-            model.add(Activation(activation_fn))
+            model.add(Dense(1024, activation=activation_fn, kernel_regularizer=l2(regularization_rate)))
             model.add(Dropout(dropout_p))
 
-            model.add(Dense(100, W_regularizer=l2(regularization_rate)))
-            model.add(Activation(activation_fn))
+            model.add(Dense(100, activation=activation_fn, kernel_regularizer=l2(regularization_rate)))
             model.add(Dropout(dropout_p))
 
-            model.add(Dense(self.output_dims, W_regularizer=l2(regularization_rate)))
-            model.add(Activation(activation_fn))
+            model.add(Dense(self.output_dims, activation=activation_fn, kernel_regularizer=l2(regularization_rate)))
 
             """
             Compile our model with our previously defined loss and optimizer, and recording the accuracy on the training data.
@@ -155,7 +150,7 @@ class Configurer(object):
             Get our outputs by training on training data and evaluating on validation and test accuracy each epoch,
                 as well as with our previously defined hyper-parameters
             """
-            outputs = model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], nb_epoch=self.epochs, batch_size=mini_batch_size)
+            outputs = model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], epochs=self.epochs, batch_size=mini_batch_size)
 
             """
             Stack and transpose our results to get a matrix of size epochs x 4, where each row contains the statistics for that epoch.
