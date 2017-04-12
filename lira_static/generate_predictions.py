@@ -149,7 +149,7 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
                 
                 """
                 In order to handle everything easily and correctly, we do the following:
-                    Each subsection of our image we get an overlay_predictions matrix of predictions, 
+                    Each subsection of our image we get an overlay_predictions 3-tensor of predictions, 
                         which we either insert into the correct row, or concatenate onto the row's pre-existing values
                 """
                 predictions = [np.array([]) for i in range(img_divide_factor)]
@@ -189,9 +189,11 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
                         overlay = np.zeros(shape=(int(sub_img_h//resize_factor), int(sub_img_w//resize_factor), 3))
 
                         """
-                        Generate vector to store predictions as we loop through our subsections, which we can later reshape to a matrix.
+                        Generate matrix to store predictions as we loop through our subsections, which we can later reshape to a 3-tensor.
+                            This will become a 3 tensor because for any entry at index i, j, we have our vector of size class_n for the model's output probabilities 
+                            This is opposed to just having an argmaxed index, where index i, j would just have an integer.
                         """
-                        overlay_predictions = np.zeros(((sub_img_h//sub_h)*(sub_img_w//sub_w)))
+                        overlay_predictions = np.zeros(((sub_img_h//sub_h)*(sub_img_w//sub_w), len(classifications)))
 
                         """
                         From our sub_img, get a matrix of subsections in this sub_img.
@@ -216,15 +218,15 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
                             batch = subs[sub_i:sub_i+mb_n]
 
                             """
-                            Then, we classify the new batch of examples and store in our temporary overlay_predictions array
+                            Then, we classify the new batch of examples and store in our overlay_predictions array
                             """
                             overlay_predictions[overlay_prediction_i:overlay_prediction_i+batch.shape[0]] = classifier.classify(batch)
                             overlay_prediction_i += batch.shape[0]
                             
                         """
-                        Convert our predictions for this subsection into a matrix so we can then concatenate it easily into our final predictions matrix.
+                        Convert our predictions for this subsection into a 3-tensor so we can then concatenate it easily into our final predictions 3-tensor.
                         """
-                        overlay_predictions = np.reshape(overlay_predictions, (sub_img_h//sub_h, sub_img_w//sub_w))
+                        overlay_predictions = np.reshape(overlay_predictions, (sub_img_h//sub_h, sub_img_w//sub_w, len(classifications)))
 
                         """
                         Move our overlay_predictions matrix into our final predictions matrix, in the correct row according to row_i.
@@ -247,13 +249,6 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
                     we combine all the rows into a final matrix by concatenating into a column.
                 """
                 predictions = get_concatenated_col(predictions)
-
-                """
-                Now that all the predictions are together in one matrix, we can properly "view" them all, 
-                    and use them with our denoisers.
-                We then denoise our predictions using Markov Random Fields.
-                """
-                #predictions = denoise_predictions.denoise_predictions(predictions, len(classifications), epochs)
 
                 """
                 Then we store it in our dataset

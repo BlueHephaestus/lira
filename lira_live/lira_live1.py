@@ -184,6 +184,14 @@ def main(sub_h=80,
                     if not all_predictions_empty(prediction_sub, classifications):
                         """
                         If it is not empty, we continue!
+                        """
+                        """
+                        We argmax over our predictions in order to just get integer values, which we can display.
+                            ->Instead of the probabilities which are produced by our model output
+                        """
+                        prediction_sub = np.argmax(prediction_sub, axis=2)
+
+                        """
                         Get our img for this subsection to display from get_next_overlay_subsection()
                         As well as our predictions for this subsection using get_prediction_subsection()
                         """

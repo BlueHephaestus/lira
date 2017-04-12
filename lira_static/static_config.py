@@ -46,18 +46,13 @@ class StaticConfig(object):
             x: a np array of the shape that the given model expects as input.
 
         Returns:
-            Gets one-hot predictions from the input given, of shape (n, class_n)
-            Then argmaxes, and returns a vector of shape (n,)
+            Gets predictions from the input given, of shape (n, class_n),
+                and returns this matrix.
         """
         """
         Get predictions on batch with our given mini batch x
         """
         predictions = self.model.predict_on_batch(x)
-
-        """
-        Get the argmax of these predictions, so as to get a classification instead of a one-hot vector
-        """
-        predictions = np.argmax(predictions, axis=1)
 
         """
         Return these.

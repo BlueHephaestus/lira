@@ -91,6 +91,13 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
                 img_predictions = predictions_hf.get(str(img_i))
 
                 """
+                Since I haven't yet made a denoising algorithm that works with 3-tensors instead of matrices for predictions,
+                    we argmax right here.
+                THIS NEEDS TO BE AFTER THE DENOISING, NORMALLY
+                """
+                img_predictions = np.argmax(img_predictions, axis=2)
+
+                """
                 We then denoise our predictions, now that the entire predictions matrix is loaded for this image.
                 """
                 predictions = post_processing.denoise_predictions(predictions, len(classifications), epochs)
