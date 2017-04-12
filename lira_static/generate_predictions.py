@@ -9,8 +9,6 @@ from static_config import StaticConfig
 import img_handler
 from img_handler import *
 
-import denoise_predictions
-
 def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl"):
     """
     Arguments:
@@ -28,6 +26,25 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
         Once completed with all subsections, these predictions are combined to get one 2d matrix of predictions, which is written to `predictions_archive_dir`.
 
         Has no return value.
+
+    Denoising note: Denoising is no longer done in this file, but in post_processing.py instead!
+        We used to do denoising in this file, however this resulted in problems due to how LIRA Live works.
+        LIRA-Live, when quitting a session, will get all predictions up to the current slide/subsection, 
+            and save these along with any new predictions that were generated. 
+        Usually, this just takes a bit of time, but you end up with a file that is the same as it was previously,
+            but with the new samples appended to the end.
+        However, if the old predictions are modified, then LIRA-Live would save the modified predictions, overwriting any old ones.
+        I implemented this before I had a denoiser.
+        This means that if I generate new denoised predictions, then open and close LIRA-Live on those new denoised predictions,
+            it will save the denoised predictions as our new samples.
+        In the case of LIRA-Live we are 100% certain that the data we obtain from it is correct,
+            so when we denoise that data before saving it, we inevitably screw up some of our labeled data, polluting our dataset with incorrect labels.
+        The solution? Don't use the denoiser when generating predictions.h5. 
+        If we instead only use it when generating overlays / display results, or getting statistics (i.e. any other case but LIRA-Live), 
+            we avoid this problem. 
+        It's also nice, because it means we can experiment with different denoising algorithms far quicker than usual.
+        So now, the predictions.h5 is for un-post-processed output, the raw predictions of the network.
+        And when end-pipeline statistics or overlays are needed, post_processing.py can be used to prettify them.
     """
 
     """
@@ -44,7 +61,7 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
     """
     Epochs, the number of iterations to run our denoising algorithm on each full predictions matrix                                                                                                                                      
     """
-    epochs = 2
+    #epochs = 2
 
     """
     Our factors to resize our image by, or divide it into subsections.
@@ -236,7 +253,7 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
                     and use them with our denoisers.
                 We then denoise our predictions using Markov Random Fields.
                 """
-                predictions = denoise_predictions.denoise_predictions(predictions, len(classifications), epochs)
+                #predictions = denoise_predictions.denoise_predictions(predictions, len(classifications), epochs)
 
                 """
                 Then we store it in our dataset
