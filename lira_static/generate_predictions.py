@@ -59,11 +59,6 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
     mb_n = 100
 
     """
-    Epochs, the number of iterations to run our denoising algorithm on each full predictions matrix                                                                                                                                      
-    """
-    #epochs = 2
-
-    """
     Our factors to resize our image by, or divide it into subsections.
 
     Set this to None to have a dynamic divide factor.
