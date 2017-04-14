@@ -132,6 +132,12 @@ def main(sub_h=80,
                     img_predictions = predictions_hf.get(str(img_i))
 
                     """
+                    We argmax over our predictions in order to just get integer values, which we can display.
+                        ->Instead of the probabilities which are produced by our model output
+                    """
+                    img_predictions = np.argmax(img_predictions, axis=2)
+
+                    """
                     Make sure we never get an image s.t. 
                         (img_h-img_h%80)/80 < pred_h
                         (img_w-img_w%145)/145 < pred_w
@@ -185,12 +191,6 @@ def main(sub_h=80,
                         """
                         If it is not empty, we continue!
                         """
-                        """
-                        We argmax over our predictions in order to just get integer values, which we can display.
-                            ->Instead of the probabilities which are produced by our model output
-                        """
-                        prediction_sub = np.argmax(prediction_sub, axis=2)
-
                         """
                         Get our img for this subsection to display from get_next_overlay_subsection()
                         As well as our predictions for this subsection using get_prediction_subsection()
