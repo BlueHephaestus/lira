@@ -14,6 +14,7 @@ def denoise_predictions(src, class_n, epochs):
         src: np array of shape (h, w), the source image.
         class_n: int number of classes / classifications we will find in our src img.
         epochs: int number of denoising iterations to put our src image through.
+            Note: set this to 0 if you don't want denoising.
 
     Returns
         For each pixel in our src image, 
@@ -25,6 +26,12 @@ def denoise_predictions(src, class_n, epochs):
     h, w = src.shape
 
     costs = np.zeros((class_n))
+
+    """
+    Just in case we don't want any denoising, in which case we return the src.
+    """
+    if epochs == 0:
+        return src
 
     """
     Since this is interacting with a file which has its own progress indicator,
