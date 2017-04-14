@@ -19,7 +19,6 @@ from transformation_handler import *
 import dataset_handler
 from dataset_handler import *
 
-
 def undersample_dataset(x, y, class_n, undersample_n=None):
     """
     Arguments:
@@ -146,14 +145,17 @@ def oversample_dataset(x, y, class_n):
     """
     return balanced_x, balanced_y
 
-def custom_sample_dataset(x, y, class_n):
+def custom_sample_dataset(x, y, class_n, sample_ns):
     """
     Arguments:
         x, y: Our dataset, x is input data and y is output data. Both are np arrays.
         class_n: Integer number of classes we have for our model.
+        sample_ns: List of integers containing the number of samples we want of each class when finished.
+            e.g. if we had sample nums of [12, 6836] and put in [50, 60] for sample_ns, we'd end up with 50 of our first class and 60 of our second class.
 
     Returns:
-        We balance the dataset in a hard coded way.
+        We balance the dataset by copying samples in classes that have less than their number specified by sample_ns, 
+            and removing samples from classifications which have more than their number specified by sample_ns.
     """
 
     """
@@ -164,22 +166,15 @@ def custom_sample_dataset(x, y, class_n):
         class_sample_nums[class_i] = np.sum(y==class_i)
 
     """
-    We then get the boundary number, to undersample a class to if above, or oversample if below.
-    """
-    class_sample_boundary = 6500
-
-    """
     We then get our dimensions accordingly, and initialise each to zeros
     """
     """
-    Since we are not going to mess with our last class, we include an outlier number for the number of samples in this class.
-        We then get our dimensions as our boundary * other classes, and add our outlier number to this.
+    We then get our dimensions as the sum of our sample_ns
     """
-    outlier_num = np.sum(y==(class_n-1))
-    balanced_x_dims = [int(class_sample_boundary*(class_n-1) + outlier_num)]
+    balanced_x_dims = [np.sum(sample_ns)]
     balanced_x_dims.extend(x.shape[1:])
     balanced_x = np.zeros((balanced_x_dims))
-    balanced_y = np.zeros((int(class_sample_boundary*(class_n-1) + outlier_num)))
+    balanced_y = np.zeros((np.sum(sample_ns)))
 
     """
     Then we get a zeroed array to keep track of each class as we add it to our balanced dataset
@@ -197,41 +192,28 @@ def custom_sample_dataset(x, y, class_n):
         balanced = True
         for sample_i, sample in enumerate(x):
             """
-            First check if this is not the outlier class, because if it is the outlier class, we don't mess with it.
+            Then, check if it is below our desired sample number for this class, and if so, oversample it.
             """
-            if y[sample_i] != class_n-1:
-                """
-                Then, check if it is below our boundary, and if so, oversample it.
-                """
-                if class_sample_counter[y[sample_i]] < class_sample_boundary:
-                    class_sample_counter[y[sample_i]]+=1
-                    balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
-                    balanced_i += 1
-                    balanced = False
-                """
-                Then, check if it is above our boundary, and if so, undersample it.
-                """
-                if class_sample_counter[y[sample_i]] > class_sample_boundary:
-                    class_sample_counter[y[sample_i]]-=1
-                    balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
-                    balanced_i += 1
-                    balanced = False
-            else:
-                """
-                If this is our outlier, we just straight up add it to our balanced dataset, if we still have > 0 to add (i.e. we don't have outlier_num of classes yet)
-                """
-                if class_sample_counter[y[sample_i]] < outlier_num:
-                    class_sample_counter[y[sample_i]]+=1
-                    balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
-                    balanced_i += 1
-                    balanced=False
+            if class_sample_counter[y[sample_i]] < sample_ns[y[sample_i]]:
+                class_sample_counter[y[sample_i]]+=1
+                balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
+                balanced_i += 1
+                balanced = False
+            """
+            Then, check if it is above our desired sample number for this class, and if so, undersample it.
+            """
+            if class_sample_counter[y[sample_i]] > sample_ns[y[sample_i]]:
+                class_sample_counter[y[sample_i]]-=1
+                balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
+                balanced_i += 1
+                balanced = False
                 
     """
     We then return our new dataset
     """
     return balanced_x, balanced_y
 
-def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, static_transformation_n=5, undersample_balance_dataset=False, undersample_n=None, oversample_balance_dataset=False, custom_sample_balance_dataset=False):
+def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, static_transformation_n=5, undersample_balance_dataset=False, undersample_n=None, oversample_balance_dataset=False, custom_sample_balance_dataset=False, sample_ns=[]):
     """
     Arguments:
         archive_dir: String where .h5 file is stored containing model's data.
@@ -281,7 +263,7 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         Custom sample our dataset if our option is enabled.
         """
         print "Balancing Dataset..."
-        x, y = custom_sample_dataset(x, y, class_n)
+        x, y = custom_sample_dataset(x, y, class_n, sample_ns)
 
     """
     Since our samples are only 2 dimensional, 
@@ -394,4 +376,4 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         hf.create_dataset("x", data=x)
         hf.create_dataset("y", data=y)
 
-generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, undersample_balance_dataset=True, undersample_n = 6836)
+generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [6292, 0, 3931, 6836, 6836, 0, 0])
