@@ -20,11 +20,13 @@ import dataset_handler
 from dataset_handler import *
 
 
-def undersample_dataset(x, y, class_n):
+def undersample_dataset(x, y, class_n, undersample_n=None):
     """
     Arguments:
         x, y: Our dataset, x is input data and y is output data. Both are np arrays.
         class_n: Integer number of classes we have for our model.
+        undersample_n: Integer number to sample our dataset down to, instead of the number of samples in the minority class. 
+            If not supplied, will default to the number of samples in the minority class.
 
     Returns:
         Use this if your dataset is very biased, e.g. 95% one classification, 5% another classification.
@@ -42,9 +44,12 @@ def undersample_dataset(x, y, class_n):
         class_sample_nums[class_i] = np.sum(y==class_i)
 
     """
-    We then get the minority / smallest class number
+    We then get the minority / smallest class number, or use our given int if it's supplied
     """
-    class_sample_minority = np.min(class_sample_nums)
+    if undersample_n:
+        class_sample_minority = undersample_n
+    else:
+        class_sample_minority = np.min(class_sample_nums)
 
     """
     Then we get a zeroed array to keep track of each class as we add it to our balanced dataset
@@ -52,12 +57,22 @@ def undersample_dataset(x, y, class_n):
     class_sample_counter = np.zeros_like(class_sample_nums)
 
     """
+    We find how large our array will be by using min(existing #, minority #),
+        since if the number of samples for one class is > our minority #, it will be rounded down to our minority #,
+        and if it is < our minority, it will be left as is.
+    Using this, we can have class_sample_minority be an arbitrary value other than just the smallest value.
+    """
+    balanced_n = 0
+    for class_sample_num in class_sample_nums:
+        balanced_n += np.minimum(int(class_sample_num), int(class_sample_minority))
+
+    """
     We then get our dimensions accordingly, and initialise each to zeros
     """
-    balanced_x_dims = [int(class_sample_minority*class_n)]
+    balanced_x_dims = [balanced_n]
     balanced_x_dims.extend(x.shape[1:])
     balanced_x = np.zeros((balanced_x_dims))
-    balanced_y = np.zeros((int(class_sample_minority*class_n)))
+    balanced_y = np.zeros((balanced_n))
 
     """
     We then loop through, making sure to only add each class class_sample_minority times,
@@ -65,8 +80,8 @@ def undersample_dataset(x, y, class_n):
     """
     balanced_i = 0
     for sample_i, sample in enumerate(x):
-        if class_sample_counter[y[sample_i]] > class_sample_minority:
-            class_sample_counter[y[sample_i]]-=1
+        if class_sample_counter[y[sample_i]] < class_sample_minority:
+            class_sample_counter[y[sample_i]]+=1
             balanced_x[balanced_i], balanced_y[balanced_i] = sample, y[sample_i]
             balanced_i += 1
     """
@@ -216,7 +231,7 @@ def custom_sample_dataset(x, y, class_n):
     """
     return balanced_x, balanced_y
 
-def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, static_transformation_n=5, undersample_balance_dataset=False, oversample_balance_dataset=False, custom_sample_balance_dataset=False):
+def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, static_transformation_n=5, undersample_balance_dataset=False, undersample_n=None, oversample_balance_dataset=False, custom_sample_balance_dataset=False):
     """
     Arguments:
         archive_dir: String where .h5 file is stored containing model's data.
@@ -252,7 +267,7 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         Undersample our dataset if our option is enabled.
         """
         print "Balancing Dataset..."
-        x, y = undersample_dataset(x, y, class_n)
+        x, y = undersample_dataset(x, y, class_n, undersample_n)
 
     elif oversample_balance_dataset:
         """
@@ -379,4 +394,4 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         hf.create_dataset("x", data=x)
         hf.create_dataset("y", data=y)
 
-generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True)
+generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, undersample_balance_dataset=True, undersample_n = 6836)
