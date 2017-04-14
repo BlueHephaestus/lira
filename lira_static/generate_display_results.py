@@ -7,6 +7,8 @@ Further documentation can be found in each method.
 """
 import os, sys, h5py, pickle, cv2
 
+import numpy as np
+
 import img_handler
 from img_handler import get_relative_factor, clear_dir
 
@@ -100,7 +102,7 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
                 """
                 We then denoise our predictions, now that the entire predictions matrix is loaded for this image.
                 """
-                predictions = post_processing.denoise_predictions(predictions, len(classifications), epochs)
+                img_predictions = post_processing.denoise_predictions(img_predictions, len(classifications), epochs)
 
                 """
                 Get the factor to use for both subsections and resizing
