@@ -151,7 +151,7 @@ def custom_sample_dataset(x, y, class_n):
     """
     We then get the boundary number, to undersample a class to if above, or oversample if below.
     """
-    class_sample_boundary = 10000
+    class_sample_boundary = 6500
 
     """
     We then get our dimensions accordingly, and initialise each to zeros
