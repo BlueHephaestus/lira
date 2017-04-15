@@ -22,6 +22,7 @@ def denoise_predictions(src, epochs):
             get the cost of each class at this location with our cost function,
             then place the class with the lowest cost at the mirrored location in our destination image.
         Then repeat this process `epochs` number of times
+
     """
     h, w, class_n = src.shape
     
