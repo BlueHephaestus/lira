@@ -59,10 +59,11 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     output_dims = 7
 
     datagen = ImageDataGenerator(
-        rescale=1./255.,
-        rotation_range=20,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
+        rotation_range=90,
+        width_shift_range=0.5,
+        height_shift_range=0.5,
+        shear_range=0.5,
+        zoom_range=0.5,
         fill_mode="constant",
         cval=244,
         horizontal_flip=True,
@@ -72,11 +73,11 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     Model Hyper Parameters
         (optimizer is initialized in each run)
     """
-    epochs = 100
-    mini_batch_size = 100
+    epochs = 50
+    mini_batch_size = 90
     loss = "binary_crossentropy"
-    dropout_p = 0.5
-    regularization_rate = 0.000016
+    dropout_p = 0.1
+    regularization_rate = 0.0001
 
     """
     Amount of times we train our model to remove possible variance in the results
@@ -167,9 +168,9 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         Get our outputs by training on training data and evaluating on validation and test accuracy each epoch,
             as well as with our previously defined hyper-parameters
         """
-        #outputs = model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], epochs=epochs, batch_size=mini_batch_size)
+        outputs = model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], epochs=epochs, batch_size=mini_batch_size)
         #datagen.fit(dataset.training.x)
-        outputs = model.fit_generator(datagen.flow(dataset.training.x, dataset.training.y, batch_size=mini_batch_size), validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], steps_per_epoch=len(dataset.training.x)/float(mini_batch_size), epochs=epochs, workers=8)
+        #outputs = model.fit_generator(datagen.flow(dataset.training.x, dataset.training.y, batch_size=mini_batch_size), validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], steps_per_epoch=len(dataset.training.x)/float(mini_batch_size), epochs=epochs, workers=8)
 
         """
         Stack and transpose our results to get a matrix of size epochs x 4, where each row contains the statistics for that epoch.
