@@ -8,10 +8,10 @@ Further documentation found in each function.
 import sys
 import numpy as np
 
-def denoise_predictions(src, class_n, epochs):
+def denoise_predictions(src, epochs):
     """
     Arguments:
-        src: np array of shape (h, w), the source image.
+        src: np array of shape (h, w, class_n), the source image.
         class_n: int number of classes / classifications we will find in our src img.
         epochs: int number of denoising iterations to put our src image through.
             Note: set this to 0 if you don't want denoising.
@@ -23,10 +23,11 @@ def denoise_predictions(src, class_n, epochs):
             then place the class with the lowest cost at the mirrored location in our destination image.
         Then repeat this process `epochs` number of times
     """
-    h, w = src.shape
+    h, w, class_n = src.shape
+    
+    neighbor_weight = 0.8
 
     costs = np.zeros((class_n))
-
     """
     Just in case we don't want any denoising, in which case we return the src.
     """
@@ -43,12 +44,11 @@ def denoise_predictions(src, class_n, epochs):
         """
         Each loop, reset our destination image, which will contain the new denoised image.
         """
-        dst = np.zeros_like(src)
+        dst = np.zeros((h,w))
         sys.stdout.write("\rDenoising Image... %i%%"%(int(float(epoch)/epochs*100)))
         sys.stdout.flush()
         for i in range(h):
             for j in range(w):
-
                 """
                 Get indices of neighbors
                 """
@@ -58,7 +58,7 @@ def denoise_predictions(src, class_n, epochs):
                 Get cost of each class for this pixel in our src img
                 """
                 for class_i in range(class_n):
-                    costs[class_i] = cost(class_i,src[i,j],src,neighbors)
+                    costs[class_i] = cost(class_i, src[i,j], src, neighbors, neighbor_weight, class_n)
 
                 """
                 Assign dst pixel to class with lowest cost.
@@ -71,23 +71,6 @@ def denoise_predictions(src, class_n, epochs):
         src = dst
     return dst
 
-
-def kronecker_delta(a,b):
-        """
-        Arguments:
-            a,b: Two np arrays of the same shape. 
-
-        Returns:
-            An integer representation of performing ~(a-b)
-            
-            The Kronecker Delta function is really useful, but there isn't an actual method in many libraries.
-            Fortunately, it's pretty much just ~(a-b), since we want the following behavior:
-                kronecker_delta(a,b) = 1 if a == b
-                kronecker_delta(a,b) = 0 if a != b
-            So we do this, then return the integer representation of our logical op.
-            Since I use numpy it holds for scalars and also vectors/matrices.
-        """
-        return np.logical_not(a-b).astype(int)
 
 def get_neighbors(i,j,h,w):
     """
@@ -110,25 +93,22 @@ def get_neighbors(i,j,h,w):
             del neighbors[neighbor_i]
     return neighbors
 
-def cost(dst_val,src_val,src,neighbors):
+def cost(dst_val, src_val, src, neighbors, neighbor_weight, class_n):
     """
     Arguments:
         dst_val: Possible/Candidate value for the destination pixel. 0 <= dst_val < class_n
         src_val: The value of the source pixel. 0 <= src_val < class_n
         src: np array of shape (h, w), the source image. Used for referencing our neighbor indices
         neighbors: Our neighbor indices of our src pixel. See get_neighbors.
+        neighbor_weight: 
+            How much importance to put on the neighbor values. 
+            This could also be thought of as a smoothing factor.
+            Should be between 0 and 1
+        class_n: int number of classes / classifications. 
 
     Returns:
         The cost of placing dst_val as the source pixel's src_val, given src_val and neighbors of src_val.
         The lower the cost, the better a candidate value dst_val is. 
-        Gets the values of our neighbors, then does the cost function 
-            -kron_delta(dst_val, src_val) + beta*sum(kron_delta(dst_val, neighbor_vals))
-        Where beta is a parameter we choose to weigh how much we care about the neighbor values.
-        This cost function puts weight on the neighbor values, but also puts importance on the source values so we don't disregard them.
-            With this, we get a smoothed image that still looks like the original.
-        The cost function also returns lower values the more values that a pixel has in common with it's neighbors, 
-            so that a pixel that is completely different has a higher cost, and one that is very similar has a lower cost.
-        With these two desirable traits, we have our cost function. We return the cost.
     """
     """
     The values of the neighbor indices of our src pixel. We get these as a vector to speed up the cost computation.
@@ -136,7 +116,37 @@ def cost(dst_val,src_val,src,neighbors):
     neighbor_vals = np.array([src[neighbor] for neighbor in neighbors])
 
     """
-    Compute our cost function as follows, using our neighbor value vector to compute the neighbor kronecker deltas simultaneously.
-    """
-    return -(1 * kronecker_delta(dst_val,src_val) + 10 * np.sum(kronecker_delta(dst_val,neighbor_vals)))
+    Compute our cost function as follows:
+        
+        C = (a * (mean((d - N)**2)) + (1-a) * (mean((d-s)**2)))
+        
+    Where 
+        a is our neighbor weight, 
+        n is our number of classes (since the values are n-length vectors),
+        d is our destination value,
+        s is our src value,
+        and N is our neighbor value matrix, of size neighbor_n x n
 
+    This has been simplified to allow for cheaper computation, however its format originally was:
+        
+        C = a * (sum(f(d, N_i)) + (1-a) * f(d, s))
+        f(d, x) = mean((d-x)**2)
+
+    Which makes much more sense. the f(d, x) function was chosen to just be the Mean Squared Error, 
+        which I expanded and changed the extra sum(f(d, N_i)) to just be mean((d-N)**2), 
+        since numpy adds the squared differences in the same manner as if I just did both sums:
+            mean(sum((d-N_i)**2)) = 1/n * sum((d-N)**2) = mean((d-N)**2
+        So I went with the right most equation because it was more compact.
+
+    As for the f(d, s) equation, this was already very simplified.
+
+    So, to recap:
+        f(d, x) gives a value between 0 and 1 because d and x are between 0 and 1 (otherwise I would have used the radial basis function probably),
+            which is close to 1 for very different values, and close to 0 for very similar values 
+            It is the mean squared error cost function.
+        a, (1-a) were used so that whatever the percent importance assigned to neighbors was (you could also think of this as a 0-1 weight), 
+            the remaining percent would be assigned to the original src value, and we'd still get a sane equation for any values for "a" between 0 and 1
+            If you don't think of it as percentages, then just think of it as a way to make sure the equation works for any values 0-1,
+                and make sure that if there is high weight on neighbors, there is low weight on source values, and vice versa..
+    """
+    return (neighbor_weight * (np.mean(np.square(dst_val - neighbor_vals))) + (1.-neighbor_weight) * (np.mean(np.square(dst_val-src_val))))
