@@ -94,7 +94,7 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
                 Get the image and predictions for the image
                 """
                 img = img_hf.get(str(img_i))
-                img_predictions = predictions_hf.get(str(img_i))
+                img_predictions = np.array(predictions_hf.get(str(img_i)))
 
                 """
                 We then denoise our predictions, now that all the predictions are loaded for this image.
