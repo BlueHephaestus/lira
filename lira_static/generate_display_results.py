@@ -19,13 +19,17 @@ from subsection_handler import get_next_overlay_subsection
 
 import post_processing
 
-def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", results_dir = "results", epochs = 1):
+def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", results_dir = "results", neighbor_weight=0.8, epochs = 4):
     """
     Arguments:
         img_archive_dir: a string filepath of the .h5 file where the images / greyscales are stored.
         predictions_archive_dir: a string filepath of the .h5 file where the model's predictions on the images/greyscales is stored.
         classification_metadata_dir: a string filepath of the .pkl file where the model's classification strings and color key for each classification are stored.
         results_dir: a string filepath to store each result image.
+        neighbor_weight: 
+            How much importance to put on the neighbor values. 
+            This could also be thought of as a smoothing factor.
+            Should be between 0 and 1
         epochs: the number of iterations to run our denoising algorithm on each full predictions matrix. Defaults to 1.
 
     Returns:
@@ -92,17 +96,18 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
                 img = img_hf.get(str(img_i))
                 img_predictions = predictions_hf.get(str(img_i))
 
+
+                """
+                We then denoise our predictions, now that the entire predictions matrix is loaded for this image.
+                """
+                img_predictions = post_processing.denoise_predictions(img_predictions, neighbor_weight, epochs)
+
                 """
                 Since I haven't yet made a denoising algorithm that works with 3-tensors instead of matrices for predictions,
                     we argmax right here.
                 THIS NEEDS TO BE AFTER THE DENOISING, NORMALLY
                 """
                 img_predictions = np.argmax(img_predictions, axis=2)
-
-                """
-                We then denoise our predictions, now that the entire predictions matrix is loaded for this image.
-                """
-                img_predictions = post_processing.denoise_predictions(img_predictions, len(classifications), epochs)
 
                 """
                 Get the factor to use for both subsections and resizing
