@@ -8,11 +8,14 @@ Further documentation found in each function.
 import sys
 import numpy as np
 
-def denoise_predictions(src, epochs):
+def denoise_predictions(src, neighbor_weight, epochs):
     """
     Arguments:
-        src: np array of shape (h, w, class_n), the source image.
-        class_n: int number of classes / classifications we will find in our src img.
+        src: np array of shape (h, w), the source image.
+        neighbor_weight: 
+            How much importance to put on the neighbor values. 
+            This could also be thought of as a smoothing factor.
+            Should be between 0 and 1
         epochs: int number of denoising iterations to put our src image through.
             Note: set this to 0 if you don't want denoising.
 
@@ -22,18 +25,28 @@ def denoise_predictions(src, epochs):
             get the cost of each class at this location with our cost function,
             then place the class with the lowest cost at the mirrored location in our destination image.
         Then repeat this process `epochs` number of times
-
     """
     h, w, class_n = src.shape
     
-    neighbor_weight = 0.8
-
-    costs = np.zeros((class_n))
     """
     Just in case we don't want any denoising, in which case we return the src.
     """
     if epochs == 0:
         return src
+
+    """
+    Since our cost function accepts our candidate values as one-hot vectors, 
+        we create the one-hot vectors here for each class number.
+    Since the one-hot vectors would end up just being
+        [1, 0, ... 0]
+        [0, 1, ... 0]
+        [     .     ]
+        [     .     ]
+        [     .     ]
+        [0, 0, ... 1]
+    we can just create an identity matrix of size class_n, since it is equivalent.
+    """
+    classes = np.eye(class_n)
 
     """
     Since this is interacting with a file which has its own progress indicator,
@@ -45,7 +58,7 @@ def denoise_predictions(src, epochs):
         """
         Each loop, reset our destination image, which will contain the new denoised image.
         """
-        dst = np.zeros((h,w))
+        dst = np.zeros_like(src)
         sys.stdout.write("\rDenoising Image... %i%%"%(int(float(epoch)/epochs*100)))
         sys.stdout.flush()
         for i in range(h):
@@ -56,15 +69,27 @@ def denoise_predictions(src, epochs):
                 neighbors=get_neighbors(i,j,h,w)
                 
                 """
-                Get cost of each class for this pixel in our src img
+                Get cost of each class for this pixel in our src img,
+                    then put the complement of that cost (1-cost) as our new output value
+                    in our destination image.
+                Since our denoiser iterates through an image that has output probabilities 
+                    at each pixel, we need to set this pixel to have new, updated probabilities.
+                We can do this by just getting the complement of the cost, 
+                    since this way the lower the cost, the higher the probability.
+                (they aren't yet a proper probability distribution, that comes in the next line)
                 """
                 for class_i in range(class_n):
-                    costs[class_i] = cost(class_i, src[i,j], src, neighbors, neighbor_weight, class_n)
+                    dst[i,j,class_i] = 1-cost(classes[class_i], src[i,j], src, neighbors, neighbor_weight, class_n)
 
                 """
-                Assign dst pixel to class with lowest cost.
+                Of course at this point the values at our destination pixel sum to more than 1, so we 
+                    normalize them into an actual probability distribution across classes via dst = dst_pixel/sum(dst_pixel)
+
+                I could do this with some fancy matrix multiplication at the end of our pixel loop, 
+                    however that would be harder to understand, and we are running this on CPU anyways so it wouldn't save much time.
                 """
-                dst[i,j] = np.argmin(costs)
+                dst[i,j] = dst[i,j] / np.sum(dst[i,j])
+        
         """
         Set src equal to dst, so that we can run this again on the result of the previous loop,
             and continue denoising the image for `epochs` times.
@@ -151,3 +176,4 @@ def cost(dst_val, src_val, src, neighbors, neighbor_weight, class_n):
                 and make sure that if there is high weight on neighbors, there is low weight on source values, and vice versa..
     """
     return (neighbor_weight * (np.mean(np.square(dst_val - neighbor_vals))) + (1.-neighbor_weight) * (np.mean(np.square(dst_val-src_val))))
+
