@@ -106,12 +106,12 @@ class Configurer(object):
             """
             Get our dataset object for easy reference of data subsets (training, validation, and test) from our archive_dir.
             """
-            dataset, whole_normalization_data = load_dataset_obj(self.p_training, self.p_validation, self.p_test, self.archive_dir, self.output_dims, whole_data_normalization=False)
+            dataset, whole_normalization_data = load_dataset_obj(p_training, p_validation, p_test, archive_dir, output_dims, whole_data_normalization=False)
 
             """
             Get properly formatted input dimensions for our convolutional layer, so that we go from [h, w] to [-1, h, w, 1]
             """
-            image_input_dims = [-1, self.input_dims[0], self.input_dims[1], 1]
+            image_input_dims = [-1, input_dims[0], input_dims[1], 1]
 
             """
             Reshape our dataset inputs accordingly
@@ -121,41 +121,90 @@ class Configurer(object):
             dataset.test.x = np.reshape(dataset.test.x, image_input_dims)
 
             """
-            Define our model
+            Convert our data from grayscale into RGB by repeating the last dimension,
+                for use with large pretrained networks, trained on rgb data.
+            This goes from [-1, ..., 1] to [-1, ..., 3]
             """
-            model = Sequential()
-            model.add(Conv2D(20, (7, 12), padding="valid", input_shape=(80, 145, 1), data_format="channels_last", activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
-            model.add(MaxPooling2D(data_format="channels_last"))
-
-            model.add(Conv2D(40, (6, 10), padding="valid", data_format="channels_last", activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
-            model.add(MaxPooling2D(data_format="channels_last"))
-
-            model.add(Flatten())
-
-            model.add(Dense(1024, activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
-            model.add(Dropout(dropout_p))
-
-            model.add(Dense(100, activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
-            model.add(Dropout(dropout_p))
-
-            model.add(Dense(self.output_dims, activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
+            dataset.training.x = np.repeat(dataset.training.x, [3], axis=3)
+            dataset.validation.x = np.repeat(dataset.validation.x, [3], axis=3)
+            dataset.test.x = np.repeat(dataset.test.x, [3], axis=3)
 
             """
-            Compile our model with our previously defined loss and optimizer, and recording the accuracy on the training data.
+            Since our last dimension is now 3 instead of 1, we update our image_input_dims
             """
-            model.compile(loss=self.loss, optimizer=optimizer, metrics=["accuracy"])
+            image_input_dims = [-1, input_dims[0], input_dims[1], 3]
+            
+            """
+            Open our pre-trained very deep network,
+                without the dense layers at the end of the network,
+                and with the input shape of our data
+            """
+            pretrained_model = VGG19(weights='imagenet', include_top=False, input_shape=image_input_dims[1:])
+
+            """
+            Get the features produced by our bottleneck layer, the features that are produced 
+                by the last convolutional + maxpooling layer in this pretrained net (before the dense layers).
+            These will be referred to as bottleneck features.
+            """
+            print "Generating Features from Pre-Trained Model..."
+            dataset.training.x = pretrained_model.predict(dataset.training.x)
+            dataset.validation.x = pretrained_model.predict(dataset.validation.x)
+            dataset.test.x = pretrained_model.predict(dataset.test.x)
+
+            """
+            Now we can define a new, smaller model on top of this pretrained model.
+            We will call this model the bottleneck model, for lack of a better name (who wants to call it "top_model"? that sucks)
+                We set input shape to the output shape of our pretrained model, since it uses the bottleneck layer's output (the bottleneck features) as input.
+            """
+            bottleneck_model = Sequential()
+            bottleneck_model.add(Flatten(input_shape=dataset.training.x.shape[1:]))
+            bottleneck_model.add(Dense(1024, activation="relu", kernel_regularizer=l2(regularization_rate)))
+            bottleneck_model.add(Dropout(dropout_p))
+            bottleneck_model.add(Dense(128, activation="relu", kernel_regularizer=l2(regularization_rate)))
+            bottleneck_model.add(Dropout(dropout_p))
+            bottleneck_model.add(Dense(output_dims, activation="softmax"))
+
+            """
+            Compile our model with our previously defined loss and optimizer, and record the accuracy on the training data.
+            """
+            bottleneck_model.compile(loss=loss, optimizer=optimizer, metrics=["accuracy"])
 
             """
             Get our test data callback with our previously imported class from keras_test_callback.py
                 We also reset it every loop so that keras doesn't automatically append results to it
             """
-            test_callback = TestCallback(model, (dataset.test.x, dataset.test.y))
+            test_callback = TestCallback(bottleneck_model, (dataset.test.x, dataset.test.y))
 
             """
             Get our outputs by training on training data and evaluating on validation and test accuracy each epoch,
-                as well as with our previously defined hyper-parameters
+                and use our previously defined hyper-parameters where needed.
             """
-            outputs = model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], epochs=self.epochs, batch_size=mini_batch_size)
+            outputs = bottleneck_model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], epochs=epochs, batch_size=mini_batch_size)
+
+            """
+            Now that we have a trained bottleneck model on top of our pre-trained model,
+                we add the bottleneck model to the literal top of our pre-trained model to get a new model for our problem.
+            Our chain for the new, full, combined model is as follows:
+                Inputs -> Pre-Trained Model -> Bottleneck Model -> Outputs
+            So that:
+                the input to the pretrained model is the input to the full model,
+                the output of the pretrained model is the input to the bottleneck model,
+                    (since it was trained on the bottleneck features / output of the pretrained model)
+                and the output of the bottleneck model is the output of the full model.
+            And we do this by symbolically linking the inputs and outputs according to our chain:
+                Input -> pretrained outputs -> bottleneck outputs -> Output
+            And can then initialize a full model using this linked input and output.
+
+            If I didn't explain this well, please let me know.
+            """
+            pretrained_inputs = Input(image_input_dims[1:])
+            pretrained_outputs = pretrained_model(pretrained_inputs)
+            bottleneck_outputs = bottleneck_model(pretrained_outputs)
+            model = Model(inputs=pretrained_inputs, outputs=bottleneck_outputs)
+            """
+            Note: Keras will give us a warning for not compiling our model, but this is fine because we aren't training the entire model.
+            If you do wish to train the model, simply compile it with parameters/arguments of your choice.
+            """
 
             """
             Stack and transpose our results to get a matrix of size epochs x 4, where each row contains the statistics for that epoch.
