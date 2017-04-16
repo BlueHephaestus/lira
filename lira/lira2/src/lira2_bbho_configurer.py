@@ -15,6 +15,8 @@ from keras.layers import Dense, Activation, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras.optimizers import Adam
 from keras.regularizers import l2
+from keras.applications import *
+from keras.models import Model
 
 import dataset_handler
 from dataset_handler import *
