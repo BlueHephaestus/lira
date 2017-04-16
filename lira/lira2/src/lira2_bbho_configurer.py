@@ -146,7 +146,6 @@ class Configurer(object):
                 by the last convolutional + maxpooling layer in this pretrained net (before the dense layers).
             These will be referred to as bottleneck features.
             """
-            print "Generating Features from Pre-Trained Model..."
             dataset.training.x = pretrained_model.predict(dataset.training.x)
             dataset.validation.x = pretrained_model.predict(dataset.validation.x)
             dataset.test.x = pretrained_model.predict(dataset.test.x)
@@ -182,28 +181,8 @@ class Configurer(object):
             outputs = bottleneck_model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], epochs=epochs, batch_size=mini_batch_size)
 
             """
-            Now that we have a trained bottleneck model on top of our pre-trained model,
-                we add the bottleneck model to the literal top of our pre-trained model to get a new model for our problem.
-            Our chain for the new, full, combined model is as follows:
-                Inputs -> Pre-Trained Model -> Bottleneck Model -> Outputs
-            So that:
-                the input to the pretrained model is the input to the full model,
-                the output of the pretrained model is the input to the bottleneck model,
-                    (since it was trained on the bottleneck features / output of the pretrained model)
-                and the output of the bottleneck model is the output of the full model.
-            And we do this by symbolically linking the inputs and outputs according to our chain:
-                Input -> pretrained outputs -> bottleneck outputs -> Output
-            And can then initialize a full model using this linked input and output.
-
-            If I didn't explain this well, please let me know.
-            """
-            pretrained_inputs = Input(image_input_dims[1:])
-            pretrained_outputs = pretrained_model(pretrained_inputs)
-            bottleneck_outputs = bottleneck_model(pretrained_outputs)
-            model = Model(inputs=pretrained_inputs, outputs=bottleneck_outputs)
-            """
-            Note: Keras will give us a warning for not compiling our model, but this is fine because we aren't training the entire model.
-            If you do wish to train the model, simply compile it with parameters/arguments of your choice.
+            Since we don't need to save a model for future use, we don't need to create a full model by combining our pretrained and bottleneck models, as we usually do.
+                So, we can get our results and exit now.
             """
 
             """
