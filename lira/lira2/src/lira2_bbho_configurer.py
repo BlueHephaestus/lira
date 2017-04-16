@@ -148,6 +148,7 @@ class Configurer(object):
                 by the last convolutional + maxpooling layer in this pretrained net (before the dense layers).
             These will be referred to as bottleneck features.
             """
+            print "Generating Features from Pre-Trained Model..."
             dataset.training.x = pretrained_model.predict(dataset.training.x)
             dataset.validation.x = pretrained_model.predict(dataset.validation.x)
             dataset.test.x = pretrained_model.predict(dataset.test.x)
@@ -157,6 +158,7 @@ class Configurer(object):
             We will call this model the bottleneck model, for lack of a better name (who wants to call it "top_model"? that sucks)
                 We set input shape to the output shape of our pretrained model, since it uses the bottleneck layer's output (the bottleneck features) as input.
             """
+            print "Training Bottleneck Model..."
             bottleneck_model = Sequential()
             bottleneck_model.add(Flatten(input_shape=dataset.training.x.shape[1:]))
             bottleneck_model.add(Dense(1024, activation="relu", kernel_regularizer=l2(regularization_rate)))
