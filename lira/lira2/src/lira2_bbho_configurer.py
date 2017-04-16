@@ -106,12 +106,12 @@ class Configurer(object):
             """
             Get our dataset object for easy reference of data subsets (training, validation, and test) from our archive_dir.
             """
-            dataset, whole_normalization_data = load_dataset_obj(p_training, p_validation, p_test, archive_dir, output_dims, whole_data_normalization=False)
+            dataset, whole_normalization_data = load_dataset_obj(self.p_training, self.p_validation, self.p_test, self.archive_dir, self.output_dims, whole_data_normalization=False)
 
             """
             Get properly formatted input dimensions for our convolutional layer, so that we go from [h, w] to [-1, h, w, 1]
             """
-            image_input_dims = [-1, input_dims[0], input_dims[1], 1]
+            image_input_dims = [-1, self.input_dims[0], self.input_dims[1], 1]
 
             """
             Reshape our dataset inputs accordingly
@@ -132,7 +132,7 @@ class Configurer(object):
             """
             Since our last dimension is now 3 instead of 1, we update our image_input_dims
             """
-            image_input_dims = [-1, input_dims[0], input_dims[1], 3]
+            image_input_dims = [-1, self.input_dims[0], self.input_dims[1], 3]
             
             """
             Open our pre-trained very deep network,
@@ -161,12 +161,12 @@ class Configurer(object):
             bottleneck_model.add(Dropout(dropout_p))
             bottleneck_model.add(Dense(128, activation="relu", kernel_regularizer=l2(regularization_rate)))
             bottleneck_model.add(Dropout(dropout_p))
-            bottleneck_model.add(Dense(output_dims, activation="softmax"))
+            bottleneck_model.add(Dense(self.output_dims, activation="softmax"))
 
             """
             Compile our model with our previously defined loss and optimizer, and record the accuracy on the training data.
             """
-            bottleneck_model.compile(loss=loss, optimizer=optimizer, metrics=["accuracy"])
+            bottleneck_model.compile(loss=self.loss, optimizer=optimizer, metrics=["accuracy"])
 
             """
             Get our test data callback with our previously imported class from keras_test_callback.py
@@ -178,13 +178,12 @@ class Configurer(object):
             Get our outputs by training on training data and evaluating on validation and test accuracy each epoch,
                 and use our previously defined hyper-parameters where needed.
             """
-            outputs = bottleneck_model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], epochs=epochs, batch_size=mini_batch_size)
+            outputs = bottleneck_model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], epochs=self.epochs, batch_size=mini_batch_size)
 
             """
             Since we don't need to save a model for future use, we don't need to create a full model by combining our pretrained and bottleneck models, as we usually do.
                 So, we can get our results and exit now.
             """
-
             """
             Stack and transpose our results to get a matrix of size epochs x 4, where each row contains the statistics for that epoch.
             """
