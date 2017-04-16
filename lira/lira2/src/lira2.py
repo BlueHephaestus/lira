@@ -75,11 +75,11 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     Model Hyper Parameters
         (optimizer is initialized in each run)
     """
-    epochs = 20
+    epochs = 50
     mini_batch_size = 90
     loss = "binary_crossentropy"
-    dropout_p = 0.1
-    regularization_rate = 0.0001
+    dropout_p = 0.5
+    regularization_rate = 0.001
 
     """
     Amount of times we train our model to remove possible variance in the results
@@ -173,11 +173,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         """
         bottleneck_model = Sequential()
         bottleneck_model.add(Flatten(input_shape=dataset.training.x.shape[1:]))
-        bottleneck_model.add(Dense(2048, activation="relu", kernel_regularizer=l2(regularization_rate)))
-        bottleneck_model.add(Dropout(dropout_p))
         bottleneck_model.add(Dense(1024, activation="relu", kernel_regularizer=l2(regularization_rate)))
-        bottleneck_model.add(Dropout(dropout_p))
-        bottleneck_model.add(Dense(512, activation="relu", kernel_regularizer=l2(regularization_rate)))
         bottleneck_model.add(Dropout(dropout_p))
         bottleneck_model.add(Dense(128, activation="relu", kernel_regularizer=l2(regularization_rate)))
         bottleneck_model.add(Dropout(dropout_p))
@@ -220,6 +216,10 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         pretrained_outputs = pretrained_model(pretrained_inputs)
         bottleneck_outputs = bottleneck_model(pretrained_outputs)
         model = Model(inputs=pretrained_inputs, outputs=bottleneck_outputs)
+        """
+        Note: Keras will give us a warning for not compiling our model, but this is fine because we aren't training the entire model.
+        If you do wish to train the model, simply compile it with parameters/arguments of your choice.
+        """
 
         """
         Stack and transpose our results to get a matrix of size epochs x 4, where each row contains the statistics for that epoch.
