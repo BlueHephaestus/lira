@@ -206,7 +206,7 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
                             We do this because our model's first stage consists of pretrained models, 
                             which were trained on rgb data originally and thus expect data with 3 channels.
                         """
-                        subs = np.repeat(subs, [3], axis=3)
+                        #subs = np.repeat(subs, [3], axis=3)
 
                         """
                         Loop through vector of subsections with step mb_n
