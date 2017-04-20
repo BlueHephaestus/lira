@@ -173,7 +173,6 @@ def main(sub_h=80,
                         This is based on the computation-saving assumption that if all our predictions for a subsection are empty, then we have an empty subsection.
                     """
                     prediction_sub = get_prediction_subsection(sub_i, factor, img_predictions)
-                    print prediction_sub.shape
 
                     """
                     We don't start if we are not yet to our last stopping point, however.
