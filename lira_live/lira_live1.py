@@ -173,6 +173,7 @@ def main(sub_h=80,
                         This is based on the computation-saving assumption that if all our predictions for a subsection are empty, then we have an empty subsection.
                     """
                     prediction_sub = get_prediction_subsection(sub_i, factor, img_predictions)
+                    print prediction_sub.shape
 
                     """
                     We don't start if we are not yet to our last stopping point, however.
@@ -485,6 +486,7 @@ def main(sub_h=80,
 
                     greyscale_sub = get_next_subsection(row_i, col_i, img.shape[0], img.shape[1], sub_h, sub_w, img, factor)
                     prediction_sub = get_prediction_subsection(sub_i, factor, img_predictions)
+                    prediction_sub = np.argmax(prediction_sub, axis = 2)
 
                     """
                     Again, we can easily get the number of predictions in our subsection to get the number
