@@ -533,7 +533,7 @@ def main(sub_h=80,
     """
     Now that we have filled our x and y arrays, open and create a new live_archive.h5 dataset.
     """
-    with h5py.File(live_archive_dir, "w") as live_hf:
+    with h5py.File(live_archive_dir, "w", chunks=True, compression="gzip") as live_hf:
         live_hf.create_dataset("x", data=x)
         live_hf.create_dataset("y", data=y)
     
