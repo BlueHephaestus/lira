@@ -362,6 +362,7 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
     """
     x = np.reshape(x, (-1, h*w))
 
+    print "Writing Balanced / Augmented Dataset..."
     """
     We are now done augmenting our dataset,
         We now save our transformation matrices to the metadata_dir,
@@ -372,8 +373,8 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
     """
     And finally create our augmented archive and store our transformed x and transformed y there.
     """
-    with h5py.File(augmented_archive_dir, "w") as hf:
+    with h5py.File(augmented_archive_dir, "w", chunks=True, compression="gzip") as hf:
         hf.create_dataset("x", data=x)
         hf.create_dataset("y", data=y)
 
-generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [20000, 20000,20000,20000,20000,20000,0])
+generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [80000, 80000, 80000, 80000, 80000, 80000, 0])
