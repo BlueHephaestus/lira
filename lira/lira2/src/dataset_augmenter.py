@@ -71,8 +71,15 @@ def undersample_dataset(x, y, class_n, undersample_n=None):
     """
     balanced_x_dims = [balanced_n]
     balanced_x_dims.extend(x.shape[1:])
-    balanced_x = np.zeros((balanced_x_dims))
-    balanced_y = np.zeros((balanced_n))
+    """
+    We then initialize our balanced arrays. Since these may be easily be far larger than our RAM,
+        we use np.memmap, which is a way of holding them on disk and loading sections into RAM as we need them.
+        They basically let us hold data structures in memory that are larger than our RAM, in case these are.
+    They do need our dimensions as tuples, so we do a quick convert when creating that object.
+    Otherwise, we create the balanced x and y arrays.
+    """
+    balanced_x = np.memmap("balanced_x.dat", dtype="float32", mode="w+", shape=tuple(balanced_x_dims))
+    balanced_y = np.memmap("balanced_y.dat", dtype="float32", mode="w+", shape=(balanced_n,))
 
     """
     We then loop through, making sure to only add each class class_sample_minority times,
@@ -118,8 +125,16 @@ def oversample_dataset(x, y, class_n):
     """
     balanced_x_dims = [int(class_sample_majority*class_n)]
     balanced_x_dims.extend(x.shape[1:])
-    balanced_x = np.zeros((balanced_x_dims))
-    balanced_y = np.zeros((int(class_sample_majority*class_n)))
+
+    """
+    We then initialize our balanced arrays. Since these may be easily be far larger than our RAM,
+        we use np.memmap, which is a way of holding them on disk and loading sections into RAM as we need them.
+        They basically let us hold data structures in memory that are larger than our RAM, in case these are.
+    They do need our dimensions as tuples, so we do a quick convert when creating that object.
+    Otherwise, we create the balanced x and y arrays.
+    """
+    balanced_x = np.memmap("balanced_x.dat", dtype="float32", mode="w+", shape=tuple(balanced_x_dims))
+    balanced_y = np.memmap("balanced_y.dat", dtype="float32", mode="w+", shape=(int(class_sample_majority*class_n),))
 
     """
     Then we get a zeroed array to keep track of each class as we add it to our balanced dataset
@@ -174,8 +189,16 @@ def custom_sample_dataset(x, y, class_n, sample_ns):
     """
     balanced_x_dims = [np.sum(sample_ns)]
     balanced_x_dims.extend(x.shape[1:])
-    balanced_x = np.zeros((balanced_x_dims))
-    balanced_y = np.zeros((np.sum(sample_ns)))
+
+    """
+    We then initialize our balanced arrays. Since these may be easily be far larger than our RAM,
+        we use np.memmap, which is a way of holding them on disk and loading sections into RAM as we need them.
+        They basically let us hold data structures in memory that are larger than our RAM, in case these are.
+    They do need our dimensions as tuples, so we do a quick convert when creating that object.
+    Otherwise, we create the balanced x and y arrays.
+    """
+    balanced_x = np.memmap("balanced_x.dat", dtype="float32", mode="w+", shape=tuple(balanced_x_dims))
+    balanced_y = np.memmap("balanced_y.dat", dtype="float32", mode="w+", shape=(np.sum(sample_ns),))
 
     """
     Then we get a zeroed array to keep track of each class as we add it to our balanced dataset
