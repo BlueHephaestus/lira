@@ -70,10 +70,11 @@ def get_data_subsets(archive_dir, p_training=0.8, p_validation=0.1, p_test=0.1):
     """
 
     print "Getting Training, Validation, and Test Data..."
-    with h5py.File(archive_dir,'r') as hf:
-        data = [np.array(hf.get("x")), np.array(hf.get("y"))]
+    with h5py.File(archive_dir, "r", chunks=True, compression="gzip") as hf:
+        x = np.array(hf.get("x"))
+        y = np.array(hf.get("y"))
 
-    n_samples = len(data[0])
+    n_samples = len(x)
 
     #Now we split our samples according to percentage
     training_data = [[], []]
@@ -87,11 +88,11 @@ def get_data_subsets(archive_dir, p_training=0.8, p_validation=0.1, p_test=0.1):
 
     #Shuffle while retaining element correspondence
     print "Shuffling data..."
-    unison_shuffle(data[0], data[1])
+    unison_shuffle(x, y)
 
     #Get actual subsets
-    data_x_subsets = np.split(data[0], [n_training_subset, n_training_subset+n_validation_subset])#basically the lines we cut to get our 3 subsections
-    data_y_subsets = np.split(data[1], [n_training_subset, n_training_subset+n_validation_subset])
+    data_x_subsets = np.split(x, [n_training_subset, n_training_subset+n_validation_subset])#basically the lines we cut to get our 3 subsections
+    data_y_subsets = np.split(y, [n_training_subset, n_training_subset+n_validation_subset])
 
     training_data[0] = data_x_subsets[0]
     validation_data[0] = data_x_subsets[1]
