@@ -1,5 +1,4 @@
 """
-
 Quick script to generate an augmented_samples.h5 file of augmented samples.
     Using live_samples.h5 and transformation_handler.py, 
         it creates an augmented_samples.h5 file by applying an arbitrary number of randomly generated
@@ -8,6 +7,8 @@ Quick script to generate an augmented_samples.h5 file of augmented samples.
     Augmenting the original training data is a common practice used to help train neural networks that are
         more robust to changes in their input, so that they can learn to recognize the same sample if it's
         rotated, reflected, and so on.
+
+-Blake Edwards / Dark Element
 """
 import numpy as np
 import cv2
@@ -368,7 +369,6 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
     with open(metadata_dir, "w") as f:
         pickle.dump(transformation_matrices, f)
 
-            
     """
     And finally create our augmented archive and store our transformed x and transformed y there.
     """
@@ -376,4 +376,4 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         hf.create_dataset("x", data=x)
         hf.create_dataset("y", data=y)
 
-generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [6292, 0, 3931, 6836, 6836, 0, 0])
+generate_augmented_data("../data/live_samples_backup.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [40000, 40000,40000,40000,40000,40000,0])
