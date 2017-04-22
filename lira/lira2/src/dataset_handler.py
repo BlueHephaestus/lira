@@ -71,8 +71,12 @@ def get_data_subsets(archive_dir, p_training=0.8, p_validation=0.1, p_test=0.1):
 
     print "Getting Training, Validation, and Test Data..."
     with h5py.File(archive_dir, "r", chunks=True, compression="gzip") as hf:
-        x = np.array(hf.get("x"))
-        y = np.array(hf.get("y"))
+        x_shape = tuple(hf.get("x_shape"))
+        y_shape = tuple(hf.get("y_shape"))
+        x = np.memmap("x.dat", dtype="float32", mode="w+", shape=x_shape)
+        y = np.memmap("y.dat", dtype="float32", mode="w+", shape=y_shape)
+        x[:] = hf.get("x")[:]
+        y[:] = hf.get("y")[:]
 
     n_samples = len(x)
 

@@ -398,6 +398,8 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
     """
     with h5py.File(augmented_archive_dir, "w", chunks=True, compression="gzip") as hf:
         hf.create_dataset("x", data=x)
+        hf.create_dataset("x_shape", data=x.shape)
         hf.create_dataset("y", data=y)
+        hf.create_dataset("y_shape", data=y.shape)
 
 generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [80000, 80000, 80000, 80000, 80000, 80000, 0])

@@ -535,7 +535,9 @@ def main(sub_h=80,
     """
     with h5py.File(live_archive_dir, "w", chunks=True, compression="gzip") as live_hf:
         live_hf.create_dataset("x", data=x)
+        live_hf.create_dataset("x_shape", data=x.shape)
         live_hf.create_dataset("y", data=y)
+        live_hf.create_dataset("y_shape", data=y.shape)
     
 
 main(sub_h=80, 
