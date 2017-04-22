@@ -199,7 +199,7 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
                         Convert this matrix of subsections to a vector of subsections, with each entry being a subsection.
                             This way, we can easily loop through them.
                         """
-                        subs = np.reshape(subs, (-1, sub_h, sub_w, 1))
+                        subs = np.reshape(subs, (-1, sub_h, sub_w, 3))
 
                         """
                         Then convert the subs from grayscale to rgb, by repeating their last dimension 3 times.
