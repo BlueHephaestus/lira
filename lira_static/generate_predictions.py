@@ -127,7 +127,7 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
                 Get our image, and pad it with necessary zeros so that we never have partial edge problems with the far edges
                 """
                 img = np.array(img_hf.get(str(img_i)))
-                img = pad_img(img.shape[0], img.shape[1], sub_h, sub_w, img)
+                img = pad_img(img.shape[0], img.shape[1], sub_h, sub_w, img, rgb=rgb)
 
                 """
                 Get these for easy reference later, now that our image's dimensions aren't changing

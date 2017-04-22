@@ -126,22 +126,17 @@ def add_weighted_overlay(img, overlay, alpha, rgb=False):
             A new image, created by converting our img from greyscale to BGR, so that it goes from shape (h, w) to (h, w, 1) to (h, w, 3),
                 the same shape as our overlay argument.
         if rgb images (rgb=True)
-            We convert from RGB to BGR, then continue.
+            We continue as normal, since we don't need to do any conversions.
+            I am fairly certain that our images i've tested this on are RGB instead of BGR, and opencv automatically 
+                converts it to the right one. However, if I am incorrect and our data is just in the proper format already, you can convert your data
+                using "img = img[...,::-1]" to swap the channels.
         The overlay is then added onto the new (h, w, 3) img argument, with the alpha passed into opencv's addWeighted function.
         The result of this operation is returned, a combined image created by adding the overlay argument, weighted by alpha.
     """
     img_h = img.shape[0]
     img_w = img.shape[1]
 
-    if rgb:
-        """
-        Since opencv doesn't seem to have an RGB to BGR converter 
-            (possibly because it's impossible to tell if something is RGB? It should still exist just to swap the last channel elements though),
-        We reverse the last dimension elements using python's awesome indexing
-        """
-        img = img[...,::-1]
-
-    else:
+    if not rgb:
         """
         Use our handy existing cv2 method to convert our gray 2d image into a 3d bgr one
         Note: Since it is greyscale, it doesn't matter if we go to RGB OR BGR
@@ -183,7 +178,17 @@ def pad_img(img_h, img_w, sub_h, sub_w, img):
     """
     Then pads our image with zeros to match these new dims, and returns
     """
-    img = np.lib.pad(img, ((0, new_img_h-img_h), (0, new_img_w-img_w)), 'constant', constant_values = 0) 
+    if rgb:
+        """
+        If rgb, we make sure not to mess with our color dimension / channels / last axis and still pad correctly
+        """
+        img = np.lib.pad(img, ((0, new_img_h-img_h), (0, new_img_w-img_w), (0,0)), 'constant', constant_values = 0) 
+    else:
+        """
+        Otherwise we just pad our 2d image
+        """
+        img = np.lib.pad(img, ((0, new_img_h-img_h), (0, new_img_w-img_w)), 'constant', constant_values = 0) 
+
     return img
 
 
