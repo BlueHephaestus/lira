@@ -13,13 +13,13 @@ sys.path.append("../lira_static/")
 import img_handler
 from img_handler import *
 
-def get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=1/3., sub_h=80, sub_w=145):
+def get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=1/3., sub_h=80, sub_w=145, rgb=False):
     """
     Arguments:
-        img_i: Index of our img argument in the greyscales archive
+        img_i: Index of our img argument in the images archive
         sub_i: Index of our subsection in the img
         factor: Factor to divide our img by
-        img: np array of shape (h, w, ...). To reference for obtaining a greyscale subsection for generating our overlay subsection with.
+        img: np array of shape (h, w, ...). To reference for obtaining a image subsection for generating our overlay subsection with.
         img_predictions: np array of shape (h//sub_h, w//sub_w). To reference for obtaining a predictions subsection for generating our overlay subsection with.
         classifications: List of strings mapping our class indices to string values, 
             e.g. ["Apple", "Orange", "Banana"...] for 0 -> "Apple", 1 -> "Orange", 2 -> "Banana"
@@ -30,27 +30,28 @@ def get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, clas
             0 = full transparency of overlay, 
             1 = no transparency of overlay
         sub_h, sub_w: The size of our individual subsections in our image.
+        rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
 
     Returns:
         Returns an overlay subsection at the location specified by our factor and sub_i, 
-            with the greyscale having colored prediction rectangles of transparency alpha overlaid on top of them.
+            with the image having colored prediction rectangles of transparency alpha overlaid on top of them.
     """
     """
     Using our division factor, get the row_i and col_i.
-    Then get our original greyscale subsection from our img,
-    As well as the subsection of predictions for this greyscale subsection, 
+    Then get our original image subsection from our img,
+    As well as the subsection of predictions for this image subsection, 
         using the same function with slightly modified parameters
     """
     row_i = sub_i//factor
     col_i = sub_i % factor
 
-    greyscale_sub = get_next_subsection(row_i, col_i, img.shape[0], img.shape[1], sub_h, sub_w, img, factor)
+    img_sub = get_next_subsection(row_i, col_i, img.shape[0], img.shape[1], sub_h, sub_w, img, factor)
     sub_predictions = get_next_subsection(row_i, col_i, img_predictions.shape[0], img_predictions.shape[1], 1, 1, img_predictions, factor)
 
     """
-    Generate an overlay to match our greyscale subsection in height and width, but have 3 values per cell for RGB
+    Generate an overlay to match our image subsection in height and width, but have 3 values per cell for RGB
     """
-    overlay = np.zeros((greyscale_sub.shape[0], greyscale_sub.shape[1], 3))
+    overlay = np.zeros((img_sub.shape[0], img_sub.shape[1], 3))
 
     """
     Generate our rectangles on our overlay
@@ -64,7 +65,7 @@ def get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, clas
     """
     Generate our weighted overlay subsection, and return it.
     """
-    overlay_sub = add_weighted_overlay(greyscale_sub, overlay, alpha)
+    overlay_sub = add_weighted_overlay(img_sub, overlay, alpha, rgb=rgb)
 
     return overlay_sub
 

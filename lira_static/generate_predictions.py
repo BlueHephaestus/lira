@@ -9,7 +9,7 @@ from static_config import StaticConfig
 import img_handler
 from img_handler import *
 
-def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl"):
+def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", rgb=False):
     """
     Arguments:
         model: String containing the filename of where our model is stored, to be used for classifying images and obtaining predictions
@@ -17,6 +17,7 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
         img_archive_dir: a string filepath of the .h5 file where the images / greyscales are stored.
         predictions_archive_dir: a string filepath of the .h5 file where the model's predictions on the images/greyscales will be stored.
         classification_metadata_dir: a string filepath of the .pkl file where the model's classification strings and color key for each classification will be stored.
+        rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
 
     Returns:
         Goes through each image, divides them into smaller subsections so as not to classify the entire image at once,
@@ -193,18 +194,22 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
                         """
                         From our sub_img, get a matrix of subsections in this sub_img.
                         """
-                        subs = get_subsections(sub_h, sub_w, sub_img)
+                        subs = get_subsections(sub_h, sub_w, sub_img, rgb=rgb)
 
                         """
                         Convert this matrix of subsections to a vector of subsections, with each entry being a subsection.
                             This way, we can easily loop through them.
                         """
-                        subs = np.reshape(subs, (-1, sub_h, sub_w, 3))
+                        if rgb:
+                            subs = np.reshape(subs, (-1, sub_h, sub_w, 3))
+                        else:
+                            subs = np.reshape(subs, (-1, sub_h, sub_w, 1))
 
                         """
                         Then convert the subs from grayscale to rgb, by repeating their last dimension 3 times.
                             We do this because our model's first stage consists of pretrained models, 
                             which were trained on rgb data originally and thus expect data with 3 channels.
+                        Only enable this if you are using those models.
                         """
                         #subs = np.repeat(subs, [3], axis=3)
 

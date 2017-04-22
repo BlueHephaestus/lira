@@ -10,11 +10,12 @@ import sys, os
 import numpy as np
 import cv2
 
-def get_subsections(sub_h, sub_w, img):
+def get_subsections(sub_h, sub_w, img, rgb=False):
     """
     Arguments:
         sub_h, sub_w: The size of each subsection that our image will be divided into when finished
         img: a np array of shape (h, w, ...) where h % sub_h == 0 and w % sub_w == 0
+        rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
 
     Returns:
         Loops through the img by row and column according to the sizes of our subsection,
@@ -25,7 +26,10 @@ def get_subsections(sub_h, sub_w, img):
     """
     Initialize our subs array to size (h//sub_h, w//sub_w, sub_h, sub_w) for storing our subsections
     """
-    subs = np.zeros(shape=(img.shape[0]//sub_h, img.shape[1]//sub_w, sub_h, sub_w))
+    if rgb:
+        subs = np.zeros(shape=(img.shape[0]//sub_h, img.shape[1]//sub_w, sub_h, sub_w, 3))
+    else:
+        subs = np.zeros(shape=(img.shape[0]//sub_h, img.shape[1]//sub_w, sub_h, sub_w))
 
     """
     Use python's step in the range function to loop through our rows and columns by subsection height and width
@@ -109,27 +113,40 @@ def get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divid
     sub = img[row:row+sub_img_h, col:col+sub_img_w]
     return sub
 
-def add_weighted_overlay(img, overlay, alpha):
+def add_weighted_overlay(img, overlay, alpha, rgb=False):
     """
     Arguments:
         img: np array of shape (h, w), our original image
         overlay: np array of shape (h, w, 3), a BGR colored overlay to put on top of our original image.
         alpha: transparency weight of our overlay, percentage b/w 0 and 1, with 0 being no overlay and 1 being only overlay.
+        rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
 
     Returns:
-        A new image, created by converting our img from greyscale to BGR, so that it goes from shape (h, w) to (h, w, 1) to (h, w, 3),
-            the same shape as our overlay argument.
+        if gray images (rgb=False):
+            A new image, created by converting our img from greyscale to BGR, so that it goes from shape (h, w) to (h, w, 1) to (h, w, 3),
+                the same shape as our overlay argument.
+        if rgb images (rgb=True)
+            We convert from RGB to BGR, then continue.
         The overlay is then added onto the new (h, w, 3) img argument, with the alpha passed into opencv's addWeighted function.
         The result of this operation is returned, a combined image created by adding the overlay argument, weighted by alpha.
     """
     img_h = img.shape[0]
     img_w = img.shape[1]
 
-    """
-    Use our handy existing cv2 method to convert our gray 2d image into a 3d bgr one
-    Note: Since it is greyscale, it doesn't matter if we go to RGB OR BGR
-    """
-    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    if rgb:
+        """
+        Since opencv doesn't seem to have an RGB to BGR converter 
+            (possibly because it's impossible to tell if something is RGB? It should still exist just to swap the last channel elements though),
+        We reverse the last dimension elements using python's awesome indexing
+        """
+        img = img[...,::-1]
+
+    else:
+        """
+        Use our handy existing cv2 method to convert our gray 2d image into a 3d bgr one
+        Note: Since it is greyscale, it doesn't matter if we go to RGB OR BGR
+        """
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
     """
     Set our overlay to np.uint8 if it isn't already, to have matching dtypes

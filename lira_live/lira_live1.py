@@ -31,19 +31,21 @@ def main(sub_h=80,
          classification_metadata_dir="../lira_static/classification_metadata.pkl",
          interactive_session_metadata_dir="interactive_session_metadata.pkl",
          live_archive_dir="../lira/lira2/data/live_samples.h5",
-         dual_monitor=True):
+         dual_monitor=True,
+         rgb=False):
 
     """
     Arguments:
         sub_h, sub_w: The size of our individual subsections in our images.
-        img_archive_dir: Filepath of our greyscale images. Will have predictions overlaid for Interactive GUI.
-        predictions_archive_dir: Filepath of our predictions. Will be overlaid on greyscales for Interactive GUI.
+        img_archive_dir: Filepath of our images. Will have predictions overlaid for Interactive GUI.
+        predictions_archive_dir: Filepath of our predictions. Will be overlaid on images for Interactive GUI.
         classification_metadata_dir: Filepath of our classification metadata. Will be used for handling our predictions / classifications properly.
         interactive_session_metadata_dir: Filepath of our interactive session metadata. 
             Will be used for loading/storing user-modifiable parameters in Interactive GUI.
         live_archive_dir: Filepath of our live samples archive. Will be used to store the samples obtained through our interactive session. Updated completely at the end of each session.
         dual_monitor: Boolean for if we are using two monitors or not. 
             Shrinks the width of our display if we are, and leaves normal if not.
+        rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
 
     Returns:
         This is our main execution for LIRA-Live. Here, we handle all our sub-programs and scripts for LIRA-Live.
@@ -191,11 +193,20 @@ def main(sub_h=80,
                         """
                         If it is not empty, we continue!
                         """
+
+                        """
+                        We only do this here because it is a costly computation for large images, 
+                            which we want to skip until we are sure we need this image.
+                        This is why we only have this after the checks to see if we are at the previous position,
+                            and after the checks to see if all predictions are empty
+                        """
+                        img = np.array(img)
+
                         """
                         Get our img for this subsection to display from get_next_overlay_subsection()
                         As well as our predictions for this subsection using get_prediction_subsection()
                         """
-                        overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=alpha, sub_h=80, sub_w=145)
+                        overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=alpha, sub_h=80, sub_w=145, rgb=rgb)
 
                         """
                         Get the appropriate zoom percentage, 
@@ -421,8 +432,12 @@ def main(sub_h=80,
             """
             Initialize our final x and y arrays according to our updated_total_classification_n (the total number of individual subsection classifications), sub_h, and sub_w
                 with dtype np.uint8 so we can display them properly for testing
+            We also handle our rgb option here.
             """
-            x = np.zeros((updated_total_classification_n, sub_h*sub_w), dtype=np.uint8)
+            if rgb:
+                x = np.zeros((updated_total_classification_n, sub_h*sub_w, 3), dtype=np.uint8)
+            else:
+                x = np.zeros((updated_total_classification_n, sub_h*sub_w), dtype=np.uint8)
             y = np.zeros((updated_total_classification_n,), dtype=np.uint8)
 
             """
@@ -483,7 +498,7 @@ def main(sub_h=80,
                     row_i = sub_i//factor
                     col_i = sub_i % factor
 
-                    greyscale_sub = get_next_subsection(row_i, col_i, img.shape[0], img.shape[1], sub_h, sub_w, img, factor)
+                    img_sub = get_next_subsection(row_i, col_i, img.shape[0], img.shape[1], sub_h, sub_w, img, factor)
                     prediction_sub = get_prediction_subsection(sub_i, factor, img_predictions)
                     prediction_sub = np.argmax(prediction_sub, axis = 2)
 
@@ -493,16 +508,19 @@ def main(sub_h=80,
                     """
                     individual_sub_n = prediction_sub.size
                     """
-                    We then convert greyscale_sub and prediction_sub to their final format so we can easily loop through and reference them.
+                    We then convert img_sub and prediction_sub to their final format so we can easily loop through and reference them.
                     Note: 
-                        We can't immediately reshape our greyscale_sub, since this would not preserve our subsection positions.
+                        We can't immediately reshape our img_sub, since this would not preserve our subsection positions.
                         For an example image of shape (2960, 8140), where (2960, 8140)/(80, 145) = (37, 58),
                             we must not immediately reshape to (37*58=2146, 80*145=11600).
                         Instead, we get our (37, 58, 80, 145) shaped image with our iterative solution from earlier, get_subsections().
                         And then we can reshape directly to our goal, (2146, 11600)
                     """
-                    greyscale_sub = get_subsections(sub_h, sub_w, greyscale_sub)
-                    greyscale_sub = np.reshape(greyscale_sub, (individual_sub_n, sub_h*sub_w))
+                    img_sub = get_subsections(sub_h, sub_w, img_sub, rgb=rgb)
+                    if rgb:
+                        img_sub = np.reshape(img_sub, (individual_sub_n, sub_h*sub_w, 3))
+                    else:
+                        img_sub = np.reshape(img_sub, (individual_sub_n, sub_h*sub_w))
                     prediction_sub = prediction_sub.flatten()
 
                     for individual_sub_i in range(individual_sub_n):
@@ -523,7 +541,7 @@ def main(sub_h=80,
                         """
                         Otherwise, we store this individual subsection as the next element in our final data array.
                         """
-                        x[total_classification_i] = greyscale_sub[individual_sub_i]
+                        x[total_classification_i] = img_sub[individual_sub_i]
                         y[total_classification_i] = prediction_sub[individual_sub_i]
 
                         """
@@ -542,8 +560,9 @@ def main(sub_h=80,
 
 main(sub_h=80, 
      sub_w=145, 
-     img_archive_dir="../lira/lira1/data/greyscales.h5",
+     img_archive_dir="../lira/lira1/data/images.h5",
      predictions_archive_dir="../lira/lira1/data/predictions.h5",
      classification_metadata_dir="../lira_static/classification_metadata.pkl",
      interactive_session_metadata_dir="interactive_session_metadata.pkl",
-     live_archive_dir="../lira/lira2/data/live_samples.h5")#Main execution
+     live_archive_dir="../lira/lira2/data/live_samples.h5",
+     rgb=True)#Main execution

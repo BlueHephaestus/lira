@@ -19,7 +19,7 @@ from subsection_handler import get_next_overlay_subsection
 
 import post_processing
 
-def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", results_dir = "results", neighbor_weight=0.8, epochs = 4):
+def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", results_dir = "results", neighbor_weight=0.8, epochs=4, rgb=False):
     """
     Arguments:
         img_archive_dir: a string filepath of the .h5 file where the images / greyscales are stored.
@@ -31,6 +31,7 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
             This could also be thought of as a smoothing factor.
             Should be between 0 and 1
         epochs: the number of iterations to run our denoising algorithm on each full predictions matrix. Defaults to 1.
+        rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
 
     Returns:
         Loops through each image in the `img_archive_dir`, as well as each prediction in the `predictions_archive_dir`. There should be one prediction for each image.
@@ -134,7 +135,7 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
                     """
                     Get our overlay subsection
                     """
-                    overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=0.33, sub_h=80, sub_w=145)
+                    overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=0.33, sub_h=80, sub_w=145, rgb=rgb)
 
                     """
                     Resize the overlay subsection with our resize_factor
