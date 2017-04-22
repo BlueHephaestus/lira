@@ -1,6 +1,7 @@
 """
-Archives all images as greyscales from our data_dir directory,
-    into our archive_dir .h5 file.
+Archives all images from our data_dir directory,
+    into our archive_dir .h5 file,
+    as either grayscales or rgb images, depending on the option set.
 
 Usually, these images are quite large, so this program will take a while and use a lot of memory.
 
@@ -28,13 +29,17 @@ def recursive_get_paths(img_dir):
             paths.append((os.path.join(path, fname), fname))
     return paths
 
-def load_greyscales(data_dir, archive_dir):
+def create_archive(data_dir, archive_dir, rgb=False):
     """
     Arguments:
-        data_dir: string directory where all greyscale image files are stored. 
+        data_dir: string directory where all image files are stored. 
             All files here should be images, that are readable by OpenCV
-        archive_dir: string directory of a .h5 file to store greyscale images once loaded.
-    
+        archive_dir: string directory of a .h5 file to store images once loaded.
+        rgb: Boolean for if we want to load rgb images (True), or grayscale images (False).
+            Will use opencv's load to convert to grayscale if rgb=True, 
+            however will not convert to rgb if images are grayscale, will instead just return the gray images.
+            you should do this later when loading the images to save space.
+            
     Returns:
         After iterating through each image, stores each image at the archive_dir location, 
             according to each image's index.
@@ -44,23 +49,34 @@ def load_greyscales(data_dir, archive_dir):
     print "Getting Image Paths..."
     sample_path_infos = recursive_get_paths(data_dir)
 
-    #Open our archive
+    """
+    Open/Create our archive
+    """
     print "Creating Archive..."
     with h5py.File(archive_dir, "w") as hf:
 
-        #Loop through samples
+        """
+        Loop through samples
+        """
         for sample_i, sample_path_info in enumerate(sample_path_infos):
             sample_path, sample_fname = sample_path_info
 
-            sys.stdout.write("\rGetting Greyscale of Image #%i:%s" % (sample_i, sample_fname))
+            sys.stdout.write("\rArchiving Image #%i:%s" % (sample_i, sample_fname))
             sys.stdout.flush()
 
-            #Get greyscale version of img
-            img = cv2.imread(sample_path, 0)
+            """
+            Get appropriate version of img
+            """
+            if rgb:
+                img = cv2.imread(sample_path)
+            else:
+                img = cv2.imread(sample_path, 0)
 
-            #Archive greyscale
+            """
+            Archive img
+            """
             hf.create_dataset(str(sample_i), data=img)
 
     print ""#flush formatting
 
-#load_greyscales("../data/test_slides", "../data/greyscales.h5")
+#create_archive("../data/test_slides", "../data/greyscales.h5", rgb=True)
