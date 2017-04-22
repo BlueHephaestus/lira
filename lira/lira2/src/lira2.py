@@ -60,31 +60,20 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     input_dims = [80,145]
     output_dims = 7
 
-    datagen = ImageDataGenerator(
-        rotation_range=90,
-        width_shift_range=0.5,
-        height_shift_range=0.5,
-        shear_range=0.5,
-        zoom_range=0.5,
-        fill_mode="constant",
-        cval=244,
-        horizontal_flip=True,
-        vertical_flip=True)
-
     """
     Model Hyper Parameters
         (optimizer is initialized in each run)
     """
-    epochs = 50
-    mini_batch_size = 90
+    epochs = 100
+    mini_batch_size = 95
     loss = "binary_crossentropy"
-    dropout_p = 0.5
-    regularization_rate = 0.001
+    dropout_p = 0.7
+    regularization_rate = 0.031623
 
     """
     Amount of times we train our model to remove possible variance in the results
     """
-    run_count = 1
+    run_count = 3
 
     """
     Output Parameters
@@ -171,6 +160,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         We will call this model the bottleneck model, for lack of a better name (who wants to call it "top_model"? that sucks)
             We set input shape to the output shape of our pretrained model, since it uses the bottleneck layer's output (the bottleneck features) as input.
         """
+        print "Training Bottleneck Model..."
         bottleneck_model = Sequential()
         bottleneck_model.add(Flatten(input_shape=dataset.training.x.shape[1:]))
         bottleneck_model.add(Dense(1024, activation="relu", kernel_regularizer=l2(regularization_rate)))
