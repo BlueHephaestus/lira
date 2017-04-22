@@ -107,7 +107,7 @@ def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir
     We also open our predictions file, where we will be writing our predictions in the same manner of our image file,
         so that they have a string index according to the image they came from.
     """
-    with h5py.File(img_archive_dir, "r") as img_hf:
+    with h5py.File(img_archive_dir, "r", chunks=True, compression="gzip") as img_hf:
         with h5py.File(predictions_archive_dir, "w") as predictions_hf:
             """
             Get image number for iteration
