@@ -153,12 +153,13 @@ def add_weighted_overlay(img, overlay, alpha, rgb=False):
     """
     return cv2.addWeighted(overlay, alpha, img, 1-alpha, 0, img)
 
-def pad_img(img_h, img_w, sub_h, sub_w, img):
+def pad_img(img_h, img_w, sub_h, sub_w, img, rgb=False):
     """
     Arguments:
         img_h, img_w: The h and w of our img argument.
         sub_h, sub_w: The size of our individual subsections.
         img: a np array of shape (img_h, img_w, ...) where img_h % sub_h may not == 0, and img_w % sub_w may not == 0, our original main image.
+        rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
 
     Returns:
         Computes the necessary dimensions to pad to our img_h and img_w of our img, so that
