@@ -237,7 +237,7 @@ def custom_sample_dataset(x, y, class_n, sample_ns):
     """
     return balanced_x, balanced_y
 
-def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, static_transformation_n=5, undersample_balance_dataset=False, undersample_n=None, oversample_balance_dataset=False, custom_sample_balance_dataset=False, sample_ns=[]):
+def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, class_n, h=80, w=145, sigma=0.1, random_transformation_n=0, border_value=240, static_transformations=True, static_transformation_n=5, undersample_balance_dataset=False, undersample_n=None, oversample_balance_dataset=False, custom_sample_balance_dataset=False, sample_ns=[], rgb=False):
     """
     Arguments:
         archive_dir: String where .h5 file is stored containing model's data.
@@ -253,6 +253,7 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         undersample_balance_dataset: Boolean to decide if we want to balance our dataset by removing enough of our majority samples to make all the classes have the same # of labeled classes. Defaults to False.
         oversample_balance_dataset: Boolean to decide if we want to balance our dataset by copying enough of our minority samples to make all the classes have the same # of labeled classes. Defaults to False.
         custom_sample_balance_dataset: Boolean to decide if we want to balance our dataset via a hard-coded custom technique. Defaults to False.
+        rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
 
     Returns:
         After opening our samples from archive_dir, and initialising and normalising our static transformations if enabled,
@@ -266,7 +267,9 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
     """
     with h5py.File(archive_dir, "r") as hf:
         x = np.array(hf.get("x"))
+        x_shape = np.array(hf.get("x_shape"))
         y = np.array(hf.get("y"))
+        y_shape = np.array(hf.get("x_shape"))
 
     if undersample_balance_dataset:
         """
@@ -290,12 +293,15 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         x, y = custom_sample_dataset(x, y, class_n, sample_ns)
 
     """
-    Since our samples are only 2 dimensional, 
-        we get the h and w of each sample via the first, 
+    We get the h and w of each sample via the first, 
         and then we reshape so that we have images to properly transform.
     We first reshape our x by the h and w arguments passed in.
     """
-    x = np.reshape(x, (-1, h, w))
+    if rgb:
+        x = np.reshape(x, (-1, h, w, 3))
+    else:
+        x = np.reshape(x, (-1, h, w))
+
 
     if static_transformations:
         """
@@ -383,7 +389,11 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
     """
     We then reshape to our flattened dimension as we had originally
     """
-    x = np.reshape(x, (-1, h*w))
+    if rgb:
+        x = np.reshape(x, (-1, h*w, 3))
+    else:
+        x = np.reshape(x, (-1, h*w))
+
 
     print "Writing Balanced / Augmented Dataset..."
     """
@@ -402,4 +412,4 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         hf.create_dataset("y", data=y)
         hf.create_dataset("y_shape", data=y.shape)
 
-generate_augmented_data("../data/live_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [80000, 80000, 80000, 80000, 80000, 80000, 0])
+generate_augmented_data("../data/test_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [10308, 2136, 4770, 8023, 10000, 9828, 0], rgb=True)
