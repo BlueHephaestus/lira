@@ -13,6 +13,11 @@ import numpy as np
 import cv2
 import h5py
 
+sys.path.append(os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira_static/"))
+
+import img_handler
+from img_handler import *
+
 def recursive_get_paths(img_dir):
     """
     Arguments:
@@ -45,6 +50,8 @@ def create_archive(data_dir, archive_dir, rgb=False):
             according to each image's index.
         Otherwise does not return anything.
     """
+    sub_h = 80
+    sub_w = 145
 
     print "Getting Image Paths..."
     sample_path_infos = recursive_get_paths(data_dir)
@@ -71,6 +78,11 @@ def create_archive(data_dir, archive_dir, rgb=False):
                 img = cv2.imread(sample_path)
             else:
                 img = cv2.imread(sample_path, 0)
+
+            """
+            Pad our image with necessary zeros so that we never have partial edge problems with the far edges
+            """
+            img = pad_img(img.shape[0], img.shape[1], sub_h, sub_w, img, rgb=rgb)
 
             """
             Archive img
