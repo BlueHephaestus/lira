@@ -129,6 +129,9 @@ def main(sub_h=80,
                 for img_i in range(0, img_n):
                     """
                     Get our image, and associated predictions
+                        NOTE: We could convert the img to a np.array(img), when we are going to generate our overlay and use it,
+                            however upon testing this I realized it was on average 6 times faster (5s vs 30s) to leave it be.
+                        So that's why I don't do it here.
                     """
                     img = img_hf.get(str(img_i))
                     img_predictions = predictions_hf.get(str(img_i))
@@ -193,14 +196,6 @@ def main(sub_h=80,
                         """
                         If it is not empty, we continue!
                         """
-
-                        """
-                        We only do this here because it is a costly computation for large images, 
-                            which we want to skip until we are sure we need this image.
-                        This is why we only have this after the checks to see if we are at the previous position,
-                            and after the checks to see if all predictions are empty
-                        """
-                        img = np.array(img)
 
                         """
                         Get our img for this subsection to display from get_next_overlay_subsection()
@@ -560,9 +555,9 @@ def main(sub_h=80,
 
 main(sub_h=80, 
      sub_w=145, 
-     img_archive_dir="../lira/lira1/data/images.h5",
+     img_archive_dir="../lira/lira1/data/rim_test_images.h5",
      predictions_archive_dir="../lira/lira1/data/predictions.h5",
      classification_metadata_dir="../lira_static/classification_metadata.pkl",
      interactive_session_metadata_dir="interactive_session_metadata.pkl",
-     live_archive_dir="../lira/lira2/data/live_samples.h5",
+     live_archive_dir="../lira/lira2/data/rgb_rim_samples.h5",
      rgb=True)#Main execution
