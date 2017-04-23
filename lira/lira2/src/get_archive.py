@@ -53,7 +53,7 @@ def create_archive(data_dir, archive_dir, rgb=False):
     Open/Create our archive
     """
     print "Creating Archive..."
-    with h5py.File(archive_dir, "w") as hf:
+    with h5py.File(archive_dir, mode="w", chunks=True, compression="gzip") as hf:
 
         """
         Loop through samples
