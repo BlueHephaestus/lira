@@ -77,7 +77,6 @@ def get_data_subsets(archive_dir, p_training=0.8, p_validation=0.1, p_test=0.1):
         y = np.memmap("y.dat", dtype="float32", mode="w+", shape=y_shape)
         x[:] = hf.get("x")[:]
         y[:] = hf.get("y")[:]
-
     n_samples = len(x)
 
     #Now we split our samples according to percentage

@@ -61,7 +61,7 @@ class Configurer(object):
         self.p_test = 0.15
         self.input_dims = [80,145]
         self.output_dims = 7
-        self.archive_dir=os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira/lira2/data/live_samples.h5")
+        self.archive_dir=os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira/lira2/data/augmented_samples.h5")
 
     def run_config(self, hps):
         """

@@ -1,6 +1,6 @@
 import pickle
 
-classifications = ["Healthy Tissue", "Type I - Caseum", "Type II", "Empty Slide", "Type III", "Type I - Rim"]
+classifications = ["Healthy Tissue", "Type I - Caseum", "Type II", "Empty Slide", "Type III", "Type I - Rim", "Unknown"]
 
 #BGR Colors to give to each classification index
 #         Pink,          Red,         Green,       Light Grey,      Yellow,        Blue         Purple
