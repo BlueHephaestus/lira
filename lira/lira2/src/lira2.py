@@ -118,7 +118,6 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         image_input_dims = [-1]
         image_input_dims.extend(input_dims)
 
-        print dataset.training.x.shape
         """
         Reshape our dataset inputs accordingly
         """
