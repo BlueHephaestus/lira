@@ -57,7 +57,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     p_training = 0.7
     p_validation = 0.15
     p_test = 0.15
-    input_dims = [80,145]
+    input_dims = [80,145,3]
     output_dims = 7
 
     """
@@ -73,7 +73,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     """
     Amount of times we train our model to remove possible variance in the results
     """
-    run_count = 3
+    run_count = 1
 
     """
     Output Parameters
@@ -115,8 +115,10 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         """
         Get properly formatted input dimensions for our convolutional layer, so that we go from [h, w] to [-1, h, w, 1]
         """
-        image_input_dims = [-1, input_dims[0], input_dims[1], 1]
+        image_input_dims = [-1]
+        image_input_dims.extend(input_dims)
 
+        print dataset.training.x.shape
         """
         Reshape our dataset inputs accordingly
         """
@@ -125,18 +127,10 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         dataset.test.x = np.reshape(dataset.test.x, image_input_dims)
 
         """
-        Convert our data from grayscale into RGB by repeating the last dimension,
-            for use with large pretrained networks, trained on rgb data.
-        This goes from [-1, ..., 1] to [-1, ..., 3]
-        """
-        dataset.training.x = np.repeat(dataset.training.x, [3], axis=3)
-        dataset.validation.x = np.repeat(dataset.validation.x, [3], axis=3)
-        dataset.test.x = np.repeat(dataset.test.x, [3], axis=3)
-
-        """
         Since our last dimension is now 3 instead of 1, we update our image_input_dims
         """
-        image_input_dims = [-1, input_dims[0], input_dims[1], 3]
+        image_input_dims = [-1]
+        image_input_dims.extend(input_dims)
         
         """
         Open our pre-trained very deep network,
