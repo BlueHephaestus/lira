@@ -55,7 +55,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     p_training = 0.7
     p_validation = 0.15
     p_test = 0.15
-    input_dims = [80,145]
+    input_dims = [80, 145, 3]
     output_dims = 7
 
     datagen = ImageDataGenerator(
@@ -73,7 +73,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     Model Hyper Parameters
         (optimizer is initialized in each run)
     """
-    epochs = 100
+    epochs = 50
     mini_batch_size = 100
     loss = "binary_crossentropy"
     dropout_p = 0.0
@@ -90,7 +90,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     output_title = model_title
     output_dir = model_dir
     output_filename = output_title.lower().replace(" ", "_")
-    graph_output = True
+    graph_output = False
 
     """
     We train our model independently `run_count` times, 
@@ -124,7 +124,8 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         """
         Get properly formatted input dimensions for our convolutional layer, so that we go from [h, w] to [-1, h, w, 1]
         """
-        image_input_dims = [-1, input_dims[0], input_dims[1], 1]
+        image_input_dims = [-1]
+        image_input_dims.extend(input_dims)
 
         """
         Reshape our dataset inputs accordingly
@@ -137,7 +138,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         Define our model
         """
         model = Sequential()
-        model.add(Conv2D(20, (7, 12), padding="valid", input_shape=(80, 145, 1), data_format="channels_last", activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
+        model.add(Conv2D(20, (7, 12), padding="valid", input_shape=input_dims, data_format="channels_last", activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
         model.add(MaxPooling2D(data_format="channels_last"))
 
         model.add(Conv2D(40, (6, 10), padding="valid", data_format="channels_last", activation="sigmoid", kernel_regularizer=l2(regularization_rate)))

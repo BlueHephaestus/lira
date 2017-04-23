@@ -81,7 +81,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     output_title = model_title
     output_dir = model_dir
     output_filename = output_title.lower().replace(" ", "_")
-    graph_output = True
+    graph_output = False
 
     """
     We train our model independently `run_count` times, 
