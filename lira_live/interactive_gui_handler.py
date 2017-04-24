@@ -83,13 +83,16 @@ class InteractiveGUI(object):
         """
         For configuring the window
         """
-        self.main_canvas_percentage = 0.90
-        self.tool_canvas_percentage = 1-self.main_canvas_percentage
         self.screen_height_padding_percentage = 0.20
         if dual_monitor:
+            self.main_canvas_percentage = 0.78
+            self.tool_canvas_percentage = 1-self.main_canvas_percentage - 0.12
             self.screen_width_padding_percentage = 0.52
         else:
+            self.main_canvas_percentage = 0.85
+            self.tool_canvas_percentage = 1-self.main_canvas_percentage - 0.02
             self.screen_width_padding_percentage = 0.02
+
 
     def get_relative_coordinates(self, event):
         """
@@ -452,6 +455,7 @@ class InteractiveGUI(object):
         """
         First, pad both the necessary screen padding amount.
         """
+        print screen_width, screen_height
         screen_width = screen_width - screen_width_padding_percentage*screen_width
         screen_height = screen_height - screen_height_padding_percentage*screen_height
 
@@ -461,6 +465,7 @@ class InteractiveGUI(object):
         main_canvas_percentage = 1-main_canvas_percentage
         tool_canvas_percentage = 1-tool_canvas_percentage
 
+        print screen_width, screen_height
         """
         Then we give each section it's corresponding percentage of the padded relative dim 
         """
