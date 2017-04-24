@@ -31,7 +31,7 @@ def main(sub_h=80,
          classification_metadata_dir="../lira_static/classification_metadata.pkl",
          interactive_session_metadata_dir="interactive_session_metadata.pkl",
          live_archive_dir="../lira/lira2/data/live_samples.h5",
-         dual_monitor=True,
+         dual_monitor=False,
          rgb=False):
 
     """
@@ -257,7 +257,7 @@ def main(sub_h=80,
                                 f.close()
                                 """
                                 img_predictions = update_prediction_subsection(sub_i, factor, img_predictions, interactive_session.predictions)
-                                overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=alpha, sub_h=80, sub_w=145)
+                                overlay_sub = get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=alpha, sub_h=80, sub_w=145, rgb=rgb)
 
                                 """
                                 5. Get the appropriate zoom percentage, 
