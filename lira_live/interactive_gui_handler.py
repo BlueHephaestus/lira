@@ -1,3 +1,10 @@
+"""
+Main functions for displaying the GUI for LIRA-Live, 
+    further documentation found in each function.
+
+-Blake Edwards / Dark Element
+"""
+
 import Tkinter
 from Tkinter import *
 
@@ -455,7 +462,6 @@ class InteractiveGUI(object):
         """
         First, pad both the necessary screen padding amount.
         """
-        print screen_width, screen_height
         screen_width = screen_width - screen_width_padding_percentage*screen_width
         screen_height = screen_height - screen_height_padding_percentage*screen_height
 
@@ -465,7 +471,6 @@ class InteractiveGUI(object):
         main_canvas_percentage = 1-main_canvas_percentage
         tool_canvas_percentage = 1-tool_canvas_percentage
 
-        print screen_width, screen_height
         """
         Then we give each section it's corresponding percentage of the padded relative dim 
         """
