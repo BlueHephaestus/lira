@@ -137,10 +137,20 @@ def main(sub_h=80,
                     img_predictions = predictions_hf.get(str(img_i))
 
                     """
-                    We argmax over our predictions in order to just get integer values, which we can display.
-                        ->Instead of the probabilities which are produced by our model output
+                    An important note on predictions in LIRA-Live:
+                    We have 2 problems:
+                        1. We want to display only one color in our gui for each prediction, even though each entry is a vector of probabilities
+                        2. We also need to retain the link to our predictions_hf.get, so that
+                            predictions in the file can be easily updated once they are corrected using the GUI tool.
+                    So if we just normally argmaxed over img_predictions, we'd break #2 and no longer have a link back to our file.
+                    But if we left it as is, we'd not have an easy way to display the predictions.
+
+                    The solution I came up with was to argmax over the prediction subsections as they are obtained for display,
+                        and convert these prediction subsections to one-hots (essentially the inverse of an argmax) 
+                        in order to update the predictions in the original array.
+                    Those changes can be seen in subsection_handler.py .
                     """
-                    img_predictions = np.argmax(img_predictions, axis=2)
+
 
                     """
                     Make sure we never get an image s.t. 
@@ -495,7 +505,6 @@ def main(sub_h=80,
 
                     img_sub = get_next_subsection(row_i, col_i, img.shape[0], img.shape[1], sub_h, sub_w, img, factor)
                     prediction_sub = get_prediction_subsection(sub_i, factor, img_predictions)
-                    prediction_sub = np.argmax(prediction_sub, axis = 2)
 
                     """
                     Again, we can easily get the number of predictions in our subsection to get the number
@@ -560,4 +569,5 @@ main(sub_h=80,
      classification_metadata_dir="../lira_static/classification_metadata.pkl",
      interactive_session_metadata_dir="interactive_session_metadata.pkl",
      live_archive_dir="../lira/lira2/data/rgb_rim_samples.h5",
+     dual_monitor=True,
      rgb=True)#Main execution

@@ -4,6 +4,20 @@ This file is used for handling subsections through various helper functions,
 
 -Blake Edwards / Dark Element
 """
+"""
+An important note on predictions in LIRA-Live:
+We have 2 problems:
+    1. We want to display only one color in our gui for each prediction, even though each entry is a vector of probabilities
+    2. We also need to retain the link to our predictions_hf.get, so that
+        predictions in the file can be easily updated once they are corrected using the GUI tool.
+So if we just normally argmaxed over img_predictions, we'd break #2 and no longer have a link back to our file.
+But if we left it as is, we'd not have an easy way to display the predictions.
+
+The solution I came up with was to argmax over the prediction subsections as they are obtained for display,
+    and convert these prediction subsections to one-hots (essentially the inverse of an argmax) 
+    in order to update the predictions in the original array.
+Those changes can be seen in this file.
+"""
 
 import sys
 import numpy as np
@@ -13,6 +27,8 @@ sys.path.append("../lira_static/")
 import img_handler
 from img_handler import *
 
+from keras.utils import np_utils
+
 def get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, classifications, colors, alpha=1/3., sub_h=80, sub_w=145, rgb=False):
     """
     Arguments:
@@ -20,7 +36,7 @@ def get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, clas
         sub_i: Index of our subsection in the img
         factor: Factor to divide our img by
         img: np array of shape (h, w, ...). To reference for obtaining a image subsection for generating our overlay subsection with.
-        img_predictions: np array of shape (h//sub_h, w//sub_w). To reference for obtaining a predictions subsection for generating our overlay subsection with.
+        img_predictions: np array of shape (h//sub_h, w//sub_w, class_n). To reference for obtaining a predictions subsection for generating our overlay subsection with.
         classifications: List of strings mapping our class indices to string values, 
             e.g. ["Apple", "Orange", "Banana"...] for 0 -> "Apple", 1 -> "Orange", 2 -> "Banana"
         colors: List of tuples of 3 elements, detailing BGR (B, G, R) colors for each of our 
@@ -49,6 +65,11 @@ def get_next_overlay_subsection(img_i, sub_i, factor, img, img_predictions, clas
     sub_predictions = get_next_subsection(row_i, col_i, img_predictions.shape[0], img_predictions.shape[1], 1, 1, img_predictions, factor)
 
     """
+    Argmax over these since we are using it for display
+    """
+    sub_predictions = np.argmax(sub_predictions, axis=2)
+
+    """
     Generate an overlay to match our image subsection in height and width, but have 3 values per cell for RGB
     """
     overlay = np.zeros((img_sub.shape[0], img_sub.shape[1], 3))
@@ -74,14 +95,21 @@ def get_prediction_subsection(sub_i, factor, img_predictions):
     Arguments:
         sub_i: Index of our subsection in the img
         factor: Factor to divide our img by
-        img_predictions: np array of shape (h//sub_h, w//sub_w). To reference for obtaining a predictions subsection for generating our overlay subsection with.
+        img_predictions: np array of shape (h//sub_h, w//sub_w, class_n). 
 
     Returns:
-        Gets subsection of predictions from the location in img_predictions specified by sub_i and factor. Returns this.
+        Gets subsection of predictions from the location in img_predictions specified by sub_i and factor. 
+        Then argmaxes over these predictions, since they are used for display, and
+        Returns this.
     """
     row_i = sub_i//factor
     col_i = sub_i % factor
     sub_predictions = get_next_subsection(row_i, col_i, img_predictions.shape[0], img_predictions.shape[1], 1, 1, img_predictions, factor)
+
+    """
+    Argmax over these since we are using it for display
+    """
+    sub_predictions = np.argmax(sub_predictions, axis=2)
     return sub_predictions
 
 def update_prediction_subsection(sub_i, factor, img_predictions, prediction_sub):
@@ -89,14 +117,17 @@ def update_prediction_subsection(sub_i, factor, img_predictions, prediction_sub)
     Arguments:
         sub_i: Index of our subsection in the img
         factor: Factor to divide our img by
-        img_predictions: np array of shape (h//sub_h, w//sub_w). To reference for obtaining a predictions subsection for generating our overlay subsection with.
+        img_predictions: np array of shape (h//sub_h, w//sub_w, class_n). 
         prediction_sub: Subsection of predictions, usually obtained from get_prediction_subsection. Size may vary depending on factor.
+            only has 2 dimensions, as opposed to img_predictions, which has three.
 
     Returns:
         img_predictions, with the subsection specified by sub_i and factor replaced with prediction_sub.
         Use this for updating only a subsection of our big img_predictions matrix with the new, updated subsection.
 
-        Note: We use the same technique (albeit simplified) from inside get_next_subsection()
+        Since prediction_sub is 2 dimensions, with each entry being the index of a classification/prediction,
+            we have to create one-hot / categorical vectors for each of these to store in our full img_predictions matrix.
+
     """
     row_i = sub_i//factor
     col_i = sub_i % factor
@@ -110,7 +141,17 @@ def update_prediction_subsection(sub_i, factor, img_predictions, prediction_sub)
     row = row_i * prediction_sub_h
     col = col_i * prediction_sub_w
 
-    img_predictions[row:row+prediction_sub_h, col:col+prediction_sub_w] = prediction_sub
+    """
+    We convert our prediction_sub into a categorical_prediction_sub. 
+        This takes a matrix of shape (n, m),
+            where each entry is the index value,
+        And converts to a 3-tensor of shape (n, m, class_n), where each entry is the one-hot representation of that index value.
+    It does this by first using keras's np_utils.to_categorical method to convert our prediction_sub to a matrix of shape (n*m, class_n),
+        using the last dimension of our img_predictions tensor, which will be class_n,
+    Then reshapes this into a 3-tensor of shape (n, m, 7), which is of the proper dimensionality to be assigned to our img_predictions
+    """
+    categorical_prediction_sub = np.reshape(np_utils.to_categorical(prediction_sub, img_predictions.shape[-1]), (prediction_sub_h, prediction_sub_w, -1))
+    img_predictions[row:row+prediction_sub_h, col:col+prediction_sub_w] = categorical_prediction_sub
     return img_predictions
     
 def list_find(l, e):
