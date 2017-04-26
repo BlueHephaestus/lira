@@ -103,12 +103,6 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
                 img_predictions = post_processing.denoise_predictions(img_predictions, neighbor_weight, epochs)
 
                 """
-                We argmax over our predictions in order to just get integer values, which we can display.
-                    This is instead of the probabilities which are produced by our model output
-                """
-                img_predictions = np.argmax(img_predictions, axis=2)
-
-                """
                 Get the factor to use for both subsections and resizing
                 """
                 factor = get_relative_factor(img.shape[0], None)
