@@ -41,6 +41,20 @@ class InteractiveGUI(object):
                 There is too much to include here, view individual documentation below.
         """
         """
+        An important note on predictions in LIRA-Live:
+        We have 2 problems:
+            1. We want to display only one color in our gui for each prediction, even though each entry is a vector of probabilities
+            2. We also need to retain the link to our predictions_hf.get, so that
+                predictions in the file can be easily updated once they are corrected using the GUI tool.
+        So if we just normally argmaxed over img_predictions, we'd break #2 and no longer have a link back to our file.
+        But if we left it as is, we'd not have an easy way to display the predictions.
+
+        The solution I came up with was to argmax over the prediction subsections as they are obtained for display,
+            and convert these prediction subsections to one-hots (essentially the inverse of an argmax) 
+            in order to update the predictions in the original array.
+        Those changes can be seen in subsection_handler.py .
+        """
+        """
         Our main image, and main predictions that we are currently working with. 
         """
         self.np_img = np.array([-1])
