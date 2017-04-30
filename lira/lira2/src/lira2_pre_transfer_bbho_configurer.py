@@ -57,7 +57,7 @@ class Configurer(object):
         self.p_training = 0.7
         self.p_validation = 0.15
         self.p_test = 0.15
-        self.input_dims = [80,145]
+        self.input_dims = [80, 145, 3]
         self.output_dims = 7
         self.archive_dir=os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira/lira2/data/augmented_samples.h5")
 
@@ -111,7 +111,8 @@ class Configurer(object):
             """
             Get properly formatted input dimensions for our convolutional layer, so that we go from [h, w] to [-1, h, w, 1]
             """
-            image_input_dims = [-1, self.input_dims[0], self.input_dims[1], 3]
+            image_input_dims = [-1]
+            image_input_dims.extend(input_dims)
 
             """
             Reshape our dataset inputs accordingly
@@ -124,7 +125,7 @@ class Configurer(object):
             Define our model
             """
             model = Sequential()
-            model.add(Conv2D(20, (7, 12), padding="valid", input_shape=(80, 145, 1), data_format="channels_last", activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
+            model.add(Conv2D(20, (7, 12), padding="valid", input_shape=input_dims, data_format="channels_last", activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
             model.add(MaxPooling2D(data_format="channels_last"))
 
             model.add(Conv2D(40, (6, 10), padding="valid", data_format="channels_last", activation="sigmoid", kernel_regularizer=l2(regularization_rate)))
