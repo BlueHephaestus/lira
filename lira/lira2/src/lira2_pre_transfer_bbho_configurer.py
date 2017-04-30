@@ -111,7 +111,7 @@ class Configurer(object):
             """
             Get properly formatted input dimensions for our convolutional layer, so that we go from [h, w] to [-1, h, w, 1]
             """
-            image_input_dims = [-1, self.input_dims[0], self.input_dims[1], 1]
+            image_input_dims = [-1, self.input_dims[0], self.input_dims[1], 3]
 
             """
             Reshape our dataset inputs accordingly
