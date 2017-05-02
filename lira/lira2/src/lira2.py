@@ -21,7 +21,7 @@ np.random.seed(420)
 import keras
 from keras.models import Sequential
 from keras.layers import *
-from keras.optimizers import Adam
+from keras.optimizers import *
 from keras.regularizers import l2
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications import *
@@ -61,14 +61,41 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     output_dims = 7
 
     """
-    Model Hyper Parameters
-        (optimizer is initialized in each run)
+    Bottleneck Model Hyper Parameters
+        (optimizer is initialized in each run, in the run loop)
     """
-    epochs = 100
-    mini_batch_size = 95
-    loss = "binary_crossentropy"
+    bottleneck_epochs = 50
+    bottleneck_mini_batch_size = 95
+    bottleneck_loss = "binary_crossentropy"
     dropout_p = 0.7
     regularization_rate = 0.031623
+
+    """
+    Fine-Tuning Model Hyper Parameters
+        (optimizer is initialized in each run, in the run loop)
+    """
+    fine_tuning_epochs = 50
+    fine_tuning_mini_batch_size = 32
+    fine_tuning_loss = "binary_crossentropy"
+
+    """
+    This warrants its own description.
+
+    This is the number of layers we want to fine-tune. 
+
+    Once we've trained a bottleneck model, we will be placing it on top of our pretrained model for 
+        fine-tuning, a process where we train the entire model with a small learning rate in 
+        order to improve results, which works well in practice. 
+
+    While you can fine-tune the entire model by setting fine_tuning_layer_n to 0,
+        it is also common to fine-tune just the last convolutional block / few convolutional layers of the pretrained model
+        along with the bottleneck model, instead of the whole thing.
+
+    So for this, if you want to train the last n layers of your pretrained model, you can do so 
+        by setting fine_tuning_layer_n = n.
+        So if I know the last convolutional block has 4 layers, i'd set it to 4.
+    """
+    fine_tuning_layer_n = 5
 
     """
     Amount of times we train our model to remove possible variance in the results
@@ -89,13 +116,20 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         and get closer to the true accuracy of our model.
         We have to include a lot in this loop unfortunately, since keras will start training on the model where it left off from the last run if not.
 
-    Since each run we train for `epochs` epochs, and each epoch produces 
+    Since each run we train for some epochs(variant depending on which model is trained last), and each epoch produces 
         training data loss, training data accuracy, validation data accuracy, and test data accuracy,
 
-    We can initialize our results as a np zeroed array of size (run_count, epochs, 4),
+    We can initialize our results as a np zeroed array of size (run_count, epochs # of last model, 4),
         and set our results into this each run.
+
+    We will be training for fine_tuning epochs last if fine_tuning_layer_n > 0,
+        and vice versa.
     """
-    results = np.zeros((run_count, epochs, 4))
+    if fine_tuning_layer_n > 0:
+        results = np.zeros((run_count, fine_tuning_epochs, 4))
+    else:
+        results = np.zeros((run_count, bottleneck_model, 4))
+
     for run_i in range(run_count):
         """
         Since Keras was breaking on the second run when experimenting with lira2_bbho_configurer, it
@@ -105,7 +139,8 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         
         So, while Keras doesn't break during the execution of this file, we initialize this here for each run to ensure test independence.
         """
-        optimizer = Adam(1e-4)
+        bottleneck_optimizer = Adam(1e-4)
+        fine_tuning_optimizer = SGD(lr=1e-4, momentum=0.9)
 
         """
         Get our dataset object for easy reference of data subsets (training, validation, and test) from our archive_dir.
@@ -139,14 +174,23 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         pretrained_model = VGG19(weights='imagenet', include_top=False, input_shape=image_input_dims[1:])
 
         """
+        In the case that we want to fine tune the last few layers / last convolutional block of this pretrained model after we train our bottleneck model,
+            (as this tends to give better results in practice),
+            we freeze all but the last fine_tuning_layer_n layers in our pretrained model.
+        """
+        for layer in pretrained_model.layers[:-fine_tuning_layer_n]:
+            print layer
+            layer.trainable = False
+        
+        """
         Get the features produced by our bottleneck layer, the features that are produced 
             by the last convolutional + maxpooling layer in this pretrained net (before the dense layers).
         These will be referred to as bottleneck features.
         """
         print "Generating Features from Pre-Trained Model..."
-        dataset.training.x = pretrained_model.predict(dataset.training.x)
-        dataset.validation.x = pretrained_model.predict(dataset.validation.x)
-        dataset.test.x = pretrained_model.predict(dataset.test.x)
+        bottleneck_training_features = pretrained_model.predict(dataset.training.x)
+        bottleneck_validation_features= pretrained_model.predict(dataset.validation.x)
+        bottleneck_test_features = pretrained_model.predict(dataset.test.x)
 
         """
         Now we can define a new, smaller model on top of this pretrained model.
@@ -155,7 +199,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         """
         print "Training Bottleneck Model..."
         bottleneck_model = Sequential()
-        bottleneck_model.add(Flatten(input_shape=dataset.training.x.shape[1:]))
+        bottleneck_model.add(Flatten(input_shape=bottleneck_training_features.shape[1:]))
         bottleneck_model.add(Dense(1024, activation="relu", kernel_regularizer=l2(regularization_rate)))
         bottleneck_model.add(Dropout(dropout_p))
         bottleneck_model.add(Dense(128, activation="relu", kernel_regularizer=l2(regularization_rate)))
@@ -165,19 +209,19 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         """
         Compile our model with our previously defined loss and optimizer, and record the accuracy on the training data.
         """
-        bottleneck_model.compile(loss=loss, optimizer=optimizer, metrics=["accuracy"])
+        bottleneck_model.compile(loss=bottleneck_loss, optimizer=bottleneck_optimizer, metrics=["accuracy"])
 
         """
         Get our test data callback with our previously imported class from keras_test_callback.py
             We also reset it every loop so that keras doesn't automatically append results to it
         """
-        test_callback = TestCallback(bottleneck_model, (dataset.test.x, dataset.test.y))
+        test_callback = TestCallback(bottleneck_model, (bottleneck_test_features, dataset.test.y))
 
         """
-        Get our outputs by training on training data and evaluating on validation and test accuracy each epoch,
+        Train on training data and evaluat on validation and test accuracy each epoch,
             and use our previously defined hyper-parameters where needed.
         """
-        outputs = bottleneck_model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], epochs=epochs, batch_size=mini_batch_size)
+        outputs = bottleneck_model.fit(bottleneck_training_features, dataset.training.y, validation_data=(bottleneck_validation_features, dataset.validation.y), callbacks=[test_callback], epochs=bottleneck_epochs, batch_size=bottleneck_mini_batch_size)
 
         """
         Now that we have a trained bottleneck model on top of our pre-trained model,
@@ -195,15 +239,48 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
 
         If I didn't explain this well, please let me know.
         """
+        print "Combining Pre-Trained and Bottleneck Model..."
         pretrained_inputs = Input(image_input_dims[1:])
         pretrained_outputs = pretrained_model(pretrained_inputs)
         bottleneck_outputs = bottleneck_model(pretrained_outputs)
         model = Model(inputs=pretrained_inputs, outputs=bottleneck_outputs)
-        """
-        Note: Keras will give us a warning for not compiling our model, but this is fine because we aren't training the entire model.
-        If you do wish to train the model, simply compile it with parameters/arguments of your choice.
-        """
 
+        """
+        Now that we have an entire model, we want to do what's known as "fine-tuning",
+            where we do either:
+            1. Train the entire model 
+            2. Train the last few convolutional layers, or the last convolutional block, of the pretrained model,
+                as well as the bottlneck model.
+            Either way, the reason we call it fine-tuning is because it is done so with a small learning rate,
+                so that we help the models work together better, and be more "fine-tuned" to the problem at hand,
+                without spending an insane amount of computational resources.
+
+            You can choose which one of these you want to do with fine_tuning_layer_n, 
+                setting it to 0 (or a really high number) for option 1,
+                and the number of layers at the end of the pretrained model that you want to fine-tune, if option 2.
+
+            It will skip this if fine_tuning_layer_n == 0.
+        """
+        if fine_tuning_layer_n > 0:
+            """
+            Compile our new model, with our fine-tuning loss and optimizer
+            """
+            model.compile(loss=fine_tuning_loss, optimizer=fine_tuning_optimizer, metrics=["accuracy"])
+
+            """
+            Re-initialize the test callback for our full training data
+            """
+            test_callback = TestCallback(model, (dataset.test.x, dataset.test.y))
+
+            """
+            Train on training data and evaluate on validation and test accuracy each epoch,
+                and use our previously defined hyper-parameters where needed.
+            We store this output in our outputs, 
+                and modify our fit call to use the full training data, instead of just the bottleneck features as we did with our bottleneck model.
+            """
+            print "Fine-Tuning Combined Model..."
+            outputs = model.fit(dataset.training.x, dataset.training.y, validation_data=(dataset.validation.x, dataset.validation.y), callbacks=[test_callback], epochs=fine_tuning_epochs, batch_size=fine_tuning_mini_batch_size)
+        
         """
         Stack and transpose our results to get a matrix of size epochs x 4, where each row contains the statistics for that epoch.
         """
