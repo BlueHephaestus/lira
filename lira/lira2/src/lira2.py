@@ -179,7 +179,6 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
             we freeze all but the last fine_tuning_layer_n layers in our pretrained model.
         """
         for layer in pretrained_model.layers[:-fine_tuning_layer_n]:
-            print layer
             layer.trainable = False
         
         """
