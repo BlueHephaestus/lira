@@ -56,7 +56,7 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     p_validation = 0.15
     p_test = 0.15
     input_dims = [80, 145, 3]
-    output_dims = 7
+    output_dims = 4
 
     datagen = ImageDataGenerator(
         rotation_range=90,
@@ -74,10 +74,10 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         (optimizer is initialized in each run)
     """
     epochs = 50
-    mini_batch_size = 75
+    mini_batch_size = 100
     loss = "binary_crossentropy"
     dropout_p = 0.0
-    regularization_rate = 10**(-4.5)
+    regularization_rate = 1e-5
 
     """
     Amount of times we train our model to remove possible variance in the results
