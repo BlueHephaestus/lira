@@ -1,7 +1,7 @@
 """
 Meta file to make use of the major stages of LIRA in order to do:
-    1. Raw Greyscales -> Greyscale archive (get_greyscales.py)
-    2. Sample archive -> New trained model (experiment_config.py)
+    1. Raw Greyscales -> Greyscale archive (get_archive.py)
+    2. Sample archive -> New trained model (lira2.py / lira2_pre_transfer_learning.py)
     3. Trained model & Greyscale archive -> Predictions Archive (generate_predictions.py)
     4. Predictions Archive & Greyscale Archive -> Jpg predictions per image per subsection (generate_display_results.py)
     5. Jpg predictions per image per subsection -> Jpg predictions per image (concatenate_results.py)
@@ -21,10 +21,9 @@ import sys
 
 sys.path.append("lira/lira2/src")
 
-import get_greyscales
 import get_archive
+import lira2
 import lira2_pre_transfer_learning
-#import lira2_pre_transfer_learning_rgb
 
 sys.path.append("lira_static")
 
@@ -39,33 +38,42 @@ def main(model_title):
     model = model_title.lower().replace(" ", "_")
     
     """
-    From our test_slides dir, generate new greyscales.h5 file for later
-        (If we want to, and there isn't a massive amount of greyscales we want to avoid)
+    From our test_slides dir, generate new images.h5 file for later
+        (If we want to, and there isn't a massive amount of images we want to avoid)
     """
-    print "Getting Greyscales Archive..."
-    #get_greyscales.load_greyscales("lira/lira1/data/test_slides", "lira/lira1/data/greyscales.h5")
-    get_archive.create_archive("lira/lira1/data/test_slides", "lira/lira1/data/images.h5", rgb=True)
+    print "Getting Images Archive..."
+    #get_archive.create_archive("lira/lira1/data/rim_test_slides", "lira/lira1/data/rim_test_images.h5", rgb=True)
 
     """
     From our samples.h5 file, train our model and save in saved_networks/`nn`
+        You need to change your input dimensions in the model training file, if you want to switch between grayscale/rgb
     """
-    print "Training Model..."
-    #lira2_pre_transfer_learning.train_model(model, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/augmented_samples.h5")
-    #lira2_pre_transfer_learning_rgb.train_model(model, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/augmented_samples.h5")
+    print "Training Models..."
+    """
+    Train our first model on our samples for this model
+    """
+    model1 = model + " Model 1"
+    lira2_pre_transfer_learning.train_model(model1, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/model_1_samples.h5")
 
+    """
+    Train our second model on our samples for this model
+    """
+    model2 = model + " Model 2"
+    lira2_pre_transfer_learning.train_model(model2, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/model_2_samples.h5")
+    #lira2.train_model(model, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/augmented_samples.h5")
 
     """
     From our saved model and greyscales, generate new predictions.h5 file
     """
     print "Generating Predictions..."
-    #generate_predictions.generate_predictions(model, model_dir = "lira/lira2/saved_networks", img_archive_dir = "lira/lira1/data/greyscales.h5", predictions_archive_dir = "lira/lira1/data/predictions.h5", classification_metadata_dir = "lira_static/classification_metadata.pkl")
+    #generate_predictions.generate_predictions(model, model_dir = "lira/lira2/saved_networks", img_archive_dir = "lira/lira1/data/test_images.h5", predictions_archive_dir = "lira/lira1/data/test_predictions.h5", classification_metadata_dir = "lira_static/classification_metadata.pkl", rgb=True)
 
     """
     From our new predictions.h5 and greyscales, generate human accessible images for viewing.
     """
     print "Generating Display Results..."
-    #generate_display_results.generate_display_results(img_archive_dir = "lira/lira1/data/greyscales.h5", predictions_archive_dir = "lira/lira1/data/predictions.h5", classification_metadata_dir = "lira_static/classification_metadata.pkl", results_dir = "lira_static/results", neighbor_weight=0.8, epochs=0)
-
+    #generate_display_results.generate_display_results(img_archive_dir = "lira/lira1/data/test_images.h5", predictions_archive_dir = "lira/lira1/data/test_predictions.h5", classification_metadata_dir = "lira_static/classification_metadata.pkl", results_dir = "lira_static/results", neighbor_weight=0.8, epochs=0, rgb=True)
+#
     """
     Concatenate results of generating display results, for showing off and/or debugging
     """
@@ -77,4 +85,4 @@ def main(model_title):
     """
     print "Completed! -DE"
 
-main("LIRA MK2 RGB dataset tests")
+main("LIRA MK2.8 Cooperative Model Classification")
