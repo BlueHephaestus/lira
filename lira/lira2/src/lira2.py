@@ -74,8 +74,8 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
     Fine-Tuning Model Hyper Parameters
         (optimizer is initialized in each run, in the run loop)
     """
-    fine_tuning_epochs = 50
-    fine_tuning_mini_batch_size = 32
+    fine_tuning_epochs = 20
+    fine_tuning_mini_batch_size = 95
     fine_tuning_loss = "binary_crossentropy"
 
     """
