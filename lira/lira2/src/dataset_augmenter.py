@@ -269,7 +269,7 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         x = np.array(hf.get("x"))
         x_shape = np.array(hf.get("x_shape"))
         y = np.array(hf.get("y"))
-        y_shape = np.array(hf.get("x_shape"))
+        y_shape = np.array(hf.get("y_shape"))
 
     if undersample_balance_dataset:
         """
@@ -412,4 +412,4 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         hf.create_dataset("y", data=y)
         hf.create_dataset("y_shape", data=y.shape)
 
-generate_augmented_data("../data/test_samples.h5", "../data/augmented_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [10308, 2136, 4770, 8023, 10000, 9828, 0], rgb=True)
+generate_augmented_data("../data/rgb_rim_samples.h5", "../data/model_2_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [12159, 0, 4068, 7000, 17680, 0, 0], rgb=True)
