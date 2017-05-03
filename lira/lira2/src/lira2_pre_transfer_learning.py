@@ -74,10 +74,10 @@ def train_model(model_title, model_dir="../saved_networks", archive_dir="../data
         (optimizer is initialized in each run)
     """
     epochs = 50
-    mini_batch_size = 100
+    mini_batch_size = 75
     loss = "binary_crossentropy"
     dropout_p = 0.0
-    regularization_rate = 0.000016
+    regularization_rate = 10**(-4.5)
 
     """
     Amount of times we train our model to remove possible variance in the results
