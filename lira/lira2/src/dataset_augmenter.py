@@ -263,13 +263,20 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
 
     """
 
-    """
-    """
     with h5py.File(archive_dir, "r") as hf:
-        x = np.array(hf.get("x"))
-        x_shape = np.array(hf.get("x_shape"))
+        """
+        Load our X and Y data,
+            using a memmap for our x data because it may be too large to hold in RAM,
+            and loading Y as normal since this is far less likely 
+                -using a memmap for Y when it is very unnecessary would likely impact performance significantly.
+        """
+
+        x_shape = tuple(hf.get("x_shape"))
+        x = np.memmap("x.dat", dtype="float32", mode="w+", shape=x_shape)
+        x[:] = hf.get("x")[:]
+
+        y_shape = tuple(hf.get("y_shape"))
         y = np.array(hf.get("y"))
-        y_shape = np.array(hf.get("y_shape"))
 
     if undersample_balance_dataset:
         """
