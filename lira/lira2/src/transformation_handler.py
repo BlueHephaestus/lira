@@ -133,12 +133,14 @@ def generate_2d_transformed_data(data, sigma=0.1, transformation_n=9, static_tra
 
     """
     We then get the individual dimensions of each sample, for use in our affine transformations later.
-        Since opencv wants it in format W, H, C, we have to swap the first two dimensions.
+        Since opencv wants it in format W, H, we have to swap the first two dimensions.
         Since opencv also wants it in a tuple, we then cast it to a tuple.
+        Since opencv doesn't want the color, we don't include that.
+
+    Opencv is picky.
     """
     sample_dims = data[0].shape
     sample_dims = [sample_dims[1], sample_dims[0]]
-    sample_dims.extend(data[0].shape[2:])
     sample_dims = tuple(sample_dims)
 
     """
@@ -150,8 +152,9 @@ def generate_2d_transformed_data(data, sigma=0.1, transformation_n=9, static_tra
 
     """
     Using this, we generate a zeroed np array of our transformed data, since it is going to very likely take up a lot of memory.
+        Since it will take up a lot of memory, we also use a np.memmap
     """
-    transformed_data = np.zeros(transformed_data_dims)
+    transformed_data = np.memmap("transformed_data.dat", dtype="float32", mode="w+", shape=tuple(transformed_data_dims))
 
     """
     Then, with all this ready, we loop through each sample in our original data and place it in the transformed data
