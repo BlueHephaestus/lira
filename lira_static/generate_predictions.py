@@ -9,20 +9,27 @@ from static_config import StaticConfig
 import img_handler
 from img_handler import *
 
-def generate_predictions(model, model_dir = "../lira/lira1/src", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", rgb=False):
+def generate_predictions(model_1, model_2, svm_detection_model, model_dir,  img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", rgb=False):
     """
     Arguments:
-        model: String containing the filename of where our model is stored, to be used for classifying images and obtaining predictions
-        model_dir: Filepath of where the code for the model is stored, and where it was trained. Will be used with `model` to obtain where the model is now located 
+        model_1: String containing the filename of where our first model is stored, to be used for classifying type 1 images and obtaining predictions
+        model_2: String containing the filename of where our second model is stored, to be used for classifying type 2 and 3 images and obtaining predictions
+        svm_detection_model: String containing the filename of where our svm detection model is stored, to be used for detecting Type 1 Classifications in our images, 
+            and drawing bounding rectangles on them.
+        model_dir: Directory of where all our models are stored. Will be used with `model_1`, `model_2`, and `svm_detection_model` to obtain where the model is now located 
         img_archive_dir: a string filepath of the .h5 file where the images / greyscales are stored.
         predictions_archive_dir: a string filepath of the .h5 file where the model's predictions on the images/greyscales will be stored.
         classification_metadata_dir: a string filepath of the .pkl file where the model's classification strings and color key for each classification will be stored.
         rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
 
     Returns:
-        Goes through each image, divides them into smaller subsections so as not to classify the entire image at once,
+        Goes through each image, 
+            Gets bounding rectangles on any detected Type 1 classifications,
+            divides the images into smaller subsections so as not to classify the entire image at once,
         Then goes through the subsections of our image, and divides into our sub_hxsub_w subsections, 
-        then classifies each of these using our model stored in the model and model_dir filepaths.
+        then classifies each of these,
+            using our first model if a subsection is inside a bounding rectangle, 
+            and using our second model if a subsection is not inside a bounding rectangle.
         Then, it stores the predictions into a matrix of integers, or concatenates them onto the pre-existing predictions from previous subsections.
         Once completed with all subsections, these predictions are combined to get one 2d matrix of predictions, which is written to `predictions_archive_dir`.
 
