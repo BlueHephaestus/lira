@@ -268,7 +268,7 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         Load our X and Y data,
             using a memmap for our x data because it may be too large to hold in RAM,
             and loading Y as normal since this is far less likely 
-                -using a memmap for Y when it is very unnecessary would likely impact performance significantly.
+                also, using a memmap for Y when it is very unnecessary would likely impact performance significantly.
         """
 
         x_shape = tuple(hf.get("x_shape"))
@@ -420,3 +420,4 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         hf.create_dataset("y_shape", data=y.shape)
 
 generate_augmented_data("../data/rgb_rim_samples.h5", "../data/model_2_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [12159, 0, 4068, 7000, 17680, 0, 0], rgb=True)
+#generate_augmented_data("../../../../hog_object_detection/samples.h5","../../../../hog_object_detection/augmented_samples.h5", "../data/transformation_matrices.pkl", 2, h=512, w=512, sigma=0.1, random_transformation_n=10, static_transformations=True, rgb=True)
