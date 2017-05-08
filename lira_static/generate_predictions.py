@@ -9,6 +9,9 @@ from static_config import StaticConfig
 import img_handler
 from img_handler import *
 
+import object_detection_handler
+from object_detection_handler import generate_bounding_rectangles
+
 def generate_predictions(model_1, model_2, svm_detection_model, model_dir,  img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", rgb=False):
     """
     Arguments:
@@ -105,9 +108,12 @@ def generate_predictions(model_1, model_2, svm_detection_model, model_dir,  img_
     pickle.dump(([classifications, colors]), f)
 
     """
-    Open our saved model
+    Open our saved models
+        1 -> Type 1 classifications
+        2 -> Type 2 & 3 classifications
     """
-    classifier = StaticConfig(model, model_dir)
+    classifier_1 = StaticConfig(model1, model_dir)
+    classifier_2 = StaticConfig(model2, model_dir)
 
     """
     We open our image file, where each image is stored as a dataset with a key of it's index (e.g. '0', '1', ...)
@@ -150,11 +156,32 @@ def generate_predictions(model_1, model_2, svm_detection_model, model_dir,  img_
                     resize_factor = float(get_relative_factor(img_h, resize_factor))
                 
                 """
+                Get all bounding rectangles for type 1 classifications using our svm detection model, on our entire image.
+                    (parameters for this model are defined in the object_detection_handler.py file, because this is a very problem-specific addition to this file)
+                """
+                img_detected_bounding_rectangles = generate_bounding_rectangles(img, svm_detection_model, model_dir)
+
+                """
+                We then convert the img_detected_bounding_rectangles from an array of shape (n, 2, 2) to one of shape (n, 2)
+                    by converting each (x,y) (2d coordinate) pair in the third array axis to just an x value (1d coordinate).
+
+                We do this using x_new = x * w + y, where w is the width of our image.
+                """
+                img_detected_bounding_rectangles = img_detected_bounding_rectangles[:, :, 0] * img_w + img_detected_bounding_rectangles[:, :, 1]
+
+                """
                 In order to handle everything easily and correctly, we do the following:
                     Each subsection of our image we get an overlay_predictions 3-tensor of predictions, 
                         which we either insert into the correct row, or concatenate onto the row's pre-existing values
                 """
                 predictions = [np.array([]) for i in range(img_divide_factor)]
+
+                """
+                We also start a counter for our predictions, which we increment with each batch we classify.
+                    Using this, we can check if a new batch of subsections is inside our bounding rectangles.
+                This is only reset on every new image, so we call it img_prediction_i 
+                """
+                img_prediction_i = 0
 
                 """
                 Here we start looping through rows and columns in our image, 
@@ -231,10 +258,123 @@ def generate_predictions(model_1, model_2, svm_detection_model, model_dir,  img_
                             batch = subs[sub_i:sub_i+mb_n]
 
                             """
-                            Then, we classify the new batch of examples and store in our overlay_predictions array
+                            We then check each element in our batch to see if it is inside a bounding rectangle in our image,
+                                and if so, we classify it with our first (type 1) classifier,
+                                if not, we classify it with our second (type 2 & 3) classifier.
+
+                            In the most general case, we'd need to loop through each element and iteratively add them to a
+                                "classifier 1" set, or a "classifier 2" set. 
+                            However, for all but the most bizarre edge case, this won't happen. Here are the possible cases:
+                                1. No samples in our batch are in a rectangle.
+                                2. The first n samples of our batch are in a rectangle, the rest are not.
+                                3. The last n samples of our batch are in a rectangle, the rest are not.
+                                4. All the samples in our batch are in a rectangle.
+                                5. Some of the samples in our batch are in a rectangle, but at least one section that is in a rectangle is surrounded by sections that are not in rectangles,
+                                    or sections in other rectangles.
+                            The first 4 cases will almost always happen in an image, however the 5th will only happen if 
+                                our window size for our bounding rectangles is less than our mini batch size.
+                            For this problem case, our mini batch size can't go higher than 100 due to memory constraints,
+                                and our window size is 512 (because lower would be a time constraint).
+                            So for this problem, we know there are only 4 cases. Given this information, 
+                                we can design a more efficient and simpler algorithm.
+
+                            Note: It's more efficient in how it gives us exactly two indices for referencing the samples in a rectangle,
+                                instead of a list. This is because it allows us to send all of these samples at once to the classifier,
+                                instead of one at a time with the other method. It's also simpler, in my opinion.
+
+                            We loop through each element in the batch, 
+                                and then loop through each pair of 1d coordinates for our bounding rectangles,
+                            Until we find one that is inside one of our pairs. 
+                            This is our first element that is inside our bounding rectangle.
+                            We then search for an element after this which is outside of our bounding rectangle,
+                                defaulting to `width` or `batch.shape[0]` if we don't find one.
+                            This is our last element that is inside our bounding rectangle.
+                            We use the first and last element (if they are not found, this will not occur)
+                                to reference all elements in our batch which are in a bounding rectangle, 
+                                and classify these with our first classifier, using the second classifier for all others.
+                            We initialise first and last to the same value (batch.shape[0]) so that we don't reference any elements
+                                if none are found to be inside our bounding rectangle.
                             """
-                            overlay_predictions[overlay_prediction_i:overlay_prediction_i+batch.shape[0]] = classifier.classify(batch)
+                            first_bounding_rect_i = batch.shape[0]
+                            first_bounding_rect_i_found = False
+                            last_bounding_rect_i = batch.shape[0]
+                            
+                            """
+                            First loop, to search for first_bounding_rect_i
+
+                            Note: We have to add our img_prediction_i to sample_i in order to get
+                                our sample's position in the entire image, in order to compare it with our bounding rectangles,
+                                which are coordinates over the entire image
+                                
+                                However, we keep our first_bounding_rect_i and last_bounding_rect_i as local (without this offset),
+                                    in order to easily reference the elements in our batch using them.
+                            """
+                            for sample_i, sample in enumerate(batch):
+                                sample_i += img_prediction_i
+                                for pair in img_detected_bounding_rectangles:
+                                    if pair[0] <= sample_i and sample_i <= pair[1]:
+                                        """
+                                        Our first bounding rect index, store without offset and break out of this loop
+                                        """
+                                        first_bounding_rect_i = sample_i - img_prediction_i
+                                        first_bounding_rect_i_found = True
+                                        break
+
+                                if first_bounding_rect_i_found:
+                                    break
+
+                            """
+                            Second loop, to search for last_bounding_rect_i
+                                (only happens if we find first_bounding_rect_i)
+                            We know we've found the element when it's not inside any of our rectangles.
+                            If we don't find it, we default to our initial value, batch.shape[0]
+
+                            Note: We have to add our img_prediction_i to sample_i in order to get
+                                our sample's position in the entire image, in order to compare it with our bounding rectangles,
+                                which are coordinates over the entire image
+                                
+                                However, we keep our first_bounding_rect_i and last_bounding_rect_i as local (without this offset),
+                                    in order to easily reference the elements in our batch using them.
+                            """
+                            if first_bounding_rect_i_found:
+                                for sample_i, sample in enumerate(batch[first_bounding_rect_i:]):
+                                    sample_i += img_prediction_i
+                                    for pair in img_detected_bounding_rectangles:
+                                        if pair[0] <= sample_i and sample_i <= pair[1]:
+                                            break
+                                    else:
+                                        """
+                                        Our last bounding rect index, store without offset and break out of this loop
+                                        """
+                                        last_bounding_rect_i = sample_i - img_prediction_i
+                                        break
+
+                            """
+                            So at this point we have two indices for our bounding rectangle elements.
+                            We can use these to reference the correct elements of our batch for each classifier.
+                            """
+                            if first_bounding_rect_i > 0:
+                                """
+                                If our first bounding rect index is not the first index, we classify all the samples up to it with our second classifier
+                                """
+                                overlay_predictions[overlay_prediction_i:overlay_prediction_i+first_bounding_rect_i] = classifier_2.classify(batch[:first_bounding_rect_i])
+
+                            if last_bounding_rect_i > first_bounding_rect_i:
+                                """
+                                If we have some elements in the rectangle, we classify all of them with our first classifier
+                                """
+                                overlay_predictions[overlay_prediction_i+first_bounding_rect_i:overlay_prediction_i+last_bounding_rect_i] = classifier_1.classify(batch[first_bounding_rect_i:last_bounding_rect_i])
+                            if last_bounding_rect_i < batch.shape[0]-1:
+                                """
+                                If we have elements after our elements in the rectangle, we classify all of them with our second classifer
+                                """
+                                overlay_predictions[overlay_prediction_i+last_bounding_rect_i:] = classifier_2.classify(batch[last_bounding_rect_i:])
+
+                            """
+                            We then increment our counters now that we have our new classifications stored
+                            """
                             overlay_prediction_i += batch.shape[0]
+                            img_prediction_i += batch.shape[0]
                             
                         """
                         Convert our predictions for this subsection into a 3-tensor so we can then concatenate it easily into our final predictions 3-tensor.
