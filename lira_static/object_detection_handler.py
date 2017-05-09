@@ -1,4 +1,5 @@
 import cv2
+import os
 import numpy as np
 import xml.etree.ElementTree as ET
 import re
@@ -59,12 +60,24 @@ class ObjectDetector(object):
         rho = float( root.getchildren()[0].getchildren()[-1].getchildren()[0].getchildren()[1].text )
         svmvec = [float(x) for x in re.sub( '\s+', ' ', SVs.text ).strip().split(' ')]
         svmvec.append(-rho)
+        svmvec = np.array(svmvec)
 
         """
-        Initialize hog descriptor
+        Initialize hog descriptor using same parameters we used in get_hog_archive.py
         """
-        hog = cv2.HOGDescriptor()
-        hog.setSVMDetector(svmvec)#haha we LITERALLY CAN'T DO THIS BECAUSE WE CAN'T CHANGE THE WINDOW SIZE TO ANYTHING BUT THE DEFAULT HAH
+        win_size = (512, 512)
+        block_size = (16,16)
+        block_stride = (8,8)
+        cell_size = (8,8)
+        nbins = 9
+        deriv_aperture = 1
+        win_sigma = 4.
+        histogram_norm_type = 0
+        l2_hys_threshold = 2.0000000000000001e-01
+        gamma_correction = False
+        n_levels = 64
+        hog = cv2.HOGDescriptor(win_size, block_size, block_stride, cell_size, nbins, deriv_aperture, win_sigma, histogram_norm_type, l2_hys_threshold, gamma_correction, n_levels)
+        hog.setSVMDetector(svmvec)#look at recent example for how it somehow works now
 
 
     def generate_bounding_rectangles(img, svm_detection_model, model_dir):
@@ -89,6 +102,7 @@ class ObjectDetector(object):
                 So we end up with an array of shape (n, 2, 2) where n is the total number of rectangles.
                 We return this.
         """
+        pass
 
 
-                
+a = ObjectDetector("type1_detection_svm", "../lira/lira2/saved_networks")
