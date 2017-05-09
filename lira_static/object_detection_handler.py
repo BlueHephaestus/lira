@@ -14,7 +14,8 @@ class ObjectDetector(object):
             model_dir: Directory of where all our models are stored. Will be used with `model_1`, `model_2`, and `svm_detection_model` to obtain where the model is now located 
 
         Returns:
-            Initializes our self.svm with parameters located at model_dir/svm_detection_model.
+            Initializes our self.hog using svm for detection - located at model_dir/svm_detection_model.
+            We have to use a hog, since we need the detectMultiScale method of it. So that's why we don't call it self.detector, or something
         """
         model_dir = "%s%s%s.xml" % (model_dir, os.sep, svm_detection_model)
 
@@ -77,20 +78,25 @@ class ObjectDetector(object):
         gamma_correction = False
         n_levels = 64
         hog = cv2.HOGDescriptor(win_size, block_size, block_stride, cell_size, nbins, deriv_aperture, win_sigma, histogram_norm_type, l2_hys_threshold, gamma_correction, n_levels)
-        hog.setSVMDetector(svmvec)#look at recent example for how it somehow works now
+        hog.setSVMDetector(svmvec)
+
+        """
+        Set our class attribute to this hog
+        """
+        self.hog = hog
 
 
-    def generate_bounding_rectangles(img, svm_detection_model, model_dir):
+    def generate_bounding_rectangles(img):
         """
         Arguments:
             img: a np array of shape (h, w, ...) where h % sub_h == 0 and w % sub_w == 0, our original main image
 
         Returns:
             Uses OpenCV's detectMultiScale (parameters defined in this file) to slide a window across our img, using it as input to our 
-                svm, loaded from model_dir/svm_detection_model.
+                hog, using an svm loaded from model_dir/svm_detection_model.
             detectMultiScale also scales the image up (zooms in) until there is not enough room to slide the window or the maximum
                 number of levels is reached.
-            If the svm produces any positive examples, these bounding rectangles are then mean-shifted to remove overlapping positive examples / rectangles,
+            If the detector produces any positive examples, these bounding rectangles are then mean-shifted to remove overlapping positive examples / rectangles,
                 and at the end we return a list of the format
                     [(x1_1, y1_1), (x2_1, y2_1)]
                     [(x1_2, y1_2), (x2_2, y2_2)]
@@ -101,8 +107,11 @@ class ObjectDetector(object):
 
                 So we end up with an array of shape (n, 2, 2) where n is the total number of rectangles.
                 We return this.
+
+        TODO: Make it easy to see results here, generate rectangles on images given, save the result as a resized smaller version, and then continue so we can see it on a bunch of images.
+        Start testing!
         """
-        pass
+        self.hog.detectMultiScale(img, winStride=(64, 64), scale=1.5, useMeanShiftGrouping=True, 
 
 
 a = ObjectDetector("type1_detection_svm", "../lira/lira2/saved_networks")
