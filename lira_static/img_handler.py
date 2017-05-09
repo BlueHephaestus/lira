@@ -116,7 +116,7 @@ def get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divid
 def add_weighted_overlay(img, overlay, alpha, rgb=False):
     """
     Arguments:
-        img: np array of shape (h, w), our original image
+        img: np array of shape (h, w)
         overlay: np array of shape (h, w, 3), a BGR colored overlay to put on top of our original image.
         alpha: transparency weight of our overlay, percentage b/w 0 and 1, with 0 being no overlay and 1 being only overlay.
         rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
