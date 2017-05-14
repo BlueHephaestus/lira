@@ -1,4 +1,4 @@
-## Description
+﻿## Description
 
 L.I.R.A. (Lesion Image Recognition and Analysis) is a machine learning for image recognition and analysis project made in collaboration with [Colorado State University's Microbiology Research Lab.](http://mrl.colostate.edu/)
 
@@ -8,13 +8,25 @@ The problem has been approached with a deep convolutional neural network in Pyth
 
 This project/repo has been made public along with a research paper, found [here when it's finished]()
 
-I am manager of the code for this project, as the primary developer of the code for the project and official collaborator with the MRL. Unfortunately, updating this as it was developed publicly is not an option before the paper was published, so much of this was developed and replaced on my own machines. Because of that, much of the history of the development of this project is not available, and a large amount of it is merely marked under it's own "Initial Commit". Github Premium was purchased at this point, so that I could continue updating the remaining history as it was finished, and then make the repository public when the time came.
+I (Blake Edwards / Dark Element) am manager of the code for this project, as the primary developer of the code for the project and official collaborator with the MRL. Much of the initial development history for this project is not available, due to the fact that we didn't have Github Premium during that time, and thus couldn't make a private repository. This repository was then made private during the majority of the remainder of the project's development, until we published the research paper.
 
-The dataset is too large to store here, however we will set up a system for ease of access to others.
+The dataset is too large to store here, however we will set up a system for ease of access to others, if needed.
 
 We hope that the code here has been documented and designed well enough that many people may modify it for their own uses, but if you have trouble with any of it, don't hesitate to contact the manager of the code for this project (Blake Edwards / Dark Element).
 
-The project is divided into several directories, described below. Every program in these directories (with the exception of LIRA MK1) contains it's own detailed documentation, as well as every function in each of these programs. If anything is not clear enough, I would greatly appreciate any questions or helpful comments. 
+The project is divided into several directories, described below. Every program in these directories (with the exception of LIRA MK1) contains it's own detailed documentation, along with the functions in each of these programs. If anything is not clear enough, I would greatly appreciate any questions or helpful comments. 
+
+### Current Machine Learning Pipeline
+
+Note: This pipeline is subject to change, and the following description is only our current best strategy.
+
+1. Samples for training are obtained through various means. These could be obtained via LIRA-Live (described below), or just through a quick script to create an h5py archive from a directory of samples.
+
+2. These samples will be 7 classes initially: (1) Healthy Tissue, (2) Empty Slide, (3) Type 1 - Rim, (4) Type 1 - Caseum, (5) Type 2, (6) Type 3, (7) Unknown / Miscellaneous. ![Classifications](/documents/classifications.png)
+
+The archive is split into two new archives: one containing the Healthy Tissue, Empty Slide, Type 1 - Rim, and Type 1 Caseum classifications, the other containing Healthy Tissue, Empty Slide, Type 2, and Type 3 classifications.
+
+3. Our first classifier (Type 1 classifier) is trained on the first archive, and our second classifier (Type 2 & 3 classifier) is trained on the second archive. This will come into play in the later steps, but the key idea is that our first classifier is meant for everything not Type 2 or 3, and our second classifier is meant for everything not Type 1.
 
 #### lira/
 
