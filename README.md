@@ -68,6 +68,8 @@ Once we've finished this, the raw results should be far superior to those obtain
 
 Fortunately, we already have a Denoising algorithm for our predictions / labels across our slide, which we use to clean / smooth this up.
 
+Below is a breakdown of each of the project directories, and their purpose(s).
+
 ### lira/
 
 This directory contains the data, saved models, and files for training the Keras model (currently a deep convolutional neural network) for microscopic lesion classification.
