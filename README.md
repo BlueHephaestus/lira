@@ -72,6 +72,8 @@ Once we've finished this, the raw results should be far superior to those obtain
 
 Fortunately, we already have a Denoising algorithm for our predictions / labels across our slide, which we use to clean / smooth this up.
 
+# Directory Structure
+
 Below is a breakdown of each of the project directories, and their purpose(s).
 
 ## lira/
