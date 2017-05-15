@@ -94,23 +94,23 @@ Features:
 
 There have been many experiments and upgrades of the LIRA MK 2 model, denoted as LIRA MK 2.x . These experiments and the currently used version are detailed below:
 
-MK 2.0 - Initial version
+**MK 2.0** - Initial version
 
-MK 2.1 - Improved hyperparameters and added denoising to latter portion of pipeline
+**MK 2.1** - Improved hyperparameters and added denoising to latter portion of pipeline
 
-MK 2.2 - Testing with balancing of training data as well as augmentation of training data, all tests showed worse results than original data however not enough time was available to optimize the architecture for the modified dataset.
+**MK 2.2** - Testing with balancing of training data as well as augmentation of training data, all tests showed worse results than original data however not enough time was available to optimize the architecture for the modified dataset.
 
-MK 2.3 - Tested results on only 4 classifications (Healthy Tissue, Empty Slide, Type 2, and Type 3) instead of all 7 per usual. This improved results, but at the obvious cost of never classifying Type 1 lesions.
+**MK 2.3** - Tested results on only 4 classifications (Healthy Tissue, Empty Slide, Type 2, and Type 3) instead of all 7 per usual. This improved results, but at the obvious cost of never classifying Type 1 lesions.
 
-MK 2.4 - Added new file to use transfer learning to train our microscopic classifier, however this had the same problems our original had - it was unable to correctly classify Type 1 classifications due to the lack of Type 1 data in the current datset.
+**MK 2.4** - Added new file to use transfer learning to train our microscopic classifier, however this had the same problems our original had - it was unable to correctly classify Type 1 classifications due to the lack of Type 1 data in the current datset.
 
-MK 2.5 - Added functionality to both transfer learning and non-transfer learning versions to support RGB data as well as gray data.
+**MK 2.5** - Added functionality to both transfer learning and non-transfer learning versions to support RGB data as well as gray data.
 
-MK 2.6 - Re-optimized both non-transfer learning and transfer learning versions with new dataset, balanced between all classifications. Results improved, however both versions still had trouble differentiating between Type 1 and 3 lesions.
+**MK 2.6** - Re-optimized both non-transfer learning and transfer learning versions with new dataset, balanced between all classifications. Results improved, however both versions still had trouble differentiating between Type 1 and 3 lesions.
 
-MK 2.7 - Updated transfer learning to fine-tune full model after training a small add-on / bottleneck model, however the problem still remained.
+**MK 2.7** - Updated transfer learning to fine-tune full model after training a small add-on / bottleneck model, however the problem still remained.
 
-MK 2.8 - Currently WIP, macroscopic + cooperative microscopic classification as described above. Expected to solve the Type 1 and Type 3 problem.
+**MK 2.8** - Currently WIP, macroscopic + cooperative microscopic classification as described above. Expected to solve the Type 1 and Type 3 problem.
 
 ### lira_static/
 
