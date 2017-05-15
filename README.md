@@ -116,19 +116,19 @@ There have been many experiments and upgrades of the LIRA MK 2 model, denoted as
 
   This section of the project is in charge of classifying our test slides, using our model(s) once they are finished training, as well as getting displayable results once the test slides are classified. All of the files here are devoted to loading the model(s), generating results, and storing and prettifying those results. Functions include:
 
-1. generate_predictions.py - Main file for classifying test slides (i.e. generating predictions on those slides), using other files in lira_static/
+1. **generate_predictions.py** - Main file for classifying test slides (i.e. generating predictions on those slides), using other files in lira_static/
 
-2. img_handler.py - Contains many miscellaneous functions for use across the LIRA project.
+2. **img_handler.py** - Contains many miscellaneous functions for use across the LIRA project.
 
-3. object_detection_handler.py - In charge of loading and using our SVM for getting bounding rectangles on our slides.
+3. **object_detection_handler.py** - In charge of loading and using our SVM for getting bounding rectangles on our slides.
 
-4. static_config.py - In charge of loading and using our microscopic classifiers for individual subsection classification.
+4. **static_config.py** - In charge of loading and using our microscopic classifiers for individual subsection classification.
 
-5. post_processing.py - Loads our predictions obtained from generate_predictions, and uses our denoising algorithm to clean up / smooth them.
+5. **post_processing.py** - Loads our predictions obtained from generate_predictions, and uses our denoising algorithm to clean up / smooth them.
 
-6. generate_display_results.py - Loads our predictions obtained from generate_predictions and combines them with our grayscales into a colored overlay, then resizes them down so they can be easily opened and viewed.
+6. **generate_display_results.py** - Loads our predictions obtained from generate_predictions and combines them with our grayscales into a colored overlay, then resizes them down so they can be easily opened and viewed.
 
-7. concatenate_results.py - Since our generate_display_results can only do it's thing on subsections of the original slides (due to memory constraints), we concatenate all of those images together with this file.
+7. **concatenate_results.py** - Since our generate_display_results can only do it's thing on subsections of the original slides (due to memory constraints), we concatenate all of those images together with this file.
  
 
 ### lira_live/
