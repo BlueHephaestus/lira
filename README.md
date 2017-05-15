@@ -4,9 +4,11 @@ L.I.R.A. (Lesion Image Recognition and Analysis) is a machine learning for image
 
 This project was made to help identify the frequency of lesions in infected tuberculosis lung slides, however it has been made efficiently, modularly, and with good documentation, in the hopes that others may also find use in it's various tools. In having a quickly automated system for testing tuberculosis drug treatment, treatments can be tested faster and new statistics can be gained for the efficacy of these treatments.
 
-The problem has been approached with a deep convolutional neural network in Python's Keras library, alongside various other techniques in machine learning and neural networks. If I do not include the remaining information and parameters in the research article to be published at the time of this project's completion, I will put them here.
+The problem has been approached with a machine learning pipeline, consisting of deep convolutional neural networks in Python's Keras (v2.0) library, object detection with Python and OpenCV (v3.0), along with various other techniques in machine learning and neural networks. 
 
-This project/repo has been made public along with a research paper, found [here when it's finished]()
+I plan to include the specific hyperparameters and configuration details for these techniques in the research paper to be published at the time of this project's completion, however if I do not I will put them here. Despite this, many specifics and details can be found in this README.
+
+This project/repo will be made public along with a research paper, found [here when it's finished]()
 
 The dataset used for this project is too large to store here, however we will set up a system for ease of access to others, if needed.
 
@@ -57,10 +59,12 @@ Once we have bounding rectangles for our Type 1 lesions, we can simply use one m
 2. The archive is split into two new archives: one containing the Healthy Tissue, Empty Slide, Type 1 - Rim, and Type 1 Caseum classifications, the other containing Healthy Tissue, Empty Slide, Type 2, and Type 3 classifications.
 
 3. Our first classifier (Type 1 classifier) is trained on the first archive, and our second classifier (Type 2 & 3 classifier) is trained on the second archive. What this does is it prepares our first classifier for everything Type 1, and our second classifier for everything Type 2 or 3. They both come equipped with Healthy Tissue & Empty Slide classifications so that they can correctly classify any of those they encounter. 
+
+For an idea of the microscopic model, it originally looked like this when training on all 7 classifications: ![Microscopic Model](/documents/model_graphic_1.png). This model is trained entirely, and is not a transfer learning model. For the two microscopic models, the model architecture is exactly the same as this visual, with the exception of the number of outputs, which is 4 instead of 7.
  
 #### Part 4 - Using our microscopic classifiers
 
-We then loop across the subsections of our slide, classifying them with our first classifier if they are inside of a bounding rectangle, and classifying them with our second if they are not.
+As you may notice, the input size for the microscopic classifiers is 80x145, far smaller than the 65,000x30,000 (approximate) size of our full slides. We classify the full slides by dividing them into a lot of 80x145 subsections, iterating across these, and classifying each with the appropriate classifier. We classify them with our first classifier if they are inside of a bounding rectangle, and classify them with our second if they are not.
 
 #### Part 5 - Cleaning our classifications
 
