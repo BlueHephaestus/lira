@@ -10,16 +10,16 @@ import img_handler
 from img_handler import *
 
 import object_detection_handler
-from object_detection_handler import generate_bounding_rectangles
+from object_detection_handler import ObjectDetector
 
-def generate_predictions(model_1, model_2, svm_detection_model, model_dir,  img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", rgb=False):
+def generate_predictions(model_1, model_2, object_detection_model, model_dir,  img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", rgb=False):
     """
     Arguments:
         model_1: String containing the filename of where our first model is stored, to be used for classifying type 1 images and obtaining predictions
         model_2: String containing the filename of where our second model is stored, to be used for classifying type 2 and 3 images and obtaining predictions
-        svm_detection_model: String containing the filename of where our svm detection model is stored, to be used for detecting Type 1 Classifications in our images, 
+        object_detection_model: String containing the filename of where our svm detection model is stored, to be used for detecting Type 1 Classifications in our images, 
             and drawing bounding rectangles on them.
-        model_dir: Directory of where all our models are stored. Will be used with `model_1`, `model_2`, and `svm_detection_model` to obtain where the model is now located 
+        model_dir: Directory of where all our models are stored. Will be used with `model_1`, `model_2`, and `object_detection_model` to obtain where the model is now located 
         img_archive_dir: a string filepath of the .h5 file where the images / greyscales are stored.
         predictions_archive_dir: a string filepath of the .h5 file where the model's predictions on the images/greyscales will be stored.
         classification_metadata_dir: a string filepath of the .pkl file where the model's classification strings and color key for each classification will be stored.
@@ -116,6 +116,11 @@ def generate_predictions(model_1, model_2, svm_detection_model, model_dir,  img_
     classifier_2 = StaticConfig(model2, model_dir)
 
     """
+    Open our saved object detection model
+    """
+    object_detector = ObjectDetector(object_detection_model, model_dir)
+
+    """
     We open our image file, where each image is stored as a dataset with a key of it's index (e.g. '0', '1', ...)
     We also open our predictions file, where we will be writing our predictions in the same manner of our image file,
         so that they have a string index according to the image they came from.
@@ -159,15 +164,40 @@ def generate_predictions(model_1, model_2, svm_detection_model, model_dir,  img_
                 Get all bounding rectangles for type 1 classifications using our svm detection model, on our entire image.
                     (parameters for this model are defined in the object_detection_handler.py file, because this is a very problem-specific addition to this file)
                 """
-                img_detected_bounding_rectangles = generate_bounding_rectangles(img, svm_detection_model, model_dir)
+                img_detected_bounding_rects = object_detector.generate_bounding_rects(img)
 
                 """
-                We then convert the img_detected_bounding_rectangles from an array of shape (n, 2, 2) to one of shape (n, 2)
-                    by converting each (x,y) (2d coordinate) pair in the third array axis to just an x value (1d coordinate).
-
-                We do this using x_new = x * w + y, where w is the width of our image.
+                We only do any of this if we actually have some bounding rectangles on our image,
+                    so we check for that here.
                 """
-                img_detected_bounding_rectangles = img_detected_bounding_rectangles[:, :, 0] * img_w + img_detected_bounding_rectangles[:, :, 1]
+                if len(img_detected_bounding_rects) > 0:
+                    """
+                    We then convert the img_detected_bounding_rectangles from an array of shape (n, 4) to one of shape (n, 2)
+                        by converting each (x,y) (2d coordinate) pair to just an x value (1d coordinate).
+
+                    We do this using x_new = x * w + y, where w is the width of our image.
+                    """
+                    """
+                    First we get the 2d cords for ease of reference
+                    """
+                    x1 = img_detected_bounding_rects[:, 0]
+                    y1 = img_detected_bounding_rects[:, 1]
+                    x2 = img_detected_bounding_rects[:, 2]
+                    y2 = img_detected_bounding_rects[:, 3]
+
+                    """
+                    Then we get x1 and x2, our new 1d cords
+                    """
+                    x1 = x1 * img_w + y1
+                    x2 = x2 * img_w + y2
+
+                    """
+                    Then we cast them as np.arrays and concatenate on axis 1, giving us our array of shape (n, 2)
+                        containing only our 1d cords for the bounding rects.
+                    """
+                    x1 = np.array(x1)
+                    x2 = np.array(x2)
+                    img_detected_bounding_rects = np.concatenate((x1,x2), axis=1)
 
                 """
                 In order to handle everything easily and correctly, we do the following:
@@ -300,54 +330,60 @@ def generate_predictions(model_1, model_2, svm_detection_model, model_dir,  img_
                             last_bounding_rect_i = batch.shape[0]
                             
                             """
-                            First loop, to search for first_bounding_rect_i
-
-                            Note: We have to add our img_prediction_i to sample_i in order to get
-                                our sample's position in the entire image, in order to compare it with our bounding rectangles,
-                                which are coordinates over the entire image
-                                
-                                However, we keep our first_bounding_rect_i and last_bounding_rect_i as local (without this offset),
-                                    in order to easily reference the elements in our batch using them.
+                            We only do any of this if we actually have some bounding rectangles on our image,
+                                so we check for that here.
                             """
-                            for sample_i, sample in enumerate(batch):
-                                sample_i += img_prediction_i
-                                for pair in img_detected_bounding_rectangles:
-                                    if pair[0] <= sample_i and sample_i <= pair[1]:
-                                        """
-                                        Our first bounding rect index, store without offset and break out of this loop
-                                        """
-                                        first_bounding_rect_i = sample_i - img_prediction_i
-                                        first_bounding_rect_i_found = True
-                                        break
+                            if len(img_detected_bounding_rects) > 0:
 
-                                if first_bounding_rect_i_found:
-                                    break
+                                """
+                                First loop, to search for first_bounding_rect_i
 
-                            """
-                            Second loop, to search for last_bounding_rect_i
-                                (only happens if we find first_bounding_rect_i)
-                            We know we've found the element when it's not inside any of our rectangles.
-                            If we don't find it, we default to our initial value, batch.shape[0]
-
-                            Note: We have to add our img_prediction_i to sample_i in order to get
-                                our sample's position in the entire image, in order to compare it with our bounding rectangles,
-                                which are coordinates over the entire image
-                                
-                                However, we keep our first_bounding_rect_i and last_bounding_rect_i as local (without this offset),
-                                    in order to easily reference the elements in our batch using them.
-                            """
-                            if first_bounding_rect_i_found:
-                                for sample_i, sample in enumerate(batch[first_bounding_rect_i:]):
+                                Note: We have to add our img_prediction_i to sample_i in order to get
+                                    our sample's position in the entire image, in order to compare it with our bounding rectangles,
+                                    which are coordinates over the entire image
+                                    
+                                    However, we keep our first_bounding_rect_i and last_bounding_rect_i as local (without this offset),
+                                        in order to easily reference the elements in our batch using them.
+                                """
+                                for sample_i, sample in enumerate(batch):
                                     sample_i += img_prediction_i
-                                    for pair in img_detected_bounding_rectangles:
+                                    for pair in img_detected_bounding_rects:
                                         if pair[0] <= sample_i and sample_i <= pair[1]:
+                                            """
+                                            Our first bounding rect index, store without offset and break out of this loop
+                                            """
+                                            first_bounding_rect_i = sample_i - img_prediction_i
+                                            first_bounding_rect_i_found = True
                                             break
-                                    else:
-                                        """
-                                        Our last bounding rect index, store without offset and break out of this loop
-                                        """
-                                        last_bounding_rect_i = sample_i - img_prediction_i
+
+                                    if first_bounding_rect_i_found:
                                         break
+
+                                """
+                                Second loop, to search for last_bounding_rect_i
+                                    (only happens if we find first_bounding_rect_i)
+                                We know we've found the element when it's not inside any of our rectangles.
+                                If we don't find it, we default to our initial value, batch.shape[0]
+
+                                Note: We have to add our img_prediction_i to sample_i in order to get
+                                    our sample's position in the entire image, in order to compare it with our bounding rectangles,
+                                    which are coordinates over the entire image
+                                    
+                                    However, we keep our first_bounding_rect_i and last_bounding_rect_i as local (without this offset),
+                                        in order to easily reference the elements in our batch using them.
+                                """
+                                if first_bounding_rect_i_found:
+                                    for sample_i, sample in enumerate(batch[first_bounding_rect_i:]):
+                                        sample_i += img_prediction_i
+                                        for pair in img_detected_bounding_rects:
+                                            if pair[0] <= sample_i and sample_i <= pair[1]:
+                                                break
+                                        else:
+                                            """
+                                            Our last bounding rect index, store without offset and break out of this loop
+                                            """
+                                            last_bounding_rect_i = sample_i - img_prediction_i
+                                            break
 
                             """
                             So at this point we have two indices for our bounding rectangle elements.
