@@ -177,6 +177,7 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
 
                     We do this using x_new = x * w + y, where w is the width of our image.
                     """
+
                     """
                     First we get the 2d cords for ease of reference
                     """

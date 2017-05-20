@@ -247,6 +247,7 @@ class ObjectDetector(object):
 
             So we end up with an array of shape (n, 2*2) where n is the total number of rectangles.
             We return this.
+
         """
         """
         Initialize our list of bounding rectangles (aka bounding rectangle coordinates)
