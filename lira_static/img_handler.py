@@ -264,6 +264,157 @@ def get_relative_factor(img_h, factor, threshold=3000, default_factor=8):
 
     return factor
 
+def convert_2d_rects_to_1d_rects(rects_2d, width):
+    """
+    Arguments:
+        rects_2d: 
+            A np array of the format
+                [x1_1, y1_1, x2_1, y2_1]
+                [x1_2, y1_2, x2_2, y2_2]
+                [ ...                  ]
+                [x1_n, y1_n, x2_n, y2_n]
+
+            Where each entry is the pairs coordinates corresponding to the top-left and bottom-right corners of a (2d) rectangle.
+            These should be ints.
+        width: Integer width of our image these rectangles belong to.
+
+    Returns:
+        rects_1d:
+            A np array of the format
+
+                [x1_1, x2_1]
+                [x1_2, x2_2]
+                [ ........ ]
+                [x1_m, x2_m]
+
+            Where each entry is the pairs coordinates corresponding to the left and right boundaries of new 1d rectangles, meaning 
+                x1_1 will be the index of the first element in a certain rectangle, 
+                and x2_1 will be the index of the last element.
+
+            So that we can do array[x1_1:x2_1] for each pair, and only get elements that were originally in the rectangles.
+
+            Due to the want for our array[x1_1:x2_1] condition, and the way the conversion works (detailed below), 
+                we will have our rects_1d array be far longer than our original rects_2d array.
+    """
+    """
+    Let's say we have a rectangle on an image. 
+    This rectangle will be in the form of two points, like (x1, y1), (x2, y2).
+    This rectangle has certain elements of our matrix (i.e. pixels of the image) within it.
+    If we flatten our image, we'd like a way to reference these same elements with a sort of 1d rectangle.
+    However, this isn't possible. There is no general way to get a 1d coordinate pair for this (of form (x1, x2)),
+        given two 2d coordinates like (x1, y1), (x2, y2).
+
+    Let's say we have an image with a rectangle in the top-left corner, so that the elements which are in the rectangle
+        are marked by x's, and the ones not are marked by 0s.
+
+        xxxxx000
+        xxxxx000
+        xxxxx000
+        xxxxx000
+        00000000
+        00000000
+
+    If we flatten the image, we end up with these elements:
+
+        xxxxx000xxxxx000xxxxx000xxxxx0000000000000000000
+
+    So we can see there is no one line of elements we can reference in the flattened image to get all the ones
+        which were in the original image, in a a general case. 
+
+    We need multiple 1d coordinates to do it. That's what this function does. Given some 2d coordinates,
+        it goes through and gets all the 1d coordinates we need to fulfill this desired attribute.
+
+    It does it by using the patterns inherent in this conversion,
+        such as knowing our intervals will have (x2-x1)+1 elements,
+        and knowing that there will be (y2-y1)+1 of these intervals.
+
+        In our above example, we would have had:
+            x1 = 0
+            y1 = 0
+            x2 = 4
+            y2 = 3
+            
+            (4-0)+1 = 5 elements per interval
+            (3-0)+1 = 4 intervals
+
+    """ 
+    """
+    Our result list, since it's easier to just append
+        rather than figure out how long the np array would be via
+        all of our (y2-y1)+1 numbers, and then keep track of our
+        position in this array, and so on.
+    """
+    rects_1d = []
+
+    """ 
+    Since it's easier to do this one rectangle at a time, that's how we do it.
+    """
+    for rect_2d in rects_2d:
+        x1 = rect_2d[0]
+        y1 = rect_2d[1]
+        x2 = rect_2d[2]
+        y2 = rect_2d[3]
+
+        """
+        Repeat ((y2-y1)+1) times
+        """
+        for i in range((y2-y1)+1):
+            """
+            Get 1d x1 normal way
+            """
+            x1_1d = (y1+i) * width + x1
+
+            """
+            Get 1d x2 using x1_1d + interval width,
+                i.e. x1_1d + ((x2-x1)+1)
+            """
+            x2_1d = x1_1d + ((x2-x1)+1)
+            
+            """
+            Then append these to new rects_1d list
+            """
+            rects_1d.append([x1_1d, x2_1d])
+
+    """
+    Then convert to an np array and cast to int,
+        then return.
+    """
+    rects_1d = np.array(rects_1d).astype(int)
+
+    return rects_1d
+        
+def get_global_prediction_i(i, img_h, img_w, sub_h, sub_w, img_divide_factor, sub_img_row_i, sub_img_col_i):
+    """
+    We have our img_prediction_i (i) which is incremented each batch, however
+        due to the fact that our batches of subsections are part of larger subsections which the image is
+        divided into, we have to find the global img_prediction_i (i) by taking these into account.
+        This is a bit complicated, so we use this separate function for it
+    """
+    """
+    img_h
+    img_w
+    img_divide_factor
+    sub_img_row_i
+    sub_img_col_i
+    """
+
+    #get the sub img h&w in subsections
+    sub_img_h = (img_h//img_divide_factor)//sub_h
+    sub_img_w = (img_w//img_divide_factor)//sub_w
+
+    total_elements_already_passed = sub_img_h * sub_img_w * (sub_img_row_i * img_divide_factor + sub_img_col_i)
+    #print total_elements_already_passed
+    local_i = i - (total_elements_already_passed) 
+    local_row_i = local_i // sub_img_w 
+    local_col_i = local_i % sub_img_w
+    global_row_i = local_row_i + (sub_img_h * sub_img_row_i)
+    global_col_i = local_col_i + (sub_img_w * sub_img_col_i)
+    global_i = global_row_i * (img_w//sub_w) + global_col_i
+    return global_i
+
+
+    
+
 def disp_img_fullscreen(img, name="test"):
     """
     Displays the given image full screen. 

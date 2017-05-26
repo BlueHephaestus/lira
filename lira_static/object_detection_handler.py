@@ -220,10 +220,10 @@ class ObjectDetector(object):
         """
         return bounding_rects[pick]
 
-    def generate_bounding_rectangles(self, img):
+    def generate_bounding_rects(self, img):
         """
         Arguments:
-            img: a np array of shape (h, w, ...) where h % sub_h == 0 and w % sub_w == 0, our original main image
+            img: an array of shape (h, w, ...) where h % sub_h == 0 and w % sub_w == 0, our original main image
 
         Returns:
             Loops through different scales of our image, and slides a window across each of these scales,
@@ -255,6 +255,17 @@ class ObjectDetector(object):
         bounding_rects = []
 
         """
+        Cast img to nparray just in case it isn't already
+        """
+        img = np.array(img)
+
+        """
+        Until further changes, we resize our images down by a constant resize factor.
+        """
+        resize_factor = 0.05
+        img = cv2.resize(img, (0,0), fx=resize_factor, fy=resize_factor)
+
+        """
         We use win_shape for both min_shape in pyramid(), and win_shape in sliding_window().
         This way, we don't need to check if our resized_img is larger than (or equal to) our window shape.
         """
@@ -262,7 +273,7 @@ class ObjectDetector(object):
         scale = 0.7
         suppression_overlap_threshold = 0.1
         start = time.time()#For doing speed checks
-        for (scale_i, resized_img) in self.pyramid(img, scale=scale, min_shape=win_shape, n=8):
+        for (scale_i, resized_img) in self.pyramid(img, scale=scale, min_shape=win_shape, n=1):
             for (row_i, col_i, window) in self.sliding_window(resized_img, step_size=256, win_shape=win_shape):
                 """
                 row_i, col_i give us the top-left cord of our bounding rectangle on the resized image.
@@ -302,12 +313,14 @@ class ObjectDetector(object):
 
                     We also do it on both dimensions at once by putting win_size into a np array.
                     """
+                    #print self.detector_model.predict_on_batch(hog_descriptors)
                     relative_win_shape = np.array(win_shape) * (1./scale)**(scale_i)
 
                     """
                     Using this, we offset our top-left coordinates and store the now complete set of coordinates
                         for our bounding rectangle into bounding_rects
                     """
+                    #if np.max(self.detector_model.predict_on_batch(hog_descriptors)) >= .999:
                     bounding_rects.append([col_i, row_i, col_i+relative_win_shape[1], row_i+relative_win_shape[0]])
 
 
@@ -320,25 +333,49 @@ class ObjectDetector(object):
         print len(bounding_rects)
 
         """
-        We cast this to a np array now that it's fully ready,
-            and we also will need to use the array multiplication ops np provides 
-            in the caller of this function.
-            
-            Note: I realize it gets casted to a np array in the suppression function, 
-                however we may not always use suppression, so we include it here in case of that.
-                It's also simpler and has an explanation of why we need it as a np array
+        temp
+        """
+        bounding_rects = np.array([[0,0,1500,1150]])
+        #bounding_rects = np.array([[700, 700, 1000, 1000]])
+        #bounding_rects = np.array([[0,0,300,300]])
+        for (x1,y1,x2,y2) in bounding_rects:
+            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.imwrite("test.png", img)
+        """
+        end temp
+        """
 
+        """
+        Since this bounding_rects was obtained on an image which was resized down by resize_factor 
+            (a number of format 1/x, so always 0 < 1/x <= 1, i.e. 1/20 = 0.05),
+        We want to resize the coordinates to match the original img argument. 
+        Fortunately, since the number is of format 1/x, a downscale (large image -> smaller image) resize,
+            we just need the upscale (smaller image -> large image) resize number, which is just x.
+        So how do we get x from 1/x? We just do 1/(1/x) = x, by simple algebra.
+        And we can just resize the coordinates back up by multiplying them by this x.
+
+        Since we need array multiplication for this (and will need it in future ops once this is returned),
+            we cast it before applying the multiplication.
+        """
+        bounding_rects = np.array(bounding_rects)
+        bounding_rects = bounding_rects * (1./resize_factor)
+
+        """
         We then also cast it's elements to be of type int, 
             which we didn't do earlier because our calculations for the lower-right coordinate
             of each bounding rect often result in floating point values, 
             and you can't initialize python lists with a preset data type.
+        We also get more float values when resizing it up.
         """
         bounding_rects = np.array(bounding_rects).astype(int)
+
         print "%f seconds for detection" % (time.time() - start)
 
         return bounding_rects
 
+"""
 a = ObjectDetector("type1_detection_model", "../lira/lira2/saved_networks")
+"""
 
 """
 Small and quick test image
@@ -346,11 +383,11 @@ Small and quick test image
 """
 test = np.floor(np.random.rand(2048,2048,3)*255).astype(np.uint8)
 #test = cv2.imread(os.path.expanduser("~/downloads/images/akihabara_background_1.jpg"))
-a.generate_bounding_rectangles(test)
+a.generate_bounding_rects(test)
 """
 """
 test = np.floor(np.random.rand(512,512,3)*255).astype(np.uint8)
-a.generate_bounding_rectangles(test)
+a.generate_bounding_rects(test)
 """
 
 """
@@ -358,13 +395,22 @@ Full test image(s)
 """
 #test1 = cv2.imread("../lira/lira1/data/rim_test_slides/115939_0_cropped.png")
 #test1 = cv2.resize(test1, (1024, 1024))
-test1 = cv2.imread("../lira/lira1/data/test_slides/115893.svs")
-test1 = cv2.resize(test1, (0,0), fx=0.05, fy=.05)
-test1 = test1.astype(np.uint8)
-print test1.shape
-img_detected_bounding_rects = a.generate_bounding_rectangles(test1)
-print "%i Positives Detected" % len(img_detected_bounding_rects)
-print img_detected_bounding_rects
-for (x1,y1,x2,y2) in img_detected_bounding_rects:
-    cv2.rectangle(test1, (x1, y1), (x2, y2), (0, 255, 0), 2)
-cv2.imwrite("test.png", test1)
+"""
+def test_on_img(i, f):
+    test1 = cv2.imread(f)
+    test1 = cv2.resize(test1, (0,0), fx=0.05, fy=.05)
+    test1 = test1.astype(np.uint8)
+    print test1.shape
+    img_detected_bounding_rects = a.generate_bounding_rects(test1)
+    print "%i Positives Detected" % len(img_detected_bounding_rects)
+    print img_detected_bounding_rects
+    for (x1,y1,x2,y2) in img_detected_bounding_rects:
+        cv2.rectangle(test1, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    cv2.imwrite("%i.png" % i, test1)
+
+for path in os.walk("../lira/lira1/data/rim_test_slides"):
+    dir, b, fnames = path
+    for i, fname in enumerate(fnames):
+        fpath = dir + os.sep + fname
+        test_on_img(i,fpath)
+"""

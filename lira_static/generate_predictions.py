@@ -17,7 +17,7 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
     Arguments:
         model_1: String containing the filename of where our first model is stored, to be used for classifying type 1 images and obtaining predictions
         model_2: String containing the filename of where our second model is stored, to be used for classifying type 2 and 3 images and obtaining predictions
-        object_detection_model: String containing the filename of where our svm detection model is stored, to be used for detecting Type 1 Classifications in our images, 
+        object_detection_model: String containing the filename of where our detection model is stored, to be used for detecting Type 1 Classifications in our images, 
             and drawing bounding rectangles on them.
         model_dir: Directory of where all our models are stored. Will be used with `model_1`, `model_2`, and `object_detection_model` to obtain where the model is now located 
         img_archive_dir: a string filepath of the .h5 file where the images / greyscales are stored.
@@ -67,7 +67,7 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
     """
     Mini batch size, arbitrarily chosen to be 100 because we have enough memory to handle it efficiently
     """
-    mb_n = 100
+    mb_n = 1
 
     """
     Our factors to resize our image by, or divide it into subsections.
@@ -112,13 +112,13 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
         1 -> Type 1 classifications
         2 -> Type 2 & 3 classifications
     """
-    classifier_1 = StaticConfig(model1, model_dir)
-    classifier_2 = StaticConfig(model2, model_dir)
+    #classifier_1 = StaticConfig(model_1, model_dir)
+    #classifier_2 = StaticConfig(model_2, model_dir)
 
     """
     Open our saved object detection model
     """
-    object_detector = ObjectDetector(object_detection_model, model_dir)
+    #object_detector = ObjectDetector(object_detection_model, model_dir)
 
     """
     We open our image file, where each image is stored as a dataset with a key of it's index (e.g. '0', '1', ...)
@@ -144,7 +144,8 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                 """
                 Get our image
                 """
-                img = img_hf.get(str(img_i))
+                #img = img_hf.get(str(img_i))
+                img = np.floor(np.random.rand(1280, 2320, 3)*255).astype(int)#TEMP
 
                 """
                 Get these for easy reference later, now that our image's dimensions aren't changing
@@ -159,46 +160,47 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                     img_divide_factor = get_relative_factor(img_h, img_divide_factor)
                 if dynamic_resize_factor:
                     resize_factor = float(get_relative_factor(img_h, resize_factor))
+                img_divide_factor = 8
                 
                 """
-                Get all bounding rectangles for type 1 classifications using our svm detection model, on our entire image.
+                Get all bounding rectangles for type 1 classifications using our detection model, on our entire image.
                     (parameters for this model are defined in the object_detection_handler.py file, because this is a very problem-specific addition to this file)
                 """
-                img_detected_bounding_rects = object_detector.generate_bounding_rects(img)
+                #img_detected_bounding_rects = object_detector.generate_bounding_rects(img)
+                img_detected_bounding_rects = np.array([[200,200,580,640], [1200,400,1800,600]])#TEMP
 
                 """
                 We only do any of this if we actually have some bounding rectangles on our image,
                     so we check for that here.
                 """
+                print img_detected_bounding_rects
+                print img_detected_bounding_rects.shape
                 if len(img_detected_bounding_rects) > 0:
                     """
+                    We want our coordinates to be relative to subsection size instead of pixels, so we divide accordingly
+                        and convert back to int again.
+                    """
+                    img_detected_bounding_rects[:,0] /= sub_w
+                    img_detected_bounding_rects[:,1] /= sub_h
+                    img_detected_bounding_rects[:,2] /= sub_w
+                    img_detected_bounding_rects[:,3] /= sub_h
+                    img_detected_bounding_rects = img_detected_bounding_rects.astype(int)
+                    print img_detected_bounding_rects
+                    """
                     We then convert the img_detected_bounding_rectangles from an array of shape (n, 4) to one of shape (n, 2)
-                        by converting each (x,y) (2d coordinate) pair to just an x value (1d coordinate).
+                        by converting our 2d rectangle coordinates into sets of 1d coordinates, 
+                        which we can use to reference all the elements in our flattened image which were originally in our 2d rectangles.
 
-                    We do this using x_new = x * w + y, where w is the width of our image.
+                    We do this using our function for it in img_handler.py, and further documentation for how it works
+                        can be found there.
                     """
+                    img_detected_bounding_rects = convert_2d_rects_to_1d_rects(img_detected_bounding_rects, img_w//sub_w)
 
-                    """
-                    First we get the 2d cords for ease of reference
-                    """
-                    x1 = img_detected_bounding_rects[:, 0]
-                    y1 = img_detected_bounding_rects[:, 1]
-                    x2 = img_detected_bounding_rects[:, 2]
-                    y2 = img_detected_bounding_rects[:, 3]
-
-                    """
-                    Then we get x1 and x2, our new 1d cords
-                    """
-                    x1 = x1 * img_w + y1
-                    x2 = x2 * img_w + y2
-
-                    """
-                    Then we cast them as np.arrays and concatenate on axis 1, giving us our array of shape (n, 2)
-                        containing only our 1d cords for the bounding rects.
-                    """
-                    x1 = np.array(x1)
-                    x2 = np.array(x2)
-                    img_detected_bounding_rects = np.concatenate((x1,x2), axis=1)
+                """
+                print list(img_detected_bounding_rects)
+                sys.exit()
+                """
+                print img_detected_bounding_rects.shape
 
                 """
                 In order to handle everything easily and correctly, we do the following:
@@ -335,6 +337,21 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                                 so we check for that here.
                             """
                             if len(img_detected_bounding_rects) > 0:
+                                """
+                                We have our img_prediction_i which is incremented each batch, however
+                                    due to the fact that our batches of subsections are part of larger subsections which the image is
+                                    divided into, we have to find the global img_prediction_i by taking these into account.
+                                    This is a bit complicated, so we use a separate function for it
+                                """
+                                #def get_global_prediction_i(i, img_h, img_w, sub_h, sub_w, img_divide_factor, sub_img_row_i, sub_img_col_i):
+                                #def get_global_prediction_i(i, img_h, img_w, sub_h, sub_w, img_divide_factor, sub_img_row_i, sub_img_col_i):
+                                """
+                                print img_prediction_i, img_h, img_w, sub_h, sub_w, img_divide_factor, row_i, col_i
+                                sys.exit()
+                                """
+
+                                global_prediction_i = get_global_prediction_i(img_prediction_i, img_h, img_w, sub_h, sub_w, img_divide_factor, row_i, col_i)
+                                #print img_prediction_i, global_prediction_i
 
                                 """
                                 First loop, to search for first_bounding_rect_i
@@ -347,13 +364,13 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                                         in order to easily reference the elements in our batch using them.
                                 """
                                 for sample_i, sample in enumerate(batch):
-                                    sample_i += img_prediction_i
+                                    sample_i += global_prediction_i
                                     for pair in img_detected_bounding_rects:
                                         if pair[0] <= sample_i and sample_i <= pair[1]:
                                             """
                                             Our first bounding rect index, store without offset and break out of this loop
                                             """
-                                            first_bounding_rect_i = sample_i - img_prediction_i
+                                            first_bounding_rect_i = sample_i - global_prediction_i
                                             first_bounding_rect_i_found = True
                                             break
 
@@ -375,7 +392,7 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                                 """
                                 if first_bounding_rect_i_found:
                                     for sample_i, sample in enumerate(batch[first_bounding_rect_i:]):
-                                        sample_i += img_prediction_i
+                                        sample_i += (global_prediction_i + first_bounding_rect_i)
                                         for pair in img_detected_bounding_rects:
                                             if pair[0] <= sample_i and sample_i <= pair[1]:
                                                 break
@@ -383,30 +400,73 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                                             """
                                             Our last bounding rect index, store without offset and break out of this loop
                                             """
-                                            last_bounding_rect_i = sample_i - img_prediction_i
+                                            last_bounding_rect_i = sample_i - global_prediction_i
                                             break
 
                             """
                             So at this point we have two indices for our bounding rectangle elements.
                             We can use these to reference the correct elements of our batch for each classifier.
+
+                            Since our classification indices are going to be 0, 1, 2, 3 for both first and second classifiers, 
+                                however they represent different things for each of them
+                                (e.g. 1 = Type 1 Caseum for 1st classifier, 1 = Type II for 2nd classifier),
+                                which means we have to make sure they have unique and different numbers again = going from local to global mappings again.
+
+                            In order to do this, we just manually map them from their unique mappings back to global, so that
+                                1 = Type 1 Caseum 
+                                2 = Type II 
+                            Since these are probability vectors instead of indices, this is a bit more complicated, but overrall the same.
+                            And we can then properly generate our overlays with our overlay_predictions array when we're done
                             """
+                            #print first_bounding_rect_i, last_bounding_rect_i
                             if first_bounding_rect_i > 0:
                                 """
                                 If our first bounding rect index is not the first index, we classify all the samples up to it with our second classifier
+                                    and insert them in the correct order for our mapping
                                 """
-                                overlay_predictions[overlay_prediction_i:overlay_prediction_i+first_bounding_rect_i] = classifier_2.classify(batch[:first_bounding_rect_i])
+                                #classifier_2_classifications = classifier_2.classify(batch[:first_bounding_rect_i])
+                                classifier_2_classifications = np.array([[0,.9,.1,0]])#TEMP
+
+                                overlay_predictions[overlay_prediction_i:overlay_prediction_i+first_bounding_rect_i][:,0] = classifier_2_classifications[:,0]
+                                overlay_predictions[overlay_prediction_i:overlay_prediction_i+first_bounding_rect_i][:,2:5] = classifier_2_classifications[:,1:]
+                                #print "TYPE 2"
 
                             if last_bounding_rect_i > first_bounding_rect_i:
                                 """
                                 If we have some elements in the rectangle, we classify all of them with our first classifier
+                                    and insert them in the correct order for our mapping
                                 """
-                                overlay_predictions[overlay_prediction_i+first_bounding_rect_i:overlay_prediction_i+last_bounding_rect_i] = classifier_1.classify(batch[first_bounding_rect_i:last_bounding_rect_i])
+                                #classifier_1_classifications = classifier_1.classify(batch[first_bounding_rect_i:last_bounding_rect_i])
+                                classifier_1_classifications = np.array([[0,.9,.1,0]])#TEMP
+
+                                overlay_predictions[overlay_prediction_i+first_bounding_rect_i:overlay_prediction_i+last_bounding_rect_i][:,0:2] = classifier_1_classifications[:,0:2]
+                                overlay_predictions[overlay_prediction_i+first_bounding_rect_i:overlay_prediction_i+last_bounding_rect_i][:,3] = classifier_1_classifications[:,2]
+                                overlay_predictions[overlay_prediction_i+first_bounding_rect_i:overlay_prediction_i+last_bounding_rect_i][:,5] = classifier_1_classifications[:,3]
+                                #print "TYPE 1 ", overlay_predictions[overlay_prediction_i:overlay_prediction_i+last_bounding_rect_i]
+                                #print "TYPE 1"
+
                             if last_bounding_rect_i < batch.shape[0]-1:
                                 """
                                 If we have elements after our elements in the rectangle, we classify all of them with our second classifer
+                                    and insert them in the correct order for our mapping
                                 """
-                                overlay_predictions[overlay_prediction_i+last_bounding_rect_i:] = classifier_2.classify(batch[last_bounding_rect_i:])
+                                #overlay_predictions[overlay_prediction_i+last_bounding_rect_i:] = classifier_2.classify(batch[last_bounding_rect_i:])
+                                #classifier_2_classifications = classifier_2.classify(batch[last_bounding_rect_i:])
+                                classifier_2_classifications = np.array([[0,.9,.1,0]])#TEMP
 
+                                overlay_predictions[overlay_prediction_i+last_bounding_rect_i:overlay_prediction_i+batch.shape[0]][:,0] = classifier_2_classifications[:,0]
+                                overlay_predictions[overlay_prediction_i+last_bounding_rect_i:overlay_prediction_i+batch.shape[0]][:,2:5] = classifier_2_classifications[:,1:]
+
+                                #print "TYPE 2 ", overlay_predictions[overlay_prediction_i:overlay_prediction_i+last_bounding_rect_i]
+                                #print "TYPE 2"
+
+                            """
+                            print first_bounding_rect_i, last_bounding_rect_i
+                            print overlay_predictions[overlay_prediction_i:overlay_prediction_i+batch.shape[0]]
+
+                            if overlay_prediction_i > 12:
+                                sys.exit()
+                            """
                             """
                             We then increment our counters now that we have our new classifications stored
                             """
