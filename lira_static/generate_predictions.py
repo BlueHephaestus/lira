@@ -65,21 +65,11 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
     sub_w = 145
 
     """
-    Mini batch size, arbitrarily chosen to be 100 because we have enough memory to handle it efficiently
-    """
-    mb_n = 1
+    Our factor to resize our image by.
 
-    """
-    Our factors to resize our image by, or divide it into subsections.
-
-    Set this to None to have a dynamic divide factor.
+    Set this to None to have a dynamic resize factor.
         the threshold is only relevant if it is None.
-
-    Same goes for resize factor.
     """
-    dynamic_img_divide_factor = True
-    img_divide_factor = None
-
     dynamic_resize_factor = True
     resize_factor = None
 
@@ -88,6 +78,14 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
         *cough* if you want to show off *cough*
     """
     print_times = False
+
+    """
+    Then convert the subs from grayscale to rgb, by repeating their last dimension 3 times.
+        We do this because our model's first stage consists of pretrained models, 
+        which were trained on rgb data originally and thus expect data with 3 channels.
+    Only enable this if you are using those models.
+    """
+    grayscale_to_rgb = False
 
     """
     Classifications to give to each classification index
@@ -112,13 +110,13 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
         1 -> Type 1 classifications
         2 -> Type 2 & 3 classifications
     """
-    #classifier_1 = StaticConfig(model_1, model_dir)
-    #classifier_2 = StaticConfig(model_2, model_dir)
+    classifier_1 = StaticConfig(model_1, model_dir)
+    classifier_2 = StaticConfig(model_2, model_dir)
 
     """
     Open our saved object detection model
     """
-    #object_detector = ObjectDetector(object_detection_model, model_dir)
+    object_detector = ObjectDetector(object_detection_model, model_dir)
 
     """
     We open our image file, where each image is stored as a dataset with a key of it's index (e.g. '0', '1', ...)
@@ -144,8 +142,7 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                 """
                 Get our image
                 """
-                #img = img_hf.get(str(img_i))
-                img = np.floor(np.random.rand(1280, 2320, 3)*255).astype(int)#TEMP
+                img = img_hf.get(str(img_i))
 
                 """
                 Get these for easy reference later, now that our image's dimensions aren't changing
@@ -154,27 +151,21 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                 img_w = img.shape[1]
 
                 """
-                Get our img_divide_factor and resize_factor variables from the dimensions of our image
+                Get our resize_factor variable from the dimensions of our image
                 """
-                if dynamic_img_divide_factor:
-                    img_divide_factor = get_relative_factor(img_h, img_divide_factor)
                 if dynamic_resize_factor:
                     resize_factor = float(get_relative_factor(img_h, resize_factor))
-                img_divide_factor = 8
                 
                 """
                 Get all bounding rectangles for type 1 classifications using our detection model, on our entire image.
                     (parameters for this model are defined in the object_detection_handler.py file, because this is a very problem-specific addition to this file)
                 """
-                #img_detected_bounding_rects = object_detector.generate_bounding_rects(img)
-                img_detected_bounding_rects = np.array([[200,200,580,640], [1200,400,1800,600]])#TEMP
+                img_detected_bounding_rects = object_detector.generate_bounding_rects(img)
 
                 """
                 We only do any of this if we actually have some bounding rectangles on our image,
                     so we check for that here.
                 """
-                print img_detected_bounding_rects
-                print img_detected_bounding_rects.shape
                 if len(img_detected_bounding_rects) > 0:
                     """
                     We want our coordinates to be relative to subsection size instead of pixels, so we divide accordingly
@@ -185,7 +176,7 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                     img_detected_bounding_rects[:,2] /= sub_w
                     img_detected_bounding_rects[:,3] /= sub_h
                     img_detected_bounding_rects = img_detected_bounding_rects.astype(int)
-                    print img_detected_bounding_rects
+
                     """
                     We then convert the img_detected_bounding_rectangles from an array of shape (n, 4) to one of shape (n, 2)
                         by converting our 2d rectangle coordinates into sets of 1d coordinates, 
@@ -195,12 +186,6 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                         can be found there.
                     """
                     img_detected_bounding_rects = convert_2d_rects_to_1d_rects(img_detected_bounding_rects, img_w//sub_w)
-
-                """
-                print list(img_detected_bounding_rects)
-                sys.exit()
-                """
-                print img_detected_bounding_rects.shape
 
                 """
                 In order to handle everything easily and correctly, we do the following:
@@ -277,7 +262,8 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                             which were trained on rgb data originally and thus expect data with 3 channels.
                         Only enable this if you are using those models.
                         """
-                        #subs = np.repeat(subs, [3], axis=3)
+                        if grayscale_to_rgb:
+                            subs = np.repeat(subs, [3], axis=3)
 
                         """
                         Loop through vector of subsections with step mb_n
