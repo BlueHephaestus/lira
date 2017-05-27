@@ -10,6 +10,21 @@ import sys, os
 import numpy as np
 import cv2
 
+def subsections_generator(img, sub_h, sub_w):
+    """
+    Arguments:
+        img: a np array of shape (h, w, ...) 
+        sub_h, sub_w: The size of each subsection that our image will be divided into when finished
+    Returns:
+        A generator, which yields a subsection each iteration, 
+            by looping through the image and referencing each sub_h and sub_w subsection each time.
+        We also do img.shape[0]//sub_h and so on so as to 
+            loop the exact number of times so that we don't get any partial subsections.
+    """
+    for row_i in xrange(0, img.shape[0]//sub_h):
+        for col_i in xrange(0, img.shape[1]//sub_w):
+            yield img[row_i:row_i+sub_h, col_i:col_i+sub_w]
+
 def get_subsections(sub_h, sub_w, img, rgb=False):
     """
     Arguments:
@@ -411,9 +426,6 @@ def get_global_prediction_i(i, img_h, img_w, sub_h, sub_w, img_divide_factor, su
     global_col_i = local_col_i + (sub_img_w * sub_img_col_i)
     global_i = global_row_i * (img_w//sub_w) + global_col_i
     return global_i
-
-
-    
 
 def disp_img_fullscreen(img, name="test"):
     """
