@@ -31,11 +31,12 @@ import generate_predictions
 import generate_display_results
 import concatenate_results
 
-def main(model_title):
+def main(model_title, detection_model_title):
     """
     Get filename of nn from title
     """
     model = model_title.lower().replace(" ", "_")
+    detection_model = detection_model_title.lower().replace(" ", "_")
     
     """
     From our test_slides dir, generate new images.h5 file for later
@@ -52,37 +53,37 @@ def main(model_title):
     """
     Train our first model on our samples for this model
     """
-    model1 = model + " Model 1"
-    lira2_pre_transfer_learning.train_model(model1, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/model_1_samples.h5")
+    model1 = model + "_model_1"
+    #lira2_pre_transfer_learning.train_model(model1, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/model_1_samples.h5")
 
     """
     Train our second model on our samples for this model
     """
-    model2 = model + " Model 2"
-    lira2_pre_transfer_learning.train_model(model2, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/model_2_samples.h5")
+    model2 = model + "_model_2"
+    #lira2_pre_transfer_learning.train_model(model2, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/model_2_samples.h5")
     #lira2.train_model(model, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/augmented_samples.h5")
 
     """
     From our saved model and greyscales, generate new predictions.h5 file
     """
     print "Generating Predictions..."
-    #generate_predictions.generate_predictions(model, model_dir = "lira/lira2/saved_networks", img_archive_dir = "lira/lira1/data/test_images.h5", predictions_archive_dir = "lira/lira1/data/test_predictions.h5", classification_metadata_dir = "lira_static/classification_metadata.pkl", rgb=True)
+    generate_predictions.generate_predictions(model1, model2, detection_model, model_dir = "lira/lira2/saved_networks", img_archive_dir = "lira/lira1/data/test_images.h5", predictions_archive_dir = "lira/lira1/data/test_predictions.h5", classification_metadata_dir = "lira_static/classification_metadata.pkl", rgb=True)
 
     """
     From our new predictions.h5 and greyscales, generate human accessible images for viewing.
     """
     print "Generating Display Results..."
-    #generate_display_results.generate_display_results(img_archive_dir = "lira/lira1/data/test_images.h5", predictions_archive_dir = "lira/lira1/data/test_predictions.h5", classification_metadata_dir = "lira_static/classification_metadata.pkl", results_dir = "lira_static/results", neighbor_weight=0.8, epochs=0, rgb=True)
+    generate_display_results.generate_display_results(img_archive_dir = "lira/lira1/data/test_images.h5", predictions_archive_dir = "lira/lira1/data/test_predictions.h5", classification_metadata_dir = "lira_static/classification_metadata.pkl", results_dir = "lira_static/results", alpha=0.33, neighbor_weight=0.8, epochs=0, rgb=True)
 #
     """
     Concatenate results of generating display results, for showing off and/or debugging
     """
     print "Concatenating Results..."
-    #concatenate_results.concatenate_results("lira_static/results/", "lira_static/concatenated_results/", classification_metadata_dir="lira_static/classification_metadata.pkl")
+    concatenate_results.concatenate_results("lira_static/results/", "lira_static/concatenated_results/", classification_metadata_dir="lira_static/classification_metadata.pkl")
     
     """
     At this point we have all we need to open LIRA live again when we want to, so we are done!
     """
     print "Completed! -DE"
 
-main("LIRA MK2.8 Cooperative Model Classification")
+main("LIRA MK2.8 Cooperative Model Classification", "Type1 Detection Model")
