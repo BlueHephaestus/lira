@@ -175,46 +175,6 @@ def add_weighted_overlay(img, overlay, alpha, rgb=False):
     """
     return cv2.addWeighted(overlay, alpha, img, 1-alpha, 0, img)
 
-def pad_img(img_h, img_w, sub_h, sub_w, img, rgb=False):
-    """
-    Arguments:
-        img_h, img_w: The h and w of our img argument.
-        sub_h, sub_w: The size of our individual subsections.
-        img: a np array of shape (img_h, img_w, ...) where img_h % sub_h may not == 0, and img_w % sub_w may not == 0, our original main image.
-        rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
-
-    Returns:
-        Computes the necessary dimensions to pad to our img_h and img_w of our img, so that
-            img_h % sub_h == 0 and img_w % sub_w.
-        Then pads our original image to match these dimensions, by adding zeros.
-        Returns this padded image.
-
-        This is very useful for remaining functions in generate_overlay, where having an image that satisfies the img_h % sub_h == 0 and img_w % sub_w == 0
-            is very helpful.
-    """
-    """
-    Computes necessary new image dimensions
-    """
-    new_img_h = img_h - img_h % sub_h + sub_h
-    new_img_w = img_w - img_w % sub_w + sub_w
-
-    """
-    Then pads our image with zeros to match these new dims, and returns
-    """
-    if rgb:
-        """
-        If rgb, we make sure not to mess with our color dimension / channels / last axis and still pad correctly
-        """
-        img = np.lib.pad(img, ((0, new_img_h-img_h), (0, new_img_w-img_w), (0,0)), 'constant', constant_values = 0) 
-    else:
-        """
-        Otherwise we just pad our 2d image
-        """
-        img = np.lib.pad(img, ((0, new_img_h-img_h), (0, new_img_w-img_w)), 'constant', constant_values = 0) 
-
-    return img
-
-
 def clear_dir(dir):
     """
     Arguments:
@@ -405,35 +365,6 @@ def convert_2d_rects_to_1d_rects(rects_2d, width):
 
     return rects_1d
         
-def get_global_prediction_i(i, img_h, img_w, sub_h, sub_w, img_divide_factor, sub_img_row_i, sub_img_col_i):
-    """
-    We have our img_prediction_i (i) which is incremented each batch, however
-        due to the fact that our batches of subsections are part of larger subsections which the image is
-        divided into, we have to find the global img_prediction_i (i) by taking these into account.
-        This is a bit complicated, so we use this separate function for it
-    """
-    """
-    img_h
-    img_w
-    img_divide_factor
-    sub_img_row_i
-    sub_img_col_i
-    """
-
-    #get the sub img h&w in subsections
-    sub_img_h = (img_h//img_divide_factor)//sub_h
-    sub_img_w = (img_w//img_divide_factor)//sub_w
-
-    total_elements_already_passed = sub_img_h * sub_img_w * (sub_img_row_i * img_divide_factor + sub_img_col_i)
-    #print total_elements_already_passed
-    local_i = i - (total_elements_already_passed) 
-    local_row_i = local_i // sub_img_w 
-    local_col_i = local_i % sub_img_w
-    global_row_i = local_row_i + (sub_img_h * sub_img_row_i)
-    global_col_i = local_col_i + (sub_img_w * sub_img_col_i)
-    global_i = global_row_i * (img_w//sub_w) + global_col_i
-    return global_i
-
 def disp_img_fullscreen(img, name="test"):
     """
     Displays the given image full screen. 
@@ -444,17 +375,3 @@ def disp_img_fullscreen(img, name="test"):
     cv2.imshow(name,img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-
-def get_concatenated_row(samples):
-    """
-    Concatenate each sample in samples horizontally, along axis 1.
-    Return the resulting array.
-    """
-    return np.concatenate([sample for sample in samples], axis=1)
-
-def get_concatenated_col(samples):
-    """
-    Concatenate each sample in samples vertically, along axis 0.
-    Return the resulting array.
-    """
-    return np.concatenate([sample for sample in samples], axis=0)
