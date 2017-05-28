@@ -3,8 +3,7 @@ Meta file to make use of the major stages of LIRA in order to do:
     1. Raw Greyscales -> Greyscale archive (get_archive.py)
     2. Sample archive -> New trained model (lira2.py / lira2_pre_transfer_learning.py)
     3. Trained model & Greyscale archive -> Predictions Archive (generate_predictions.py)
-    4. Predictions Archive & Greyscale Archive -> Jpg predictions per image per subsection (generate_display_results.py)
-    5. Jpg predictions per image per subsection -> Jpg predictions per image (concatenate_results.py)
+    4. Predictions Archive & Greyscale Archive -> Jpg predictions per image (generate_display_results.py)
 
 We have to set the directories again in the arguments because of where this file is positioned. When we have "../" something in one of our files for the directory, it is relative to the parent file calling that function. When that function is here, i.e. not in the normal place, it messes up stuff sometimes.
 
@@ -29,7 +28,6 @@ sys.path.append("lira_static")
 
 import generate_predictions
 import generate_display_results
-import concatenate_results
 
 def main(model_title, detection_model_title):
     """
@@ -54,13 +52,13 @@ def main(model_title, detection_model_title):
     Train our first model on our samples for this model
     """
     model1 = model + "_model_1"
-    #lira2_pre_transfer_learning.train_model(model1, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/model_1_samples.h5")
+    lira2_pre_transfer_learning.train_model(model1, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/model_1_samples.h5")
 
     """
     Train our second model on our samples for this model
     """
     model2 = model + "_model_2"
-    #lira2_pre_transfer_learning.train_model(model2, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/model_2_samples.h5")
+    lira2_pre_transfer_learning.train_model(model2, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/model_2_samples.h5")
     #lira2.train_model(model, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/augmented_samples.h5")
 
     """
@@ -70,17 +68,11 @@ def main(model_title, detection_model_title):
     generate_predictions.generate_predictions(model1, model2, detection_model, model_dir = "lira/lira2/saved_networks", img_archive_dir = "lira/lira1/data/test_images.h5", predictions_archive_dir = "lira/lira1/data/test_predictions.h5", classification_metadata_dir = "lira_static/classification_metadata.pkl", rgb=True)
 
     """
-    From our new predictions.h5 and greyscales, generate human accessible images for viewing.
+    From our new predictions.h5 and greyscales, generate easily accessible images for viewing.
     """
     print "Generating Display Results..."
     generate_display_results.generate_display_results(img_archive_dir = "lira/lira1/data/test_images.h5", predictions_archive_dir = "lira/lira1/data/test_predictions.h5", classification_metadata_dir = "lira_static/classification_metadata.pkl", results_dir = "lira_static/results", alpha=0.33, neighbor_weight=0.8, epochs=0, rgb=True)
 #
-    """
-    Concatenate results of generating display results, for showing off and/or debugging
-    """
-    print "Concatenating Results..."
-    concatenate_results.concatenate_results("lira_static/results/", "lira_static/concatenated_results/", classification_metadata_dir="lira_static/classification_metadata.pkl")
-    
     """
     At this point we have all we need to open LIRA live again when we want to, so we are done!
     """
