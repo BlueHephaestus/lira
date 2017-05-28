@@ -93,13 +93,15 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
             Start looping through images
             """
             for img_i in range(img_n):
+                sys.stdout.write("\rIMAGE %i" % img_i)
+                sys.stdout.flush()
+
                 """
                 Get the image and predictions for the image
                 """
                 img = img_hf.get(str(img_i))
                 predictions = np.array(predictions_hf.get(str(img_i)))
 
-                print predictions.shape
                 """
                 We then denoise our predictions, now that all the predictions are loaded for this image.
                 """
@@ -181,8 +183,6 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
                 """
                 img = cv2.resize(np.array(img), (0,0), fx=fx, fy=fy)
 
-                sys.stdout.write("\rIMAGE %i" % img_i)
-                sys.stdout.flush()
                 """
                 In order to have integers for each prediction, 
                     we argmax over the probability vectors for each prediction,
@@ -211,4 +211,4 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
                 We then add the img and overlay together into a weighted overlay using our alpha and function for it.
                 """
                 overlay = add_weighted_overlay(img, overlay, alpha, rgb=rgb)
-                cv2.imwrite("%s%s%i.png" % (results_dir, os.sep, img_i), overlay)
+                cv2.imwrite("%s%s%i.jpg" % (results_dir, os.sep, img_i), overlay)
