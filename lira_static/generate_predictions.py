@@ -27,14 +27,14 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
     Returns:
         Goes through each image, 
             Gets bounding rectangles on any detected Type 1 classifications,
-            divides the images into smaller subsections so as not to classify the entire image at once,
-        Then goes through the subsections of our image, and divides into our sub_hxsub_w subsections, 
-        then classifies each of these,
-            using our first model if a subsection is inside a bounding rectangle, 
-            and using our second model if a subsection is not inside a bounding rectangle.
-        Then, it stores the predictions into a matrix of integers, or concatenates them onto the pre-existing predictions from previous subsections.
-        Once completed with all subsections, these predictions are combined to get one 2d matrix of predictions, which is written to `predictions_archive_dir`.
+        Then goes through all the individual subsections of size sub_hxsub_w in the image.
+        If a subsection is inside a bounding rectangle, it is classified with the first classification model,
+            otherwise it is classified with the second classification model.
 
+        Each of these subsections gives us a prediction vector as output (regardless of the model used),
+            and this is stored into a global array for all predictions.
+        These predictions are written to `predictions_archive_dir`
+        
         Has no return value.
 
     Denoising note: Denoising is no longer done in this file, but in post_processing.py instead!
@@ -177,13 +177,13 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
 
                 """
                 Generate matrix to store predictions as we loop through our subsections, which we can later reshape to a 3-tensor.
-                    This will become a 3 tensor because for any entry at index i, j, we have our vector of size class_n for the model's output probabilities 
+                    This will become a 3 tensor because for any entry at index i, j, we have our vector of size class_n for the model's output probabilities .
                     This is opposed to just having an argmaxed index, where the element at index i, j would just be an integer.
                 """
                 predictions = np.zeros(((img_h//sub_h)*(img_w//sub_w), len(classifications)))
 
                 """
-                Loop through vector of subsections with step mb_n
+                Loop through all of our individual subsections easily using a generator
                 """
                 for sub_i, sub in enumerate(subsections_generator(img, sub_h, sub_w)):
                     sys.stdout.write("\rSubsection %.2f" % (float(sub_i)/((img_h//sub_h)*(img_w//sub_w))))
@@ -205,7 +205,7 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                         """
                         We loop through each of the pairs of bounding points, 
                             simply checking if our sub_i is inside any.
-                        If we find they are, we know it is inside of a bounding rect,
+                        If we find it is, we know it is inside of a bounding rect,
                             so we set the flag and stop checking.
                         """
                         for pair in img_detected_bounding_rects:
@@ -222,13 +222,13 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                     In order to do this, we just manually map them from their unique mappings back to global, so that
                         1 = Type I Caseum 
                         2 = Type II 
-                        (for examples)
+                        (for example)
                     Since each entry here is a probability vector instead of indices, this is a bit more complicated, but overrall the same.
                     When we're done, we can then properly generate our overlays with our predictions array
                     """
                     if sub_is_inside_bounding_rect:
                         """
-                        If we have some elements in the rectangle, we classify all of them with our first classifier
+                        If our subsection is inside a bounding rectangle, we classify it with our first classifier
                             and insert them in the correct order for our mapping
                         """
                         classifier_1_classification = classifier_1.classify(np.array([sub]))
@@ -239,16 +239,20 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
 
                     else:
                         """
-                        If we have elements after our elements in the rectangle, we classify all of them with our second classifer
+                        If our subsection is not inside a bounding rectangle, we classify it with our second classifier
                             and insert them in the correct order for our mapping
                         """
                         classifier_2_classification = classifier_2.classify(np.array([sub]))
 
+                        if np.argmax(classifier_2_classification) != 2:
+                            print sub_i, predictions[sub_i], np.argmax(predictions[sub_i])
+
                         predictions[sub_i,0] = classifier_2_classification[0,0]
                         predictions[sub_i,2:5] = classifier_2_classification[0,1:]
 
+
                 """
-                Convert our predictions for this subsection into a 3-tensor so we can then concatenate it easily into our final predictions 3-tensor.
+                Convert our now-complete predictions matrix into a 3-tensor so we can then store it into our dataset.
                 """
                 predictions = np.reshape(predictions, (img_h//sub_h, img_w//sub_w, len(classifications)))
 
