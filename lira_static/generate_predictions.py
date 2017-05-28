@@ -244,9 +244,6 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                         """
                         classifier_2_classification = classifier_2.classify(np.array([sub]))
 
-                        if np.argmax(classifier_2_classification) != 2:
-                            print sub_i, predictions[sub_i], np.argmax(predictions[sub_i])
-
                         predictions[sub_i,0] = classifier_2_classification[0,0]
                         predictions[sub_i,2:5] = classifier_2_classification[0,1:]
 
