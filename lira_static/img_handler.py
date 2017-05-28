@@ -18,11 +18,18 @@ def subsections_generator(img, sub_h, sub_w):
     Returns:
         A generator, which yields a subsection each iteration, 
             by looping through the image and referencing each sub_h and sub_w subsection each time.
-        We also do img.shape[0]//sub_h and so on so as to 
-            loop the exact number of times so that we don't get any partial subsections.
+        We loop through 0 to (img.shape[0] // sub_h)*sub_h with a step of sub_h (and vice versa for sub_w)
+        The important note here is the //, an integer division instead of a normal division. By doing this,
+            we make sure we only loop through the subsections where row_i + sub_h is complete, not going
+            outside the borders of our image.
+        The key difference is that (img.shape[0]//sub_h)*sub_h is different from img.shape[0] only because
+            the former no longer has any remainder when dividing it by sub_h, whereas img.shape[0] probably does.
+        This is important because when there is a remainder, we would return that partial subsection from this generator,
+            and that's not something we want to do because partials end up confusing our classifier.
+        Of course, this is the same reasoning for sub_w.
     """
-    for row_i in xrange(0, img.shape[0]//sub_h):
-        for col_i in xrange(0, img.shape[1]//sub_w):
+    for row_i in xrange(0, (img.shape[0]//sub_h)*sub_h, sub_h):
+        for col_i in xrange(0, (img.shape[1]//sub_w)*sub_w, sub_w):
             yield img[row_i:row_i+sub_h, col_i:col_i+sub_w]
 
 def get_subsections(sub_h, sub_w, img, rgb=False):
