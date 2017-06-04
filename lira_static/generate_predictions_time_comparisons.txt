@@ -39,3 +39,33 @@ StdDev: 19.481
 
 Approximately twice as fast as the previous system, without any official test for it.
 The hypothesis test of difference of means suggests that they are different with 95% confidence, which is super awesome.
+
+New New New System
+76.126590
+144.879694
+140.066338
+139.120830
+125.418105
+146.876912
+134.100584
+
+Mean: 129.51
+StdDev: 24.594
+
+New New New New System
+73.101448
+90.896552
+86.721263
+85.944959
+74.906396
+92.417626
+82.185329
+
+Mean: 83.739
+StdDev: 7.4598
+
+Almost 2x as fast as "new new system"
+
+
+
+
