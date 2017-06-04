@@ -161,7 +161,6 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                 img_dataset = img_hf.get(str(img_i))
                 img.resize(img_dataset.shape)
                 img_dataset.read_direct(img)
-                print img_dataset.shape
 
                 """
                 Get these for easy reference later, now that our image's dimensions aren't changing
@@ -409,10 +408,6 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                         predictions[prediction_i, 2:5] = classifier_2_prediction[1:]
 
                 t1 = time.time() - t1
-                print ""
-                print "Total: %.2f s" % t1
-                print "Line 1: %.2f s, %.2f %%" % (t2, t2/t1*100)
-                print "Line 2: %.2f s, %.2f %%" % (t3, t3/t1*100)
                 """
                 Convert our now-complete predictions matrix into a 3-tensor so we can then store it into our dataset.
                 """
