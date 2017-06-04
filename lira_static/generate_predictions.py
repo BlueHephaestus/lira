@@ -68,7 +68,7 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
     """
     Mini batch size
     """
-    mb_n = 100
+    mb_n = 70
 
     """
     Enable this if you want to see how long it took to classify each image
