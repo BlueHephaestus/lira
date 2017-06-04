@@ -361,9 +361,6 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                 """
                 Now we do the same for the other classifier
                 """
-                t1 = time.time()
-                t2 = 0
-                t3 = 0
                 for sub_i in range(0, classifier_2_sub_references.shape[0], mb_n):
                     sys.stdout.write("\r%.2f" % (float(sub_i)/classifier_2_sub_references.shape[0]))
                     sys.stdout.flush()
@@ -376,16 +373,12 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                     """
                     Create a np array of subs by referencing the correct subsection in our img with each img_reference in our img_references
                     """
-                    t = time.time()
                     classifier_2_subs = np.array([img[img_reference[0]:img_reference[0]+sub_h, img_reference[1]:img_reference[1]+sub_w] for img_reference in img_references], copy=False)
-                    t2 += time.time() - t
 
                     """
                     Get our predictions for our subsections
                     """
-                    t = time.time()
                     classifier_2_predictions = classifier_2.classify(classifier_2_subs)
-                    t3 += time.time() - t
 
                     """
                     Place these predictions in final predictions array, using our original index for each input
@@ -407,7 +400,6 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                         predictions[prediction_i, 0] = classifier_2_prediction[0]
                         predictions[prediction_i, 2:5] = classifier_2_prediction[1:]
 
-                t1 = time.time() - t1
                 """
                 Convert our now-complete predictions matrix into a 3-tensor so we can then store it into our dataset.
                 """
