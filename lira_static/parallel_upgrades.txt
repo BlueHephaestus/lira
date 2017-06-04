@@ -1,0 +1,24 @@
+We have our list of bounding rectangles as 1d index pairs, we flatten this.
+We then make a list of the size of all indices, with every element as False initially.
+We then go through each of our index pairs and set all elements inside of those indices in the list to True
+We now have a reference list for quick lookup of if a subsection index is inside a bounding rect or not.
+
+We then need to have a list of our (i, row_i, col_i) elements for the first classifier, and the same for the second classifier.
+This would be much easier if we could generate the entire list of row_i, col_i pairs without need for iteration with our generator.
+We can do this with numpy's arange, then concatenate them. See test.py for exact example of this.
+So we then have a list of our (i, row_i, col_i) elements, in order. We also have the boolean list.
+We then loop through and append them to the appropriate list, via
+
+  for i, element in enumerate(main_list):
+    if boolean_list[i]:
+      1.append(element)
+    else:
+      2.append(element)
+
+Then 1 = nparray(1)
+Then 2 = nparray(2)
+create predictions for each with same dimension
+
+then loop through first with batches and classify with first classifier, putting in first predictions
+Do same for second
+Then go through both and put in appropropriate place in united predictions array
