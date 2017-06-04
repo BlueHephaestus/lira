@@ -120,6 +120,31 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
             img_n = len(img_hf.keys())
 
             """
+            We want to save time by not re-initializing a big block of memory for our image
+                every time we get a new image, so we find the maximum shape an image will be here.
+            We do this by the product since blocks of memory are not in image format, their size 
+                only matters in terms of raw number.
+            We do the max shape because we initialize the img block of memory, and then initialize a bunch of other
+                blocks of memory around this in the loop. 
+            This means if we had less than the max, and then encountered a larger img than our current allocated block of memory,
+                it would have to reallocate. 
+
+            As my friend explains: "[Let's say] you initialize to the first image. Then you allocate more memory for other things inside the loop. That likely "surrounds" the first image with other stuff. Then you need a bigger image. Python can't realloc the image in place, so it has to allocate a new version, copy all the data, then release the old one."
+            So we instead initialize it to the maximum size an image will be.
+            """
+            max_shape = img_hf.get("0").shape
+            for img_i in range(img_n):
+                img_shape = img_hf.get(str(img_i)).shape
+                if np.prod(img_shape) > np.prod(max_shape):
+                    max_shape = img_shape
+
+            """
+            Now initialize our img block of memory to to this max_shape, 
+                with the same data type as our images
+            """
+            img = np.zeros(max_shape, img_hf.get("0").dtype)
+
+            """
             Start looping through images
             """
             for img_i in range(img_n):
@@ -129,9 +154,14 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                 start_time = time.time()
 
                 """
-                Get our image
+                Get our image by resizing our block of memory instead of deleting and recreating it,
+                    and make sure to read directly from the dataset into this block of memory,
+                    so that we can reference it quickly when iterating through subsections for classification later.
                 """
-                img = img_hf.get(str(img_i))
+                img_dataset = img_hf.get(str(img_i))
+                img.resize(img_dataset.shape)
+                img_dataset.read_direct(img)
+                print img_dataset.shape
 
                 """
                 Get these for easy reference later, now that our image's dimensions aren't changing
@@ -171,7 +201,7 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                     img_detected_bounding_rects[:,1] /= sub_h
                     img_detected_bounding_rects[:,2] /= sub_w
                     img_detected_bounding_rects[:,3] /= sub_h
-                    img_detected_bounding_rects = img_detected_bounding_rects.astype(np.uint8)
+                    img_detected_bounding_rects = img_detected_bounding_rects.astype(np.uint16)
 
                 """
                 We then want a quick reference list with booleans, so that we can check if a given subsection index is 
@@ -301,7 +331,7 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                     """
                     Create a np array of subs by referencing the correct subsection in our img with each img_reference in our img_references
                     """
-                    classifier_1_subs = np.array([img[img_reference[0]:img_reference[0]+sub_h, img_reference[1]:img_reference[1]+sub_w] for img_reference in img_references])
+                    classifier_1_subs = np.array([img[img_reference[0]:img_reference[0]+sub_h, img_reference[1]:img_reference[1]+sub_w] for img_reference in img_references], copy=False)
 
                     """
                     Get our predictions for our subsections
@@ -332,6 +362,9 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                 """
                 Now we do the same for the other classifier
                 """
+                t1 = time.time()
+                t2 = 0
+                t3 = 0
                 for sub_i in range(0, classifier_2_sub_references.shape[0], mb_n):
                     sys.stdout.write("\r%.2f" % (float(sub_i)/classifier_2_sub_references.shape[0]))
                     sys.stdout.flush()
@@ -344,12 +377,16 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                     """
                     Create a np array of subs by referencing the correct subsection in our img with each img_reference in our img_references
                     """
-                    classifier_2_subs = np.array([img[img_reference[0]:img_reference[0]+sub_h, img_reference[1]:img_reference[1]+sub_w] for img_reference in img_references])
+                    t = time.time()
+                    classifier_2_subs = np.array([img[img_reference[0]:img_reference[0]+sub_h, img_reference[1]:img_reference[1]+sub_w] for img_reference in img_references], copy=False)
+                    t2 += time.time() - t
 
                     """
                     Get our predictions for our subsections
                     """
+                    t = time.time()
                     classifier_2_predictions = classifier_2.classify(classifier_2_subs)
+                    t3 += time.time() - t
 
                     """
                     Place these predictions in final predictions array, using our original index for each input
@@ -371,6 +408,11 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                         predictions[prediction_i, 0] = classifier_2_prediction[0]
                         predictions[prediction_i, 2:5] = classifier_2_prediction[1:]
 
+                t1 = time.time() - t1
+                print ""
+                print "Total: %.2f s" % t1
+                print "Line 1: %.2f s, %.2f %%" % (t2, t2/t1*100)
+                print "Line 2: %.2f s, %.2f %%" % (t3, t3/t1*100)
                 """
                 Convert our now-complete predictions matrix into a 3-tensor so we can then store it into our dataset.
                 """
