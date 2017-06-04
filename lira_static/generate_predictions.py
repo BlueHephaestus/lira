@@ -66,6 +66,11 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
     sub_w = 145
 
     """
+    Mini batch size
+    """
+    mb_n = 100
+
+    """
     Enable this if you want to see how long it took to classify each image
         *cough* if you want to show off *cough*
     """
@@ -133,6 +138,15 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                 """
                 img_h = img.shape[0]
                 img_w = img.shape[1]
+                prediction_h = img_h // sub_h
+                prediction_w = img_w // sub_w
+
+                """
+                Generate matrix to store predictions as we loop through our subsections, which we can later reshape to a 3-tensor.
+                    This will become a 3 tensor because for any entry at index i, j, we have our vector of size class_n for the model's output probabilities .
+                    This is opposed to just having an argmaxed index, where the element at index i, j would just be an integer.
+                """
+                predictions = np.zeros((prediction_h*prediction_w, len(classifications)))
 
                 """
                 Get all bounding rectangles for type 1 classifications using our detection model, on our entire image.
@@ -143,6 +157,10 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                 """
                 We only do any of this if we actually have some bounding rectangles on our image,
                     so we check for that here.
+
+                (It also will break if we don't have this check,
+                    because when doing img_detected_bounding_rects[:,0] there won't be any elements in the array to index, 
+                    since img_detected_bounding_rects = [])
                 """
                 if len(img_detected_bounding_rects) > 0:
                     """
@@ -155,15 +173,104 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                     img_detected_bounding_rects[:,3] /= sub_h
                     img_detected_bounding_rects = img_detected_bounding_rects.astype(np.uint8)
 
-                    """
-                    We then convert the img_detected_bounding_rectangles from an array of shape (n, 4) to one of shape (n, 2)
-                        by converting our 2d rectangle coordinates into sets of 1d coordinates, 
-                        which we can use to reference all the elements in our flattened image which were originally in our 2d rectangles.
+                """
+                We then want a quick reference list with booleans, so that we can check if a given subsection index is 
+                    inside a bounding rectangle in constant time, without needing to loop through our bounding rects.
+                Also, since our bounding rects are currently 2d, we need to convert them to 1d. 
 
-                    We do this using our function for it in img_handler.py, and further documentation for how it works
-                        can be found there.
+                We can do both of these at the same time by creating a np array of booleans (initalized to false) of shape (prediction_h, prediction_w),
+                    then looping through all bounding rect pairs to set all elements our matrix inside the 2d rectangles to True,
+                    then flattening this boolean matrix into a vector.
+
+                This will give us our quick reference in the shape of a matrix, then flatten it to a vector for easy reference.
+                """
+                index_to_classifier_reference = np.zeros((prediction_h, prediction_w), dtype=bool)
+                for rect_2d in img_detected_bounding_rects:
+                    x1 = rect_2d[0]
+                    y1 = rect_2d[1]
+                    x2 = rect_2d[2]
+                    y2 = rect_2d[3]
+                    index_to_classifier_reference[y1:y2, x1:x2] = True
+
+                index_to_classifier_reference = index_to_classifier_reference.flatten()
+
+                """
+                We then want a list of (i, row_i, col_i), as if we were iterating through subsections in our image.
+                    For example, with sub_h = 80 and sub_w = 145, on a small image, we want the elements in this list to be 
+                        [(0, 0, 0), (1, 0, 145), (2, 0, 290), (3, 80, 0), (4, 80, 145), (5, 80, 290), (6, 160, 0), ...]
+                    Exactly if we were looping through like this (notes on why we loop on this below)
+
+                        i = 0
+                        for row_i in xrange(0, prediction_h*sub_h, sub_h):
+                            for col_i in xrange(0, prediction_w*sub_w, sub_w):
+                                yield (i, row_i, col_i)
+                                i += 1
+
+                        The important note here is the //, an integer division instead of a normal division. By doing this,
+                            we make sure we only loop through the subsections where row_i + sub_h is complete, not going
+                            outside the borders of our image.
+                        The key difference is that (img.shape[0]//sub_h)*sub_h is different from img.shape[0] only because
+                            the former no longer has any remainder when dividing it by sub_h, whereas img.shape[0] probably does.
+                        This is important because when there is a remainder, we would return that partial subsection from this generator,
+                            and that's not something we want to do because partials end up confusing our classifier.
+                        Of course, this is the same reasoning for sub_w.
+
+                    This is the exact code we would use if we wanted to iterate through this list, but since it's just integers
+                        and we can create it with numpy, it's using up very little memory and we can create it really quickly.
+                
+                We will use the first element with our index to classifier reference to find which list to append each tuple to,
+                    and we will use row_i and col_i (once they've been appended) to reference subsections in the original image.
+                """
+                i = np.arange(prediction_h*prediction_w)
+                row_is, col_is = np.mgrid[0:prediction_h*sub_h:sub_h, 0:prediction_w*sub_w:sub_w]
+
+                """
+                We then reshape all of them into matrices of shape (prediction_h*prediction_w, 1) so we can concatenate them together.
+                """
+                i = np.reshape(i, (-1, 1))
+                row_is = np.reshape(row_is, (-1, 1))
+                col_is = np.reshape(col_is, (-1, 1))
+
+                """
+                And finally concatenate into one big tuple of each subsections' reference data for creating our classifier-specific input lists
+                """
+                sub_references = np.concatenate((i, row_is, col_is), axis=1)
+
+                """
+                Our classifier specific input lists, to be appended to as we loop through our subsection references
+                """
+                classifier_1_sub_references = []
+                classifier_2_sub_references = []
+
+                """
+                Then loop through and use our index-to-classifier reference for appending each subsection reference to the appropriate classifier-specific list.
+                """
+                for sub_reference in sub_references:
                     """
-                    img_detected_bounding_rects = convert_2d_rects_to_1d_rects(img_detected_bounding_rects, img_w//sub_w)
+                    Use the index already present and ordered in the reference tuple for checking since it should be the same constant complexity 
+                        as if we kept track of the index with this loop.
+                    """
+                    if index_to_classifier_reference[sub_reference[0]]:
+                        classifier_1_sub_references.append(sub_reference)
+                    else:
+                        classifier_2_sub_references.append(sub_reference)
+
+                """
+                Don't need this anymore
+                """
+                del sub_references
+
+                """
+                Cast our lists to arrays since they are not going to be changing in size anymore
+                """
+                classifier_1_sub_references = np.array(classifier_1_sub_references)
+                classifier_2_sub_references = np.array(classifier_2_sub_references)
+
+                """
+                Create arrays for each classifier's predictions using the size of our new np arrays
+                """
+                classifier_1_predictions = np.zeros((classifier_1_sub_references.shape[0], len(classifications)))
+                classifier_2_predictions = np.zeros((classifier_2_sub_references.shape[0], len(classifications)))
 
                 """
                 Since this is interacting with a file which has its own progress indicator,
@@ -176,77 +283,93 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                 """
 
                 """
-                Generate matrix to store predictions as we loop through our subsections, which we can later reshape to a 3-tensor.
-                    This will become a 3 tensor because for any entry at index i, j, we have our vector of size class_n for the model's output probabilities .
-                    This is opposed to just having an argmaxed index, where the element at index i, j would just be an integer.
+                We now loop through the sub references for each classifier by mini batch size, 
+                    storing the results in our classifier's predictions with the batch.shape[0] 
+                    for proper referencing - since we will have a different batch shape 
+                    on the last iteration if our sub_references size for this classifier is not 
+                    divisible (with no remainder) by our mini batch size
                 """
-                predictions = np.zeros(((img_h//sub_h)*(img_w//sub_w), len(classifications)))
-
-                """
-                Loop through all of our individual subsections easily using a generator
-                """
-                for sub_i, sub in enumerate(subsections_generator(img, sub_h, sub_w)):
-                    sys.stdout.write("\rSubsection %.2f" % (float(sub_i)/((img_h//sub_h)*(img_w//sub_w))))
+                for sub_i in range(0, classifier_1_sub_references.shape[0], mb_n):
+                    sys.stdout.write("\r%.2f" % (float(sub_i)/classifier_1_sub_references.shape[0]))
                     sys.stdout.flush()
 
                     """
-                    We then check each subsection to see if it is inside a bounding rectangle in our image,
-                        and if so, we classify it with our first (type 1) classifier,
-                        if not, we classify it with our second (type 2 & 3) classifier.
-                    We use this flag for recording if it is inside a bounding rectangle, as you can probably tell.
+                    Get the coordinates for referencing our image from our sub_references
                     """
-                    sub_is_inside_bounding_rect = False
+                    img_references = classifier_1_sub_references[sub_i:sub_i+mb_n, 1:]
 
                     """
-                    We only do any of this if we actually have some bounding rectangles on our image,
-                        so we check for that here.
+                    Create a np array of subs by referencing the correct subsection in our img with each img_reference in our img_references
                     """
-                    if len(img_detected_bounding_rects) > 0:
-                        """
-                        We loop through each of the pairs of bounding points, 
-                            simply checking if our sub_i is inside any.
-                        If we find it is, we know it is inside of a bounding rect,
-                            so we set the flag and stop checking.
-                        """
-                        for pair in img_detected_bounding_rects:
-                            if pair[0] <= sub_i and sub_i <= pair[1]:
-                                sub_is_inside_bounding_rect = True
-                                break
-                        
+                    classifier_1_subs = np.array([img[img_reference[0]:img_reference[0]+sub_h, img_reference[1]:img_reference[1]+sub_w] for img_reference in img_references])
+
                     """
-                    Our classification indices are going to be 0, 1, 2, 3 for both first and second classifiers, 
-                        however they represent different things for each of them;
-                        (e.g. 1 = Type 1 Caseum for 1st classifier, 1 = Type II for 2nd classifier),
-                        which means we have to make sure they have unique and different numbers again, we are going from local to global mappings again.
-
-                    In order to do this, we just manually map them from their unique mappings back to global, so that
-                        1 = Type I Caseum 
-                        2 = Type II 
-                        (for example)
-                    Since each entry here is a probability vector instead of indices, this is a bit more complicated, but overrall the same.
-                    When we're done, we can then properly generate our overlays with our predictions array
+                    Get our predictions for our subsections
                     """
-                    if sub_is_inside_bounding_rect:
-                        """
-                        If our subsection is inside a bounding rectangle, we classify it with our first classifier
-                            and insert them in the correct order for our mapping
-                        """
-                        classifier_1_classification = classifier_1.classify(np.array([sub]))
+                    classifier_1_predictions = classifier_1.classify(classifier_1_subs)
 
-                        predictions[sub_i,0:2] = classifier_1_classification[0,0:2]
-                        predictions[sub_i,3] = classifier_1_classification[0,2]
-                        predictions[sub_i,5] = classifier_1_classification[0,3]
-
-                    else:
+                    """
+                    Place these predictions in final predictions array, using our original index for each input
+                        to know where to place them.
+                    """
+                    for classifier_1_prediction_i, classifier_1_prediction in enumerate(classifier_1_predictions):
                         """
-                        If our subsection is not inside a bounding rectangle, we classify it with our second classifier
-                            and insert them in the correct order for our mapping
+                        We get the original (i, row_i, col_i) element with this:
+                            classifier_1_sub_references[sub_i + classifier_1_prediction_i]
+                        And then we get just the i element with this:
+                            classifier_1_sub_references[sub_i + classifier_1_prediction_i][0]
+                        And then we use that to reference predictions with this:
+                            prediction_i = classifier_1_sub_references[sub_i + classifier_1_prediction_i][0]
+                            predictions[prediction_i]
+                        And then since our output vector needs to be mapped to length 7 from length 4, 
+                            we assign in a unique way for this classifier.
                         """
-                        classifier_2_classification = classifier_2.classify(np.array([sub]))
+                        prediction_i = classifier_1_sub_references[sub_i+classifier_1_prediction_i, 0]
+                        predictions[prediction_i, 0:2] = classifier_1_prediction[0:2]
+                        predictions[prediction_i, 3] = classifier_1_prediction[2]
+                        predictions[prediction_i, 5] = classifier_1_prediction[3]
 
-                        predictions[sub_i,0] = classifier_2_classification[0,0]
-                        predictions[sub_i,2:5] = classifier_2_classification[0,1:]
+                """
+                Now we do the same for the other classifier
+                """
+                for sub_i in range(0, classifier_2_sub_references.shape[0], mb_n):
+                    sys.stdout.write("\r%.2f" % (float(sub_i)/classifier_2_sub_references.shape[0]))
+                    sys.stdout.flush()
 
+                    """
+                    Get the coordinates for referencing our image from our sub_references
+                    """
+                    img_references = classifier_2_sub_references[sub_i:sub_i+mb_n, 1:]
+
+                    """
+                    Create a np array of subs by referencing the correct subsection in our img with each img_reference in our img_references
+                    """
+                    classifier_2_subs = np.array([img[img_reference[0]:img_reference[0]+sub_h, img_reference[1]:img_reference[1]+sub_w] for img_reference in img_references])
+
+                    """
+                    Get our predictions for our subsections
+                    """
+                    classifier_2_predictions = classifier_2.classify(classifier_2_subs)
+
+                    """
+                    Place these predictions in final predictions array, using our original index for each input
+                        to know where to place them.
+                    """
+                    for classifier_2_prediction_i, classifier_2_prediction in enumerate(classifier_2_predictions):
+                        """
+                        We get the original (i, row_i, col_i) element with this:
+                            classifier_2_sub_references[sub_i + classifier_2_prediction_i]
+                        And then we get just the i element with this:
+                            classifier_2_sub_references[sub_i + classifier_2_prediction_i][0]
+                        And then we use that to reference predictions with this:
+                            prediction_i = classifier_2_sub_references[sub_i + classifier_2_prediction_i][0]
+                            predictions[prediction_i]
+                        And then since our output vector needs to be mapped to length 7 from length 4, 
+                            we assign in a unique way for this classifier.
+                        """
+                        prediction_i = classifier_2_sub_references[sub_i+classifier_2_prediction_i, 0]
+                        predictions[prediction_i, 0] = classifier_2_prediction[0]
+                        predictions[prediction_i, 2:5] = classifier_2_prediction[1:]
 
                 """
                 Convert our now-complete predictions matrix into a 3-tensor so we can then store it into our dataset.
@@ -264,3 +387,5 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                 end_time = time.time() - start_time
                 if print_times:
                     print "Took %f seconds (%f minutes) to execute on image %i." % (end_time, end_time/60.0, img_i)
+
+
