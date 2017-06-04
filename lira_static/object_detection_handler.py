@@ -5,7 +5,6 @@ import os
 import keras
 from keras.models import load_model
 
-
 import time
 
 class ObjectDetector(object):
@@ -104,7 +103,7 @@ class ObjectDetector(object):
             This window will be of shape win_shape, and it will step across the img in both the x and y directions (w and h dimensions)
                 with step_size step size.
         """
-        #Just in case they give this as a tuple
+        #Just in case they give this as a tuple, we cast to list
         win_shape = list(win_shape)
 
         for row_i in xrange(0, img.shape[0], step_size):
@@ -263,8 +262,8 @@ class ObjectDetector(object):
         Until further changes, we resize our images down by a constant resize factor.
         """
         resize_factor = 0.05
+        #resize_factor = 0.2
         img = cv2.resize(img, (0,0), fx=resize_factor, fy=resize_factor)
-
         """
         We use win_shape for both min_shape in pyramid(), and win_shape in sliding_window().
         This way, we don't need to check if our resized_img is larger than (or equal to) our window shape.
@@ -273,8 +272,8 @@ class ObjectDetector(object):
         scale = 0.7
         suppression_overlap_threshold = 0.1
         start = time.time()#For doing speed checks
-        for (scale_i, resized_img) in self.pyramid(img, scale=scale, min_shape=win_shape, n=1):
-            for (row_i, col_i, window) in self.sliding_window(resized_img, step_size=256, win_shape=win_shape):
+        for (scale_i, resized_img) in self.pyramid(img, scale=scale, min_shape=win_shape, n=8):
+            for (row_i, col_i, window) in self.sliding_window(resized_img, step_size=64, win_shape=win_shape):
                 """
                 row_i, col_i give us the top-left cord of our bounding rectangle on the resized image.
                 The top-left cord is the same on the resized as the original image, 
@@ -329,19 +328,17 @@ class ObjectDetector(object):
         We then remove overlapping bounding rectangles using a non-maxima suppression algorithm
             (link for more info in the function)
         """
-        bounding_rects = self.non_max_suppression_fast(bounding_rects, suppression_overlap_threshold)
+        #bounding_rects = self.non_max_suppression_fast(bounding_rects, suppression_overlap_threshold)
         print len(bounding_rects)
 
         """
         temp
-        """
         bounding_rects = np.array([[0,0,1500,1150]])
         #bounding_rects = np.array([[700, 700, 1000, 1000]])
         #bounding_rects = np.array([[0,0,300,300]])
         for (x1,y1,x2,y2) in bounding_rects:
             cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.imwrite("test.png", img)
-        """
         end temp
         """
 
@@ -369,7 +366,7 @@ class ObjectDetector(object):
         """
         bounding_rects = np.array(bounding_rects).astype(int)
 
-        print "%f seconds for detection" % (time.time() - start)
+        #print "%f seconds for detection" % (time.time() - start)
 
         return bounding_rects
 
