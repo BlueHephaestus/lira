@@ -1,7 +1,7 @@
 """
 This file is mainly for generating human-viewable images from completed predictions, given greyscale images.
 Usually run after generate_predictions.py. 
-Further documentation can be found in each method.
+Further documentation can be found in each method / main function documentation.
 
 -Blake Edwards / Dark Element
 """
@@ -15,7 +15,7 @@ from img_handler import *
 sys.path.append(os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira_live/"))
 import post_processing
 
-def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", results_dir = "results", alpha=.33, sub_h=80, sub_w=145, neighbor_weight=0.8, epochs=4, rgb=False):
+def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", results_dir = "results", alpha=.33, sub_h=80, sub_w=145, neighbor_weight=0.8, rgb=False):
     """
     Arguments:
         img_archive_dir: a string filepath of the .h5 file where the images / greyscales are stored.
@@ -28,7 +28,6 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
             How much importance to put on the neighbor values. 
             This could also be thought of as a smoothing factor.
             Should be between 0 and 1
-        epochs: the number of iterations to run our denoising algorithm on each full predictions matrix. Defaults to 1.
         rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
 
     Returns:
@@ -101,7 +100,7 @@ def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5
                 """
                 We then denoise our predictions, now that all the predictions are loaded for this image.
                 """
-                predictions = post_processing.denoise_predictions(predictions, neighbor_weight, epochs)
+                predictions = post_processing.denoise_predictions(predictions, neighbor_weight)
 
                 """
                 Get the factor to use for resizing

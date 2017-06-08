@@ -7,173 +7,271 @@ Further documentation found in each function.
 """
 import sys
 import numpy as np
+from scipy.sparse import csr_matrix, eye
+from scipy.sparse.linalg import bicg
 
-def denoise_predictions(src, neighbor_weight, epochs):
+def normalize_adjacency_matrix(adjacency_matrix):
+    """
+    Helper function for denoise_predictions.
+
+    Arguments:
+        adjacency_matrix: A matrix of size h * w, 
+            https://en.wikipedia.org/wiki/Adjacency_matrix
+            
+            For this type of normalization, should be symmetric - i.e. from an undirected graph.
+            
+    Returns:
+        normalized_adjacency_matrix: A normalized version of our adjacency matrix, 
+            such that each entry represents:
+                1) If the source and dest node are connected, and if so, then
+                2) how connected the source node is
+                3) how connected the destination node is
+        If the input is symmetric, this output will still be symmetric.
+        Though it could also be normalized in other ways.
+    """
+    """
+    We sum over all the rows of this matrix to get the degrees, 
+        since it is a symmetric adjacency matrix this is the same as if we summed over the columns.
+
+    Once we have the degrees vector, we use it as the data to create a new sparse matrix, 
+        of the same shape as our adjacency matrix, and with the vector elements on the diagonal
+        via using (row, col) pairs of (0,0), (1,1), ..., (h*w-1, h*w-1) with (np.arange(h*w), np.arange(h*w))
+    """
+    """
+    We get our h*w via the length of the matrix, since we don't need individual h and w values.
+    """
+    adjacency_matrix_len = adjacency_matrix.shape[0]
+    degrees = adjacency_matrix.sum(axis=1)
+    degrees = np.array(degrees).flatten()
+    degree_matrix = csr_matrix((degrees, (np.arange(adjacency_matrix_len), np.arange(adjacency_matrix_len))), shape=(adjacency_matrix_len, adjacency_matrix_len))
+
+    """
+    We use the adjacency matrix and degree matrix to make our normalized adjacency matrix, via
+
+        M = D^(-1/2) * A * D^(-1/2)
+
+    Where 
+        D = degree matrix,
+        A = adjacency matrix,
+        M = normalized adjacency result
+
+    Since our degree matrix is a diagonal matrix, 
+        the elementwise matrix power of it is the same 
+        as the normal matrix power, so we can quickly 
+        use the built-in csr_matrix function for elementwise power
+        to compute D^(-1/2). 
+
+    We then do the dot product in the normal way.
+    """
+    degree_matrix = degree_matrix.power(-1./2)
+    normalized_adjacency_matrix = degree_matrix.dot(adjacency_matrix.dot(degree_matrix))#DAD
+    return normalized_adjacency_matrix
+
+def denoise_predictions(predictions, neighbor_weight):
     """
     Arguments:
-        src: np array of shape (h, w), the source image.
+        predictions: np array of shape (h, w, class_n), the predictions.
+            This will be referred to as an image of size h x w, as this makes 
+            notation much easier.
         neighbor_weight: 
             How much importance to put on the neighbor values. 
             This could also be thought of as a smoothing factor.
             Should be between 0 and 1
-        epochs: int number of denoising iterations to put our src image through.
-            Note: set this to 0 if you don't want denoising.
 
-    Returns
-        For each pixel in our src image, 
-            get the nearest neighbor pixels,
-            get the cost of each class at this location with our cost function,
-            then place the class with the lowest cost at the mirrored location in our destination image.
-        Then repeat this process `epochs` number of times
+    Returns:
+        Each "prediction" is an element in our predictions input,
+            and is a vector of length class_n. There are h * w of these predictions
+            in our entire predictions array.
+
+        For each prediction vector in our predictions, 
+            we produce a new denoised prediction vector,
+            taking into account both the nearby prediction vectors to this element,
+            and the original prediction vector.
+
+        Returns a new predictions array, of the same shape (h, w, class_n) as the original.
     """
-    h, w, class_n = src.shape
+    """
+    First we need to create an adjacency matrix for each entry in our predictions array, 
+        as if each node was a prediction vector, so that the graph is a rectangle of shape h x w,
+        and each node is connected to all of it's nearby nodes. 
+
+    Ex, with h = 3, w = 4:
+
+    . . . .
+    . . . . (I think it may be easier to just imagine the lines, due to limitations of text art)
+    . . . .
+    
+    Such that the minimum amount of connections a node will have (unless there is a really really small h and w)
+        will be 3, and the maximum will be 8.
+
+    Since adjacency matrices are sparse (mostly zeros), we can save memory by using different compression algorithms to 
+        only store the nonzero elements. I'll be using scipy's CSR element, as this algorithm offers easy matrix-vector 
+        dot products, and as a result of this can be extended to matrix-matrix dot products - CSR is efficient when
+        you need to perform linear algebra ops on your sparse matrices.
+
+    Since the adjacency matrix will be of size (h*w, h*w), it quickly becomes absolutely necessary to use a compression format,
+        or else numpy won't even be able to hold it in memory. For an example of h = 300, w = 400, the raw adjacency matrix
+        would contain h*w * h*w elements, = 300*400 * 300*400 = 120000 * 120000 = 1.44e10 .
+
+    Due to the simple nature of our graph, undirected and where each node is connected in a simple and deterministic manner to its neighbors,
+        we can construct it with O(n) complexity. I designed a way to incrementally create each row in this matrix given the h and w,
+        as this is all that's necessary given our knowledge of how the graph is constructed. I could loop through every element and construct it
+        the way it would be done by hand, however this would have O(n^2) complexity, and since n = h*w, that is really really bad. For the sake
+        of optimizing down to O(n), I had to observe and replicate the patterns in adjacency matrices of this type. It is not as obviously intuitive 
+        as the by-hand method, however it will run at O(n), able to loop through and construct rows of the adjacency matrix at a time.
+    """
+    """
+    Prepare these lists for constructing our CSR matrix
+    """
+    rows = []
+    cols = []
+    data = []
+
+    """
+    Get this data from our shape
+    """
+    h, w, class_n = predictions.shape
+
+    def ins(i, j, x):
+        """
+        Arguments:
+            i: row index of x
+            j: col index of x
+            x: data to add
+        Returns:
+            Adds i, our row index, to the row indices list
+            Adds j, our col index, to the col indices list
+            Adds x, our data, to the data list
+
+            This is just a quick function to save time in the next steps.
+        """
+        if j >= 0 and j < h*w:
+            rows.append(i)
+            cols.append(j)
+            data.append(x)
+
+
+    """
+    Loop through and construct our rows
+    """
+    for i in range(h*w):
+        if i % w == w-1:
+            ins(i, i-(w+1), 1)
+            ins(i, i-(w), 1)
+            ins(i, i-1, 1)
+            ins(i, i+(w-1), 1)
+            ins(i, i+(w), 1)
+
+        elif i % w == 0:
+            ins(i, i-(w), 1)
+            ins(i, i-(w-1), 1)
+            ins(i, i+1, 1)
+            ins(i, i+(w), 1)
+            ins(i, i+(w+1), 1)
+
+        else:
+            ins(i, i-(w+1), 1)
+            ins(i, i-(w), 1)
+            ins(i, i-(w-1), 1)
+            ins(i, i-1, 1)
+            ins(i, i+1, 1)
+            ins(i, i+(w-1), 1)
+            ins(i, i+(w), 1)
+            ins(i, i+(w+1), 1)
+
+    """
+    Now that lists are finished changing in size, 
+        we cast to nparrays
+    """
+    rows = np.array(rows)
+    cols = np.array(cols)
+    data = np.array(data)
+
+    """
+    Using our data and row and column indices, we create our adjacency matrix as a CSR Sparse matrix
+    """
+    adjacency_matrix = csr_matrix((data, (rows, cols)), shape=(h*w, h*w))
+
+    """
+    We then normalize this adjacency matrix
+    """
+    normalized_adjacency_matrix = normalize_adjacency_matrix(adjacency_matrix)
+
+    """
+    Then we use the following equation, from this paper:
+
+        http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0051947
+
+        (I - l*M)*f = (1-l)*y
+
+    In order to solve for new values of y (our predictions), so that we have
+        new predictions in f.
+
+    That paper has the explanation for that equation. 
+    Once we have that equation, we can simplify so that:
+
+        A = (I - l * M)
+        x = f
+        b = (1-l)*y
+
+    Our equation is now:
+
+        Ax = b ,
+
+    Which is just the setup for a least squares approximation of x:
+
+        https://en.wikipedia.org/wiki/Least_squares
+        https://www.youtube.com/watch?v=MC7l96tW8V8 (Khan Academy)
+
+    So we prepare those components first.
+    """
+    A = eye(h*w) - neighbor_weight * normalized_adjacency_matrix
+
+    predictions = np.reshape(predictions, (-1, class_n))
+    b = (1.-neighbor_weight) * predictions
+
+    """
+    Unfortunately, least squares usually expects x and b to be vectors.
+    Right now, x is going to be of shape (h*w, class_n), and b is also of shape (h*w, class_n).
+    These are very much not vectors, but matrices instead. So how can we extend least squares to work in this setting?
+    
+    It's actually very simple, due to one property.
+
+    For the system Ax = b, where 
+        A is a matrix of size n x n
+        x is a matrix of size n x m
+        b is a matrix of size n x m,
+
+    Let us look at a column vector in matrix b, at position i. 
+    Each element in this vector is determined entirely by a column vector in matrix x,
+        at position i,
+        as well as the entire matrix A.
+    For an understanding of this, think about how the elements of this column vector in b are
+        obtained through the dot product of A and x.
+    
+    What this means is that we can solve for the entire matrix x by solving for each of the columns
+        in x independently, looping across both the columns we are solving for in x and the other matching column
+        in b, and solving using normal least squares.
+
+    Remember that x is our new prediction values, so this is the last math-heavy step.
+    """
+    x = np.zeros(b.shape, dtype=np.float32)
+    for i in range(class_n):
+        col = b[:,i]
+        col = np.reshape(col, (-1, 1))
+        """
+        Solve for this column using Bi-Conjugate Gradient Iteration from scipy,
+            and set the result column into our resulting x matrix.
+        """
+        x[:,i], flags = bicg(A, col)
     
     """
-    Just in case we don't want any denoising, in which case we return the src.
+    At this point our entire x result matrix has been constructed, 
+        however it is of shape (h*w, class_n).
+    So we reshape it into (h, w, class_n), and rename it to the more
+        appropriate denoised_predictions - since these are our denoised predictions.
     """
-    if epochs == 0:
-        return src
-
-    """
-    Since our cost function accepts our candidate values as one-hot vectors, 
-        we create the one-hot vectors here for each class number.
-    Since the one-hot vectors would end up just being
-        [1, 0, ... 0]
-        [0, 1, ... 0]
-        [     .     ]
-        [     .     ]
-        [     .     ]
-        [0, 0, ... 1]
-    we can just create an identity matrix of size class_n, since it is equivalent.
-    """
-    classes = np.eye(class_n)
-
-    """
-    Since this is interacting with a file which has its own progress indicator,
-        we write some blank space to clear the screen of any previous text before writing any of our progress indicator
-    """
-    sys.stdout.write("\r                                       ")
-
-    for epoch in range(epochs):
-        """
-        Each loop, reset our destination image, which will contain the new denoised image.
-        """
-        dst = np.zeros_like(src)
-        sys.stdout.write("\rDenoising Image... %i%%"%(int(float(epoch)/epochs*100)))
-        sys.stdout.flush()
-        for i in range(h):
-            for j in range(w):
-                """
-                Get indices of neighbors
-                """
-                neighbors=get_neighbors(i,j,h,w)
-                
-                """
-                Get cost of each class for this pixel in our src img,
-                    then put the complement of that cost (1-cost) as our new output value
-                    in our destination image.
-                Since our denoiser iterates through an image that has output probabilities 
-                    at each pixel, we need to set this pixel to have new, updated probabilities.
-                We can do this by just getting the complement of the cost, 
-                    since this way the lower the cost, the higher the probability.
-                (they aren't yet a proper probability distribution, that comes in the next line)
-                """
-                for class_i in range(class_n):
-                    dst[i,j,class_i] = 1-cost(classes[class_i], src[i,j], src, neighbors, neighbor_weight, class_n)
-
-                """
-                Of course at this point the values at our destination pixel sum to more than 1, so we 
-                    normalize them into an actual probability distribution across classes via dst = dst_pixel/sum(dst_pixel)
-
-                I could do this with some fancy matrix multiplication at the end of our pixel loop, 
-                    however that would be harder to understand, and we are running this on CPU anyways so it wouldn't save much time.
-                """
-                dst[i,j] = dst[i,j] / np.sum(dst[i,j])
-        
-        """
-        Set src equal to dst, so that we can run this again on the result of the previous loop,
-            and continue denoising the image for `epochs` times.
-        """
-        src = dst
-    return dst
-
-
-def get_neighbors(i,j,h,w):
-    """
-    Arguments:
-        i,j: indices in our image matrix of size h,w
-        h,w: size/dims of our image matrix
-
-    Returns:
-        neighbors: A list containing the index pairs of each of the neighbors of (i,j).
-            For example, if i=0 and j=0, this would return [(0,1), (1,0), (1,1)]
-        
-            We do this by getting all adjacent neighbors, vertically, diagonally, and horizontally.
-            We handle our edge cases by getting all 8 of these neighbors, then looping backwards through the list
-                and removing those that aren't inside the bounds of our image.
-    """
-    neighbors=[(i-1, j-1), (i-1, j), (i-1, j+1), (i, j-1), (i, j+1), (i+1, j-1), (i+1, j), (i+1, j+1)]
-    for neighbor_i in range(len(neighbors)-1, -1, -1):#Iterate from len-1 to 0
-        sample_i, sample_j = neighbors[neighbor_i]
-        if sample_i < 0 or sample_i > h-1 or sample_j < 0 or sample_j > w-1:
-            del neighbors[neighbor_i]
-    return neighbors
-
-def cost(dst_val, src_val, src, neighbors, neighbor_weight, class_n):
-    """
-    Arguments:
-        dst_val: Possible/Candidate value for the destination pixel. 0 <= dst_val < class_n
-        src_val: The value of the source pixel. 0 <= src_val < class_n
-        src: np array of shape (h, w), the source image. Used for referencing our neighbor indices
-        neighbors: Our neighbor indices of our src pixel. See get_neighbors.
-        neighbor_weight: 
-            How much importance to put on the neighbor values. 
-            This could also be thought of as a smoothing factor.
-            Should be between 0 and 1
-        class_n: int number of classes / classifications. 
-
-    Returns:
-        The cost of placing dst_val as the source pixel's src_val, given src_val and neighbors of src_val.
-        The lower the cost, the better a candidate value dst_val is. 
-    """
-    """
-    The values of the neighbor indices of our src pixel. We get these as a vector to speed up the cost computation.
-    """
-    neighbor_vals = np.array([src[neighbor] for neighbor in neighbors])
-
-    """
-    Compute our cost function as follows:
-        
-        C = (a * (mean((d - N)**2)) + (1-a) * (mean((d-s)**2)))
-        
-    Where 
-        a is our neighbor weight, 
-        n is our number of classes (since the values are n-length vectors),
-        d is our destination value,
-        s is our src value,
-        and N is our neighbor value matrix, of size neighbor_n x n
-
-    This has been simplified to allow for cheaper computation, however its format originally was:
-        
-        C = a * (sum(f(d, N_i)) + (1-a) * f(d, s))
-        f(d, x) = mean((d-x)**2)
-
-    Which makes much more sense. the f(d, x) function was chosen to just be the Mean Squared Error, 
-        which I expanded and changed the extra sum(f(d, N_i)) to just be mean((d-N)**2), 
-        since numpy adds the squared differences in the same manner as if I just did both sums:
-            mean(sum((d-N_i)**2)) = 1/n * sum((d-N)**2) = mean((d-N)**2
-        So I went with the right most equation because it was more compact.
-
-    As for the f(d, s) equation, this was already very simplified.
-
-    So, to recap:
-        f(d, x) gives a value between 0 and 1 because d and x are between 0 and 1 (otherwise I would have used the radial basis function probably),
-            which is close to 1 for very different values, and close to 0 for very similar values 
-            It is the mean squared error cost function.
-        a, (1-a) were used so that whatever the percent importance assigned to neighbors was (you could also think of this as a 0-1 weight), 
-            the remaining percent would be assigned to the original src value, and we'd still get a sane equation for any values for "a" between 0 and 1
-            If you don't think of it as percentages, then just think of it as a way to make sure the equation works for any values 0-1,
-                and make sure that if there is high weight on neighbors, there is low weight on source values, and vice versa..
-    """
-    return (neighbor_weight * (np.mean(np.square(dst_val - neighbor_vals))) + (1.-neighbor_weight) * (np.mean(np.square(dst_val-src_val))))
+    denoised_predictions = np.reshape(x, (h, w, class_n))
+    return denoised_predictions
+    
 
