@@ -256,24 +256,28 @@ class ObjectDetector(object):
         """
         Cast img to nparray just in case it isn't already
         """
-        img = np.array(img)
+        #img = np.array(img)
 
         """
         Until further changes, we resize our images down by a constant resize factor.
         """
-        resize_factor = 0.05
+        #resize_factor = 0.05
+        #resize_factor = 0.10
         #resize_factor = 0.2
+        resize_factor = 0.25
+        #resize_factor = 0.50
         img = cv2.resize(img, (0,0), fx=resize_factor, fy=resize_factor)
+
         """
         We use win_shape for both min_shape in pyramid(), and win_shape in sliding_window().
         This way, we don't need to check if our resized_img is larger than (or equal to) our window shape.
         """
         win_shape = [512, 512]
-        scale = 0.7
+        scale = 0.9
         suppression_overlap_threshold = 0.1
         start = time.time()#For doing speed checks
-        for (scale_i, resized_img) in self.pyramid(img, scale=scale, min_shape=win_shape, n=8):
-            for (row_i, col_i, window) in self.sliding_window(resized_img, step_size=64, win_shape=win_shape):
+        for (scale_i, resized_img) in self.pyramid(img, scale=scale, min_shape=win_shape, n=16):
+            for (row_i, col_i, window) in self.sliding_window(resized_img, step_size=128, win_shape=win_shape):
                 """
                 row_i, col_i give us the top-left cord of our bounding rectangle on the resized image.
                 The top-left cord is the same on the resized as the original image, 
