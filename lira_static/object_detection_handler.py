@@ -27,47 +27,6 @@ class ObjectDetector(object):
         """
         self.detector_model = load_model(model_dir)
 
-    @staticmethod
-    def pyramid(img, scale=.95, min_shape=[512,512], n=16):
-        """
-        Credit to here for the idea and basis for this function: http://www.pyimagesearch.com/2015/03/16/image-pyramids-with-python-and-opencv/
-        It's a really good idea.
-
-        Arguments:
-            img: Our initial img, to be iteratively resized for each iteration of this generator.
-            scale: The scale to resize our image up or down. 
-                This is the value our image will be resized with, 
-                    a value of 1.5 would increase it's size (i.e. 150% of original size),
-                    and a value of 0.5 would decrease it's size (i.e. 50% of original size).
-                It will be resized each iteration.
-            min_shape: The img dimension sizes (a list of format [height, width]) at which we want to stop scaling our image down further, so as to avoid having an image too small for our windows.
-                If we reach an image shape < min_shape, we will exit regardless of if we have reached n iterations.
-                I did not include a max shape because it will never be too big for our windows, it would just make it take longer to scan windows across it.
-            n: The number of times to scale our image down, can also be thought of as levels on the pyramid.
-
-        Returns:
-            Is a generator, initially yields the original (0, img) tuple, and each iteration afterwards resizes it using the scale factor, yielding that and the iteration number instead.
-            Stops looping when either image dimension is smaller than it's associated min_shape counterpart or n iterations occur. Whichever occurs first.
-
-            The tuple it returns is always of format (i, img), where i is the iteration in the loop. Will return 0 for the initial image, and then 1, 2, 3 and so on for the remaining loops.
-        """
-        #Just in case they give this as a tuple
-        min_shape = list(min_shape)
-
-        """
-        Yield initial image
-        """
-        yield (0, img)
-
-        """
-        We loop over n - 1 so our generator yields exactly n times. Since we yield the initial image, this means we yield exactly n-1 resized versions.
-        This of course assumes we don't exit prematurely due to a resized image smaller than our min_shape.
-        """
-        for i in range(n-1):
-            img = cv2.resize(img, (0,0), fx=scale, fy=scale)
-            if img.shape[0] < min_shape[0] or img.shape[1] < min_shape[1]:
-                break
-            yield (i+1, img)
 
     @staticmethod
     def sliding_window(img, step_size=64, win_shape=[512,512]):
@@ -263,8 +222,6 @@ class ObjectDetector(object):
                 suppressed_rects.append(rect)
         return suppressed_rects
 
-
-
     def generate_bounding_rects(self, img):
         """
         Arguments:
@@ -317,58 +274,34 @@ class ObjectDetector(object):
         """
         win_shape = [128, 128]
         scale = 0.9
-        suppression_overlap_threshold = 0.1
         start = time.time()#For doing speed checks
 
-        for (scale_i, resized_img) in self.pyramid(img, scale=scale, min_shape=win_shape, n=1):
-            for (row_i, col_i, window) in self.sliding_window(resized_img, step_size=64, win_shape=win_shape):
+            for (row_i, col_i, window) in self.sliding_window(img, step_size=64, win_shape=win_shape):
                 """
-                row_i, col_i give us the top-left cord of our bounding rectangle on the resized image.
-                The top-left cord is the same on the resized as the original image, 
-                    however we will need to do some fancy computations using our scale_i in order to get the 
-                    bottom-right cord of our bounding rectangle on the original image.
-                Fortunately, we only need to care about coordinates if we predict a positive and need to store them,
-                    so we don't need to do this on every window.
+                row_i, col_i give us the top-left cord of our bounding rectangle on the image.
                 """
-
                 prediction = np.argmax(self.detector_model.predict_on_batch(np.array([window])))
                 if prediction:
                     """
                     We have a positive prediction.
-                    This means we need to get the new window size for this prediction 
-                        in order to properly get our lower-right corner coordinates on this bounding rectangle.
-                    The window size is not changing on each of the iteratively resized images, 
-                        but it is changing wrt the size of the original image size.
-                    So if we keep making our images smaller, the window size wrt the original image will continue increasing in size.
-
-                    In fact, I was able prove that it follows this rule (in paper):
-
-                        New window size = original window size * (1 / scale_factor)**(iteration number)
-
-                    For each dimension of the new (and original) window size.
-                    Since we have the original window size, the scale factor, and the iteration number (scale_i), 
-                        We compute the relative_win_size this way. 
-
-                    We also do it on both dimensions at once by putting win_size into a np array.
+                    So we add our full set of coordinates as top-left, bottom-right by adding the window shape 
+                        to our top-left coordinates.
                     """
-                    #print self.detector_model.predict_on_batch(window)
-                    #relative_win_shape = np.array(win_shape) * (1./scale)**(scale_i)
-
-                    """
-                    Using this, we offset our top-left coordinates and store the now complete set of coordinates
-                        for our bounding rectangle into bounding_rects
-                    """
-                    #if np.max(self.detector_model.predict_on_batch(hog_descriptors)) >= .999:
                     bounding_rects.append([col_i, row_i, col_i+win_shape[1], row_i+win_shape[0]])
 
 
         print len(bounding_rects)
         """
-        We then remove overlapping bounding rectangles using a non-maxima suppression algorithm
-            (link for more info in the function)
+        We then use our suppress_by_cluster_size suppression algorithm 
+            to remove all clusters of rectangles with size less than our passed in cluster_threshold.
+        Clusters are groups of interconnected/bordering rectangles, where the size of a cluster 
+            is the number of interconnected / bordering rectangles in the group.
+        Our cluster_threshold was arbitrary, and was found to be the optimal number for our samples, 
+            since many of the false positives were in small clusters of rectangles of size < cluster_threshold,
+            and so far all of the true positives have been in clusters of rectangles >= cluster_threshold.
+            So, it worked really well to remove a lot of false positives and greatly improve our accuracy.
         """
         bounding_rects = self.suppress_by_cluster_size(bounding_rects, win_shape, 30)
-        #bounding_rects = self.non_max_suppression_fast(bounding_rects, suppression_overlap_threshold)
         print len(bounding_rects)
 
         """
