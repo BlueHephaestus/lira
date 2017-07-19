@@ -12,17 +12,34 @@ class ObjectDetector(object):
     def __init__(self, detection_model, model_dir):
         """
         Arguments:
-            detection_model: String file for our model, trained for object detection 
+            detection_model: String file for our model, trained using HOG for object detection 
             model_dir: Directory of where all our models are stored. Will be used with `model_1`, `model_2`, and `detection_model` to obtain where the model is now located 
 
         Returns:
-            Initializes our self.detector_model for classifying input samples as positive (object present) or negative (object not present) 
+            Initializes our self.hog for getting HOG Descriptors on windows,
+                and our self.model for classifying the HOG Descriptors as positive (object present) or negative (object not present) 
                 when we do our sliding-window approach to generate bounding rectangles later.
         """
         model_dir = "%s%s%s.h5" % (model_dir, os.sep, detection_model)
 
         """
-        Then load our model, which was trained for our input.
+        Initialize hog descriptor using same parameters we used in get_hog_archive.py
+        """
+        win_shape = (512, 512)
+        block_size = (16,16)
+        block_stride = (8,8)
+        cell_size = (8,8)
+        nbins = 9
+        deriv_aperture = 1
+        win_sigma = 4.
+        histogram_norm_type = 0
+        l2_hys_threshold = 2.0000000000000001e-01
+        gamma_correction = False
+        n_levels = 64
+        self.hog = cv2.HOGDescriptor(win_shape, block_size, block_stride, cell_size, nbins, deriv_aperture, win_sigma, histogram_norm_type, l2_hys_threshold, gamma_correction, n_levels)
+
+        """
+        Then load our model, which was trained for HOG descriptor input.
             We use the same technique as static_config.py, loading the model with Keras's method.
         """
         self.detector_model = load_model(model_dir)
@@ -202,185 +219,22 @@ class ObjectDetector(object):
         """
         return bounding_rects[pick]
 
-    @staticmethod
-    def suppress_by_cluster_size(bounding_rects, win_shape, cluster_threshold):
-        """
-        Arguments:
-            bounding_rects: 
-                A list of the format
-                    [x1_1, y1_1, x2_1, y2_1]
-                    [x1_2, y1_2, x2_2, y2_2]
-                    [ ...                  ]
-                    [x1_n, y1_n, x2_n, y2_n]
-
-                Where each entry is the pairs coordinates corresponding to the top-left and bottom-right corners of a bounding rectangle.
-                These should be floats.
-            win_shape: Shape of our window.
-            cluster_threshold: If the size of a cluster (determined by # of rects in the cluster) is lower than this number, it gets removed. Otherwise, it stays.
-
-        Returns:
-            suppressed_bounding_rects:
-                A list of the same format as bounding_rects, however should only have clusters of rectangles where the number of rects is >= cluster_threshold
-        """
-        checked_rects = {}
-        suppressed_rects = []
-        def check_rect_connected_to_rect(check_rect, rect):
-            """
-            Arguments:
-                check_rect: Rect we are checking, to see if it is connected to rect.
-                    Should be of format [x1, y1, x2, y2]
-                rect: Rect we are checking our check_rect against.  
-                    Should be of format [x1, y1, x2, y2]
-                Note: check_rect and rect may be of different sizes, this function still works in this case.
-            """
-            """
-            We then get the rect's coordinates as variables for easy reference
-            """
-            check_x1, check_y1, check_x2, check_y2 = check_rect
-            x1, y1, x2, y2 = rect
-
-            """
-            In the next part, it helps to remember that:
-            x2 = x1 + window width
-            y2 = y1 + window height
-            """
-
-            """
-            Check if top-left corner of check rect is inside our main rect
-            """
-            if ((check_x1 >= x1 and check_x1 <= x2) and (check_y1 >= y1 and check_y1 <= y2)):
-                return True
-
-            """
-            Check if top-right corner of check rect is inside our main rect
-            """
-            if ((check_x2 >= x1 and check_x2 <= x2) and (check_y1 >= y1 and check_y1 <= y2)):
-                return True
-
-            """
-            Check if bot-left corner of check rect is inside our main rect
-            """
-            if ((check_x1 >= x1 and check_x1 <= x2) and (check_y2 >= y1 and check_y2 <= y2)):
-                return True
-
-            """
-            Check if bot-right corner of check rect is inside our main rect
-            """
-            if ((check_x2 >= x1 and check_x2 <= x2) and (check_y2 >= y1 and check_y2 <= y2)):
-                return True
-
-            """
-            If none of the above were true, then it's not touching our main rect, and therefore not connected.
-            """
-            return False
-
-        rect_within_window = lambda rect, cord, window: 0 <= np.abs(cord - check_cord) <= window 
-        rect_to_key = lambda rect: ','.join(map(str, rect))
-        def get_connected_rects(rect, rects):
-            """
-            rect is specific rectangle
-            rects is list of all rectangles
-            connected_rects is our list we are building
-            """
-            #print "Getting connected rects..."
-            connected_rects = []
-            """
-            Loop through our rectangles, and see if any of them are connected to this rectangle and also haven't been checked yet.
-                If they are, add them to our list. 
-            Note: We also avoid checking the caller's rectangle by doing this.
-            """
-            for check_rect in rects:
-                #Actual check
-                check_rect_key = rect_to_key(check_rect)
-                if (check_rect_connected_to_rect(check_rect, rect) and (check_rect_key not in checked_rects.keys())):
-                    #if (cord_within_boundary(check_rect[0], rect[0], win_shape[1]) or cord_within_boundary(check_rect[2], rect[2], win_shape[1])) and (cord_within_boundary(check_rect[1], rect[1], win_shape[0]) or cord_within_boundary(check_rect[3], rect[3], win_shape[0])):
-                    checked_rects[check_rect_key] = False
-                    connected_rects.append(check_rect)
-            for connected_rect in connected_rects:
-                #Only call this function if the rect is not yet checked
-                #connected_rect_key = rect_to_key(connected_rect)
-                """
-                print "\t",connected_rect
-                print "\t",connected_rect_key
-                print "\t",checked_rects
-                print ""
-                """
-                #if connected_rect_key not in checked_rects.keys():
-                    #checked_rects[connected_rect_key] = False
-                tmp = get_connected_rects(connected_rect, rects)
-                connected_rects.extend(tmp)
-                    #print "\t",len(tmp),len(connected_rects)
-                    #sys.exit()
-                #sys.exit()
-
-            #print "\tExiting",len(connected_rects)
-            #print "Finished getting connected rects..."
-            return connected_rects
-
-        """
-        import cv2
-        img = np.zeros((6000, 13000, 3))
-        """
-        for i, rect in enumerate(bounding_rects):
-            rect_key = rect_to_key(rect)
-            if rect_key not in checked_rects.keys():
-                checked_rects[rect_key] = False 
-                """
-                print "\t",rect_key
-                print "\t",checked_rects
-                print ""
-                """
-                connected_rects = get_connected_rects(rect, bounding_rects)
-                #print "\t",connected_rects
-                #print "\t",len(connected_rects)
-                """
-                Draw an image with all rects and original rect to check
-                """
-                """
-                cv2.rectangle(img, (rect[0], rect[1]),(rect[2],rect[3]), (255, 0, 0), 3)
-                for rect in connected_rects:
-                    cv2.rectangle(img, (rect[0], rect[1]),(rect[2],rect[3]), (0, 0, 255), 3)
-                """
-
-                """
-                if len(connected_rects)>0:
-                    sys.exit()
-                """
-                """
-                for connected_rect in connected_rects:
-                    connected_rect_key = rect_to_key(connected_rect)
-                    if connected_rect_key not in checked_rects.keys():
-                        checked_rects[connected_rect_key] = False
-                """
-                connected_rects.append(rect)
-                if len(connected_rects) >= cluster_threshold:
-                    for connected_rect in connected_rects:
-                        rect_key = rect_to_key(connected_rect)
-                        checked_rects[rect_key] = True
-        #print "**",len(checked_rects)
-        #cv2.imwrite("debugging.jpg", img)
-        #Now we have a dict where every one in a cluster of proper size is labeled with a 1
-        for rect in bounding_rects:
-            rect_key = rect_to_key(rect)
-            if checked_rects[rect_key]:
-                suppressed_rects.append(rect)
-        return suppressed_rects
-
-
-
     def generate_bounding_rects(self, img):
         """
         Arguments:
             img: an array of shape (h, w, ...) where h % sub_h == 0 and w % sub_w == 0, our original main image
 
         Returns:
-            Loops through different scales of our image, and slides a window across each of these scales.
-            We use each window as input to our model loaded from model_dir/detection_model.
+            Loops through different scales of our image, and slides a window across each of these scales,
+                (making sure to have the same window shape as our HOG descriptor)
+                and using each window as input to our HOG to get our HOG Descriptors. 
+
+            Once we have our HOG descriptors, we use those as input to our model loaded from model_dir/detection_model.
 
             If we predict a positive example (i.e. object detected) with our model, we store it in our list of bounding rectangles,
                 with our new entry being of format [x1, y1, x2, y1] 
 
-            We then (optionally) use non-maximum suppression on these bounding rectangles and return the new, suppressed bounding rectangles.
+            We then use non-maximum suppression on these bounding rectangles and return the new, suppressed bounding rectangles.
 
             At the end we return a list of the format
                 [x1_1, y1_1, x2_1, y2_1]
@@ -409,8 +263,8 @@ class ObjectDetector(object):
         """
         #resize_factor = 0.05
         #resize_factor = 0.10
-        resize_factor = 0.2#1/5th
-        #resize_factor = 0.25
+        #resize_factor = 0.2
+        resize_factor = 0.25
         #resize_factor = 0.50
         img = cv2.resize(img, (0,0), fx=resize_factor, fy=resize_factor)
 
@@ -418,13 +272,12 @@ class ObjectDetector(object):
         We use win_shape for both min_shape in pyramid(), and win_shape in sliding_window().
         This way, we don't need to check if our resized_img is larger than (or equal to) our window shape.
         """
-        win_shape = [128, 128]
+        win_shape = [512, 512]
         scale = 0.9
         suppression_overlap_threshold = 0.1
         start = time.time()#For doing speed checks
-
-        for (scale_i, resized_img) in self.pyramid(img, scale=scale, min_shape=win_shape, n=1):
-            for (row_i, col_i, window) in self.sliding_window(resized_img, step_size=64, win_shape=win_shape):
+        for (scale_i, resized_img) in self.pyramid(img, scale=scale, min_shape=win_shape, n=16):
+            for (row_i, col_i, window) in self.sliding_window(resized_img, step_size=128, win_shape=win_shape):
                 """
                 row_i, col_i give us the top-left cord of our bounding rectangle on the resized image.
                 The top-left cord is the same on the resized as the original image, 
@@ -433,8 +286,17 @@ class ObjectDetector(object):
                 Fortunately, we only need to care about coordinates if we predict a positive and need to store them,
                     so we don't need to do this on every window.
                 """
+                """
+                We then get the HOG Descriptors of our window, 
+                    Reshape them to be compatible with our detector model (i.e. same shape as input),
+                    and get our prediction on these descriptors using our detector model.
 
-                prediction = np.argmax(self.detector_model.predict_on_batch(np.array([window])))
+                If the descriptors obtained on the window do not match the detector model's input size, this won't work.
+                Be careful.
+                """
+
+                hog_descriptors = np.reshape(self.hog.compute(window), (1, -1))
+                prediction = np.argmax(self.detector_model.predict_on_batch(hog_descriptors))
                 if prediction:
                     """
                     We have a positive prediction.
@@ -454,15 +316,15 @@ class ObjectDetector(object):
 
                     We also do it on both dimensions at once by putting win_size into a np array.
                     """
-                    #print self.detector_model.predict_on_batch(window)
-                    #relative_win_shape = np.array(win_shape) * (1./scale)**(scale_i)
+                    print self.detector_model.predict_on_batch(hog_descriptors)
+                    relative_win_shape = np.array(win_shape) * (1./scale)**(scale_i)
 
                     """
                     Using this, we offset our top-left coordinates and store the now complete set of coordinates
                         for our bounding rectangle into bounding_rects
                     """
                     #if np.max(self.detector_model.predict_on_batch(hog_descriptors)) >= .999:
-                    bounding_rects.append([col_i, row_i, col_i+win_shape[1], row_i+win_shape[0]])
+                    bounding_rects.append([col_i, row_i, col_i+relative_win_shape[1], row_i+relative_win_shape[0]])
 
 
         print len(bounding_rects)
@@ -470,7 +332,6 @@ class ObjectDetector(object):
         We then remove overlapping bounding rectangles using a non-maxima suppression algorithm
             (link for more info in the function)
         """
-        bounding_rects = self.suppress_by_cluster_size(bounding_rects, win_shape, 30)
         #bounding_rects = self.non_max_suppression_fast(bounding_rects, suppression_overlap_threshold)
         print len(bounding_rects)
 
