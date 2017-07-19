@@ -77,6 +77,7 @@ class ObjectDetector(object):
                 A list of the same format as bounding_rects, however should only have clusters of rectangles where the number of rects is >= cluster_threshold
 
             Yes, I made this myself. Yes, it's awesome.
+            If you want to compliment me on my awesomeness, my email is on my github ;3
         """
         checked_rects = {}
         suppressed_rects = []
@@ -138,7 +139,6 @@ class ObjectDetector(object):
             rects is list of all rectangles
             connected_rects is our list we are building
             """
-            #print "Getting connected rects..."
             connected_rects = []
             """
             Loop through our rectangles, and see if any of them are connected to this rectangle and also haven't been checked yet.
@@ -149,72 +149,23 @@ class ObjectDetector(object):
                 #Actual check
                 check_rect_key = rect_to_key(check_rect)
                 if (check_rect_connected_to_rect(check_rect, rect) and (check_rect_key not in checked_rects.keys())):
-                    #if (cord_within_boundary(check_rect[0], rect[0], win_shape[1]) or cord_within_boundary(check_rect[2], rect[2], win_shape[1])) and (cord_within_boundary(check_rect[1], rect[1], win_shape[0]) or cord_within_boundary(check_rect[3], rect[3], win_shape[0])):
                     checked_rects[check_rect_key] = False
                     connected_rects.append(check_rect)
             for connected_rect in connected_rects:
-                #Only call this function if the rect is not yet checked
-                #connected_rect_key = rect_to_key(connected_rect)
-                """
-                print "\t",connected_rect
-                print "\t",connected_rect_key
-                print "\t",checked_rects
-                print ""
-                """
-                #if connected_rect_key not in checked_rects.keys():
-                    #checked_rects[connected_rect_key] = False
-                tmp = get_connected_rects(connected_rect, rects)
-                connected_rects.extend(tmp)
-                    #print "\t",len(tmp),len(connected_rects)
-                    #sys.exit()
-                #sys.exit()
-
-            #print "\tExiting",len(connected_rects)
-            #print "Finished getting connected rects..."
+                #This function only gets called if the rect is not yet checked
+                connected_rects.extend(get_connected_rects(connected_rect, rects))
             return connected_rects
 
-        """
-        import cv2
-        img = np.zeros((6000, 13000, 3))
-        """
         for i, rect in enumerate(bounding_rects):
             rect_key = rect_to_key(rect)
             if rect_key not in checked_rects.keys():
                 checked_rects[rect_key] = False 
-                """
-                print "\t",rect_key
-                print "\t",checked_rects
-                print ""
-                """
                 connected_rects = get_connected_rects(rect, bounding_rects)
-                #print "\t",connected_rects
-                #print "\t",len(connected_rects)
-                """
-                Draw an image with all rects and original rect to check
-                """
-                """
-                cv2.rectangle(img, (rect[0], rect[1]),(rect[2],rect[3]), (255, 0, 0), 3)
-                for rect in connected_rects:
-                    cv2.rectangle(img, (rect[0], rect[1]),(rect[2],rect[3]), (0, 0, 255), 3)
-                """
-
-                """
-                if len(connected_rects)>0:
-                    sys.exit()
-                """
-                """
-                for connected_rect in connected_rects:
-                    connected_rect_key = rect_to_key(connected_rect)
-                    if connected_rect_key not in checked_rects.keys():
-                        checked_rects[connected_rect_key] = False
-                """
                 connected_rects.append(rect)
                 if len(connected_rects) >= cluster_threshold:
                     for connected_rect in connected_rects:
                         rect_key = rect_to_key(connected_rect)
                         checked_rects[rect_key] = True
-        #print "**",len(checked_rects)
-        #cv2.imwrite("debugging.jpg", img)
         #Now we have a dict where every one in a cluster of proper size is labeled with a 1
         for rect in bounding_rects:
             rect_key = rect_to_key(rect)
@@ -294,8 +245,6 @@ class ObjectDetector(object):
                 """
                 bounding_rects.append([col_i, row_i, col_i+win_shape[1], row_i+win_shape[0]])
 
-
-        print len(bounding_rects)
         """
         We then use our suppress_by_cluster_size suppression algorithm 
             to remove all clusters of rectangles with size less than our passed in cluster_threshold.
@@ -306,8 +255,9 @@ class ObjectDetector(object):
             and so far all of the true positives have been in clusters of rectangles >= cluster_threshold.
             So, it worked really well to remove a lot of false positives and greatly improve our accuracy.
         """
+        print "Before Suppression: %i" % len(bounding_rects)
         bounding_rects = self.suppress_by_cluster_size(bounding_rects, win_shape, 30)
-        print len(bounding_rects)
+        print "After  Suppression: %i" % len(bounding_rects)
 
         """
         Since this bounding_rects was obtained on an image which was resized down by resize_factor 
