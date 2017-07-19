@@ -228,13 +228,12 @@ class ObjectDetector(object):
             img: an array of shape (h, w, ...) where h % sub_h == 0 and w % sub_w == 0, our original main image
 
         Returns:
-            Loops through different scales of our image, and slides a window across each of these scales.
-            We use each window as input to our model loaded from model_dir/detection_model.
+            Slides a window across our image, and uses each window as input to our model loaded from model_dir/detection_model.
 
             If we predict a positive example (i.e. object detected) with our model, we store it in our list of bounding rectangles,
                 with our new entry being of format [x1, y1, x2, y1] 
 
-            We then (optionally) use non-maximum suppression on these bounding rectangles and return the new, suppressed bounding rectangles.
+            We then (optionally) use a suppression algorithm on these bounding rectangles and return the new, suppressed bounding rectangles.
 
             At the end we return a list of the format
                 [x1_1, y1_1, x2_1, y2_1]
@@ -246,7 +245,6 @@ class ObjectDetector(object):
 
             So we end up with an array of shape (n, 2*2) where n is the total number of rectangles.
             We return this.
-
         """
         """
         Initialize our list of bounding rectangles (aka bounding rectangle coordinates)
@@ -259,7 +257,16 @@ class ObjectDetector(object):
         #img = np.array(img)
 
         """
-        Until further changes, we resize our images down by a constant resize factor.
+        We resize our images down by a constant resize factor, 
+            since these lesions are noticed by lowering the resolution / zooming out of the image, 
+            and looking at it from a larger perspective. Because of this, we don't need the full resolution image,
+            as it both doesn't make sense because we want to zoom out and get a bigger perspective,
+            and also because it greatly increases the computational cost.
+        
+        This is similar to those games where you have to identify what an object is but the object is very zoomed in,
+            and it slowly zooms out to give you more details. These lesions are a lot easier to classify when 
+            we zoom out first, and since we're only looking for macroscopic details (since we're zoomed out), 
+            we can afford to lower the resolution.
         """
         #resize_factor = 0.05
         #resize_factor = 0.10
@@ -268,26 +275,24 @@ class ObjectDetector(object):
         #resize_factor = 0.50
         img = cv2.resize(img, (0,0), fx=resize_factor, fy=resize_factor)
 
-        """
-        We use win_shape for both min_shape in pyramid(), and win_shape in sliding_window().
-        This way, we don't need to check if our resized_img is larger than (or equal to) our window shape.
-        """
         win_shape = [128, 128]
-        scale = 0.9
         start = time.time()#For doing speed checks
 
-            for (row_i, col_i, window) in self.sliding_window(img, step_size=64, win_shape=win_shape):
+        """
+        Slide across windows of size win_shape, with step size of step_size
+        """
+        for (row_i, col_i, window) in self.sliding_window(img, step_size=64, win_shape=win_shape):
+            """
+            row_i, col_i give us the top-left cord of our bounding rectangle on the image.
+            """
+            prediction = np.argmax(self.detector_model.predict_on_batch(np.array([window])))
+            if prediction:
                 """
-                row_i, col_i give us the top-left cord of our bounding rectangle on the image.
+                We have a positive prediction.
+                So we add our full set of coordinates as top-left, bottom-right by adding the window shape 
+                    to our top-left coordinates.
                 """
-                prediction = np.argmax(self.detector_model.predict_on_batch(np.array([window])))
-                if prediction:
-                    """
-                    We have a positive prediction.
-                    So we add our full set of coordinates as top-left, bottom-right by adding the window shape 
-                        to our top-left coordinates.
-                    """
-                    bounding_rects.append([col_i, row_i, col_i+win_shape[1], row_i+win_shape[0]])
+                bounding_rects.append([col_i, row_i, col_i+win_shape[1], row_i+win_shape[0]])
 
 
         print len(bounding_rects)
@@ -305,17 +310,6 @@ class ObjectDetector(object):
         print len(bounding_rects)
 
         """
-        temp
-        bounding_rects = np.array([[0,0,1500,1150]])
-        #bounding_rects = np.array([[700, 700, 1000, 1000]])
-        #bounding_rects = np.array([[0,0,300,300]])
-        for (x1,y1,x2,y2) in bounding_rects:
-            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.imwrite("test.png", img)
-        end temp
-        """
-
-        """
         Since this bounding_rects was obtained on an image which was resized down by resize_factor 
             (a number of format 1/x, so always 0 < 1/x <= 1, i.e. 1/20 = 0.05),
         We want to resize the coordinates to match the original img argument. 
@@ -326,61 +320,14 @@ class ObjectDetector(object):
 
         Since we need array multiplication for this (and will need it in future ops once this is returned),
             we cast it before applying the multiplication.
+
+        Since this multiplication results in floats, we then cast the elements to be of type int afterwards.
         """
         bounding_rects = np.array(bounding_rects)
         bounding_rects = bounding_rects * (1./resize_factor)
-
-        """
-        We then also cast it's elements to be of type int, 
-            which we didn't do earlier because our calculations for the lower-right coordinate
-            of each bounding rect often result in floating point values, 
-            and you can't initialize python lists with a preset data type.
-        We also get more float values when resizing it up.
-        """
         bounding_rects = np.array(bounding_rects).astype(int)
 
+        #For speed checks
         #print "%f seconds for detection" % (time.time() - start)
 
         return bounding_rects
-
-"""
-a = ObjectDetector("type1_detection_model", "../lira/lira2/saved_networks")
-"""
-
-"""
-Small and quick test image
-"""
-"""
-test = np.floor(np.random.rand(2048,2048,3)*255).astype(np.uint8)
-#test = cv2.imread(os.path.expanduser("~/downloads/images/akihabara_background_1.jpg"))
-a.generate_bounding_rects(test)
-"""
-"""
-test = np.floor(np.random.rand(512,512,3)*255).astype(np.uint8)
-a.generate_bounding_rects(test)
-"""
-
-"""
-Full test image(s)
-"""
-#test1 = cv2.imread("../lira/lira1/data/rim_test_slides/115939_0_cropped.png")
-#test1 = cv2.resize(test1, (1024, 1024))
-"""
-def test_on_img(i, f):
-    test1 = cv2.imread(f)
-    test1 = cv2.resize(test1, (0,0), fx=0.05, fy=.05)
-    test1 = test1.astype(np.uint8)
-    print test1.shape
-    img_detected_bounding_rects = a.generate_bounding_rects(test1)
-    print "%i Positives Detected" % len(img_detected_bounding_rects)
-    print img_detected_bounding_rects
-    for (x1,y1,x2,y2) in img_detected_bounding_rects:
-        cv2.rectangle(test1, (x1, y1), (x2, y2), (0, 255, 0), 2)
-    cv2.imwrite("%i.png" % i, test1)
-
-for path in os.walk("../lira/lira1/data/rim_test_slides"):
-    dir, b, fnames = path
-    for i, fname in enumerate(fnames):
-        fpath = dir + os.sep + fname
-        test_on_img(i,fpath)
-"""
