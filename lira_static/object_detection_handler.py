@@ -45,7 +45,9 @@ class ObjectDetector(object):
             This window will be of shape win_shape, and it will step across the img in both the x and y directions (w and h dimensions)
                 with step_size step size.
         """
-        #Just in case they give this as a tuple, we cast to list
+        """
+        Just in case they give this as a tuple, we cast to list
+        """
         win_shape = list(win_shape)
 
         for row_i in xrange(0, img.shape[0], step_size):
