@@ -98,111 +98,6 @@ class ObjectDetector(object):
                     yield (row_i, col_i, img[row_i:row_i + win_shape[0], col_i:col_i + win_shape[1]])
 
     @staticmethod
-    def non_max_suppression_fast(bounding_rects, overlap_threshold):
-        """
-        The following code is slightly modified from the code for this
-            shown on this link: http://www.pyimagesearch.com/2015/02/16/faster-non-maximum-suppression-python/
-
-        The reason for this is because this is really good code, and was written there for the explicit
-            purpose of doing fast non-maximum suppression, on bounding rectangles of the exact same format as
-            the ones used in this file. So, if I didn't slightly modify it from there,
-            I would have ended up with something either slower, or the same anyways.
-
-        Arguments:
-            bounding_rects: 
-                A list of the format
-                    [x1_1, y1_1, x2_1, y2_1]
-                    [x1_2, y1_2, x2_2, y2_2]
-                    [ ...                  ]
-                    [x1_n, y1_n, x2_n, y2_n]
-
-                Where each entry is the pairs coordinates corresponding to the top-left and bottom-right corners of a bounding rectangle.
-                These should be floats.
-
-            overlap_threshold:
-                Float value to control how often we remove / suppress bounding rectangles based on overlap. 
-                The smaller, the more we suppress, and vice versa.
-        """
-        """
-        If there are no bounding_rects, return an empty list
-        """
-        if len(bounding_rects) == 0:
-            return []
-
-        """
-        Otherwise we will need this as a np array
-        """
-        bounding_rects = np.array(bounding_rects)
-
-        """
-        Initialize the list of picked indexes	
-        """
-        pick = []
-
-        """
-        Grab the coordinates of the bounding_rects
-        """
-        x1 = bounding_rects[:,0]
-        y1 = bounding_rects[:,1]
-        x2 = bounding_rects[:,2]
-        y2 = bounding_rects[:,3]
-
-        """
-        Compute the area of the bounding rects and sort the bounding
-            rects by the bottom-right y-coordinate of each bounding rect
-        """
-        area = (x2 - x1 + 1) * (y2 - y1 + 1)
-        idxs = np.argsort(y2)
-
-        """
-        Keep looping while some indexes still remain in the indexes list
-            i.e. until idxs is empty
-        """
-        while len(idxs) > 0:
-            """
-            Grab the last index in the indexes list and add the
-                index value to the list of picked indexes
-            """
-            last = len(idxs) - 1
-            i = idxs[-1]
-            pick.append(i)
-
-            """
-            Find the largest (x, y) coordinates for the start (top-left) of
-                the bounding rect and the smallest (x, y) coordinates
-                for the end (bottom-right) of the bounding rect
-            """
-            xx1 = np.maximum(x1[i], x1[idxs[:-1]])
-            yy1 = np.maximum(y1[i], y1[idxs[:-1]])
-            xx2 = np.minimum(x2[i], x2[idxs[:-1]])
-            yy2 = np.minimum(y2[i], y2[idxs[:-1]])
-
-            """
-            Compute the width and height of the bounding rect
-            """
-            w = np.maximum(0, xx2 - xx1 + 1)
-            h = np.maximum(0, yy2 - yy1 + 1)
-
-            """
-            Compute the ratio of overlap
-            """
-            overlap = (w * h) / area[idxs[:-1]]
-
-            """
-            Delete all indexes from the index list that overlap over our threshold
-                np.delete deletes based on indices, which means it works well with np.where,
-                    which returns the indices where a given condition for the elements of an array are true.
-                Unfortunately np.delete doesn't yet support negative indexes,
-                    so we have to do len(idxs) - 1 here instead of -1, which is what we used in the previous code.
-            """
-            idxs = np.delete(idxs, np.concatenate(([len(idxs)-1], np.where(overlap > overlap_threshold)[0])))
-
-        """
-        Return only the bounding rects that were picked
-        """
-        return bounding_rects[pick]
-
-    @staticmethod
     def suppress_by_cluster_size(bounding_rects, win_shape, cluster_threshold):
         """
         Arguments:
@@ -221,6 +116,8 @@ class ObjectDetector(object):
         Returns:
             suppressed_bounding_rects:
                 A list of the same format as bounding_rects, however should only have clusters of rectangles where the number of rects is >= cluster_threshold
+
+            Yes, I made this myself. Yes, it's awesome.
         """
         checked_rects = {}
         suppressed_rects = []
