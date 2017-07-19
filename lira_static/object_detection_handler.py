@@ -76,11 +76,8 @@ class ObjectDetector(object):
             suppressed_bounding_rects:
                 A list of the same format as bounding_rects, however should only have clusters of rectangles where the number of rects is >= cluster_threshold
 
-            Yes, I made this myself. Yes, it's awesome.
-            If you want to compliment me on my awesomeness, my email is on my github ;3
+        Note: As this function makes use of recursion, there are several helper functions and lambdas inside this function to simplify things.
         """
-        checked_rects = {}
-        suppressed_rects = []
         def check_rect_connected_to_rect(check_rect, rect):
             """
             Arguments:
@@ -89,6 +86,13 @@ class ObjectDetector(object):
                 rect: Rect we are checking our check_rect against.  
                     Should be of format [x1, y1, x2, y2]
                 Note: check_rect and rect may be of different sizes, this function still works in this case.
+            
+            Returns:
+                True if our check_rect is bordering or overlapping / connected to our rect,
+                False if not.
+
+                Does a few simple if statements on the coordinates of our variables to check all possible cases
+                    where our rectangles may be bordering or connected, and if none of those return True, we return False
             """
             """
             We then get the rect's coordinates as variables for easy reference
@@ -131,47 +135,120 @@ class ObjectDetector(object):
             """
             return False
 
-        rect_within_window = lambda rect, cord, window: 0 <= np.abs(cord - check_cord) <= window 
+        """
+        We will use this for recording which rectangles have been checked already.
+        If a rectangle does not exist in the dictionary, it hasn't been checked.
+        If a rectangle does exist with value False, then it has been checked but so far isn't part of a cluster of size >= cluster_threshold.
+        If a rectangle does exist with value True, then it has been checked and is part of a cluster of size >= cluster_threshold.
+        We will only set values to True in the last part of the function, once we've finished creating our connected_rects list.
+        """
+        checked_rects = {}
+
+        """
+        This will be our new list of rectangles. Given a list, we remove all rectangles in clusters of size < cluster_threshold,
+            and the remaining rectangles are added to this list as the .
+        """
+        suppressed_bounding_rects = []
+
+        """
+        Quick function to get a string for a given rectangle,
+            since the rectangles are lists and as such can't be used as dictionary keys.
+        """
         rect_to_key = lambda rect: ','.join(map(str, rect))
+
         def get_connected_rects(rect, rects):
             """
-            rect is specific rectangle
-            rects is list of all rectangles
-            connected_rects is our list we are building
+            Arguments:
+                rect: Our given rectangle, we will check all rectangles in rects to see if this rectangle is connected with any others.
+                rects List of rectangles to search through for connected rectangles of our rect argument.
+
+            Returns:
+                suppressed_bounding_rects: List of all rectangles which are connected to our given rect rectangle. 
+                    They may also be bordering, but we're going to refer to them as connected.
+                Given a rectangle, this function will find all connected rectangles of that rectangle, 
+                    then call itself on all of those to get their connected rectangles, and so on until all connected rectangles (or nodes if you want to think of it that way)
+                    have been found. 
+                So, this function will return all rectangles our given rect is connected to, if those rectangles have not been checked yet.
+                We have to make sure they haven't been checked yet, otherwise we may continuously recurse onto rectangles we've already got in our list.
+                Using this function, we can get the entire cluster of interconnected rectangles (aka a "subgraph" if you want to think of it that way) in a list,
+                    for us to easily check the size of the cluster as well as the rectangles inside the cluster.
             """
             connected_rects = []
+
             """
             Loop through our rectangles, and see if any of them are connected to this rectangle and also haven't been checked yet.
-                If they are, add them to our list. 
+                If they are, add them to our connected_rects. 
             Note: We also avoid checking the caller's rectangle by doing this.
             """
             for check_rect in rects:
-                #Actual check
                 check_rect_key = rect_to_key(check_rect)
                 if (check_rect_connected_to_rect(check_rect, rect) and (check_rect_key not in checked_rects.keys())):
                     checked_rects[check_rect_key] = False
                     connected_rects.append(check_rect)
+
+            """
+            Now that we have all the rectangles our rect is directly connected to, we want to get 
+                all the rectangles those rectangles are directly connected to, and repeat until
+                all connected rectangles have been obtained.
+            So, we call this function on all directly connected rectangles, extending our original list to include
+                all rectangles returned from these calls (adding nothing if [] is returned),
+                and then return our list of connected_rects to ensure we recurse correctly to our caller function.
+            Remember: Our list of connected_rects is full of rects which have not yet been checked yet.
+                If we had rects which had been checked already in this list, we could recurse indefinitely. So we wanna avoid that.
+            """
             for connected_rect in connected_rects:
-                #This function only gets called if the rect is not yet checked
                 connected_rects.extend(get_connected_rects(connected_rect, rects))
+
             return connected_rects
 
+        """
+        For every rectangle in our given list of bounding rectangles (bounding_rects),
+        """
         for i, rect in enumerate(bounding_rects):
+            """
+            Check if the rect has been checked yet, 
+            """
             rect_key = rect_to_key(rect)
             if rect_key not in checked_rects.keys():
+                """
+                And if not, set it to checked and 
+                    get all it's connected rects using our get_connected_rects function. 
+                """
                 checked_rects[rect_key] = False 
                 connected_rects = get_connected_rects(rect, bounding_rects)
+
+                """
+                Also add our original rect to this connected_rects list as well, since 
+                    we don't wanna forget the source rect.
+                """
                 connected_rects.append(rect)
+
+                """
+                Now that we have a list of all connected rects including the original rect,
+                    we have a list for our cluster.
+                We then check if the length (i.e. size) of our cluster is >= cluster_threshold,
+                    and if so we know that these rectangles are rectangles we want to keep.
+                """
                 if len(connected_rects) >= cluster_threshold:
+                    """
+                    So, we set all of their values in the checked_rects dictionary to True
+                        because we want to keep them
+                    """
                     for connected_rect in connected_rects:
                         rect_key = rect_to_key(connected_rect)
                         checked_rects[rect_key] = True
-        #Now we have a dict where every one in a cluster of proper size is labeled with a 1
+
+        """
+        Now we have a dictionary where every rect in a cluster size >= cluster_threshold is labeled with True,
+            and all other rectangles are labeled with False.
+        So we loop through all our rects again and append all the ones we want to keep to our resulting suppressed_bounding_rects
+            list, and return this list.
+        """
         for rect in bounding_rects:
             rect_key = rect_to_key(rect)
             if checked_rects[rect_key]:
-                suppressed_rects.append(rect)
-        return suppressed_rects
+                suppressed_bounding_rects.append(rect)
+        return suppressed_bounding_rects
 
     def generate_bounding_rects(self, img):
         """
