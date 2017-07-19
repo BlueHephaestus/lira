@@ -314,33 +314,112 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         """
         If enabled,
         Our preset static transformations are as follows:
-            1. Rotate 90 Degrees
-            2. Rotate 270 Degrees
-            3. Reflect on X-axis
-            4. Reflect on Y-axis
-            5. Reflect on Origin (combination of X-axis and Y-axis reflections), or a 180-Degree Rotation
         """
         transformation_matrices = np.array(
                 [
-                    [[0., 1., 0.],
-                     [-1., 0., 0.],
-                     [0., 0., 1.]], 
-                    
-                    [[0., -1., 0.],
-                     [1., 0., 0.],
-                     [0., 0., 1.]],
-                    
-                    [[1., 0., 0.],
-                     [0., -1., 0.],
-                     [0., 0., 1.]], 
-                    
-                    [[-1., 0., 0.], 
-                     [0., 1., 0.],
-                     [0., 0., 1.]],
-                    
-                    [[-1., 0., 0.], 
-                     [0., -1., 0.], 
-                     [0., 0., 1.]]
+                    [[0.866025403784,0.5,0.0],
+                    [-0.5,0.866025403784,0.0],
+                    [0.0,0.0,1.0]],
+
+                    [[0.5,0.866025403784,0.0],
+                    [-0.866025403784,0.5,0.0],
+                    [0.0,0.0,1.0]],
+
+                    [[6.12323399574e-17,1.0,0.0],
+                    [-1.0,6.12323399574e-17,0.0],
+                    [0.0,0.0,1.0]],
+
+                    [[-0.5,0.866025403784,0.0],
+                    [-0.866025403784,-0.5,0.0],
+                    [0.0,0.0,1.0]],
+
+                    [[-0.866025403784,0.5,0.0],
+                    [-0.5,-0.866025403784,0.0],
+                    [0.0,0.0,1.0]],
+
+                    [[-1.0,1.22464679915e-16,0.0],
+                    [-1.22464679915e-16,-1.0,0.0],
+                    [0.0,0.0,1.0]],
+
+                    [[-0.866025403784,-0.5,0.0],
+                    [0.5,-0.866025403784,0.0],
+                    [0.0,0.0,1.0]],
+
+                    [[-0.5,-0.866025403784,0.0],
+                    [0.866025403784,-0.5,0.0],
+                    [0.0,0.0,1.0]],
+
+                    [[-1.83697019872e-16,-1.0,0.0],
+                    [1.0,-1.83697019872e-16,0.0],
+                    [0.0,0.0,1.0]],
+
+                    [[0.5,-0.866025403784,0.0],
+                    [0.866025403784,0.5,0.0],
+                    [0.0,0.0,1.0]],
+
+                    [[0.866025403784,-0.5,0.0],
+                    [0.5,0.866025403784,0.0],
+                    [0.0,0.0,1.0]],
+
+                    [[0.7, 0.0, 0.0],
+                    [0.0, 0.7, 0.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[0.8, 0.0, 0.0],
+                    [0.0, 0.8, 0.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[0.9, 0.0, 0.0],
+                    [0.0, 0.9, 0.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[1.1, 0.0, 0.0],
+                    [0.0, 1.1, 0.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[1.2, 0.0, 0.0],
+                    [0.0, 1.2, 0.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[1.3, 0.0, 0.0],
+                    [0.0, 1.3, 0.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[1.4, 0.0, 0.0],
+                    [0.0, 1.4, 0.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[1.0, 0.0, 0.0],
+                    [0.0, 1.0, 10.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[1.0, 0.0, 18.0],
+                    [0.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[1.0, 0.0, 0.0],
+                    [0.0, 1.0, -10.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[1.0, 0.0, -18.0],
+                    [0.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[1.0, 0.0, 18.0],
+                    [0.0, 1.0, 10.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[1.0, 0.0, 18.0],
+                    [0.0, 1.0, -10.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[1.0, 0.0, -18.0],
+                    [0.0, 1.0, 10.0],
+                    [0.0, 0.0, 1.0]],
+
+                    [[1.0, 0.0, -18.0],
+                    [0.0, 1.0, -10.0],
+                    [0.0, 0.0, 1.0]],
                 ]
              )
         transformation_matrices = transformation_matrices[:static_transformation_n]
@@ -419,5 +498,7 @@ def generate_augmented_data(archive_dir, augmented_archive_dir, metadata_dir, cl
         hf.create_dataset("y", data=y)
         hf.create_dataset("y_shape", data=y.shape)
 
-generate_augmented_data("../data/rgb_rim_samples.h5", "../data/model_2_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [12159, 0, 4068, 7000, 17680, 0, 0], rgb=True)
-#generate_augmented_data("../../../../hog_object_detection/samples.h5","../../../../hog_object_detection/augmented_samples.h5", "../data/transformation_matrices.pkl", 2, h=512, w=512, sigma=0.1, random_transformation_n=10, static_transformations=True, rgb=True)
+#generate_augmented_data("../data/rgb_rim_samples.h5", "../data/model_2_samples.h5", "../data/transformation_matrices.pkl", 7, sigma=0.1, random_transformation_n=0, static_transformations=False, static_transformation_n=0, custom_sample_balance_dataset=True, sample_ns = [12159, 0, 4068, 7000, 17680, 0, 0], rgb=True)
+generate_augmented_data("../data/model_1_samples.h5", "../data/augmented_model_1_samples.h5", "../data/transformation_matrices.pkl", 4, h=80, w=145, sigma=0.1, random_transformation_n=0, static_transformations=True, static_transformation_n=400, rgb=True, border_value=[244,244,244])
+#generate_augmented_data("../data/model_2_samples.h5", "../data/augmented_model_2_samples.h5", "../data/transformation_matrices.pkl", 4, h=80, w=145, sigma=0.1, random_transformation_n=0, static_transformations=True, static_transformation_n=400, rgb=True, border_value=[244,244,244])
+#generate_augmented_data("../../../../hog_object_detection/positive_samples.h5","../../../../hog_object_detection/positive_augmented_samples.h5", "../data/transformation_matrices.pkl", 2, h=128, w=128, sigma=0.1, random_transformation_n=0, static_transformations=True, rgb=True, static_transformation_n=400, border_value=[244,244,244])#We use =400 so we just get all of them w/e the # is

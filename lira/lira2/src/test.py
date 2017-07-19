@@ -1,39 +1,27 @@
-import numpy as np
-import cv2
+import keras
+from keras.models import Sequential
+from keras.layers import *
+from keras.optimizers import *
+from keras.regularizers import l2
 
-theta = 90
-sx = .5
-sy = .5
-dx = 32
-dy = 128
-w = 512
-h = 512
+input_shape = [80,145,3]
+regularization_rate = 1e-4
+loss="categorical_crossentropy"
+optimizer = SGD()
 
-theta = theta * np.pi / 180.#Degrees -> Radians
-rotation = np.float32([[np.cos(theta), np.sin(theta), 0], [-np.sin(theta), np.cos(theta), 0], [0,0,1]])
-scaling = np.float32([[sx,0,0],[0,sy,0],[0,0,1]])
-translation = np.float32([[1,0,dx],[0,1,dy],[0,0,1]])
+model = Sequential()
+#input 128,128,3
+model.add(Conv2D(32, (7, 7), strides=(2, 2), padding="same", input_shape=input_shape, data_format="channels_last", activation="relu", kernel_regularizer=l2(regularization_rate)))
+#input 64,64,32
+model.add(MaxPooling2D(data_format="channels_last"))
+#input 1,1,128
+model.add(Flatten())
 
-"""
-Moves top left corner of frame to center of frame
-"""
-top_left_to_center = np.array([[1., 0., .5*w], [0., 1., .5*h], [0.,0.,1.]])
+#input 1*1*128 = 128
+model.add(Dense(2, activation="softmax", kernel_regularizer=l2(regularization_rate)))
+model.compile(loss=loss, optimizer=optimizer, metrics=["accuracy"])
 
-"""
-Moves center of frame to top left corner of frame, the inverse of our previous transformation
-"""
-center_to_top_left = np.array([[1., 0., -.5*w], [0., 1., -.5*h], [0.,0.,1.]])
-
-T = scaling.dot(translation).dot(rotation)
-T = top_left_to_center.dot(T).dot(center_to_top_left)
-
-print T
-a = np.floor(np.random.rand(512, 512, 3)*255).astype(np.uint8)
-a[350:380, 350:380] = [0, 0, 0]
-
-b = cv2.warpAffine(a, T[:2], (512, 512), borderValue=[244, 244, 244])
-cv2.imshow("asdf", a)
-cv2.waitKey(0)
-cv2.imshow("asdf", b)
-cv2.waitKey(0)
-
+#Use this to check your layer's input and output shapes, for checking your math / calculations / designs
+print "Layer Input -> Output Shapes:"
+for layer in model.layers:
+    print layer.input_shape, "->", layer.output_shape

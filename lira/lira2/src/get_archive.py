@@ -68,8 +68,9 @@ def create_archive(data_dir, archive_dir, rgb=False):
         for sample_i, sample_path_info in enumerate(sample_path_infos):
             sample_path, sample_fname = sample_path_info
 
-            sys.stdout.write("\rArchiving Image #%i:%s" % (sample_i, sample_fname))
-            sys.stdout.flush()
+            #sys.stdout.write("\rArchiving Image #%i:%s" % (sample_i, sample_fname))
+            #sys.stdout.flush()
+            print"\rArchiving Image #%i:%s" % (sample_i, sample_fname)
 
             """
             Get appropriate version of img

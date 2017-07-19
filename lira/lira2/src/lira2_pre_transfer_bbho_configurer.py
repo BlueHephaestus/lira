@@ -58,8 +58,8 @@ class Configurer(object):
         self.p_validation = 0.15
         self.p_test = 0.15
         self.input_dims = [80, 145, 3]
-        self.output_dims = 7
-        self.archive_dir=os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira/lira2/data/augmented_samples.h5")
+        self.output_dims = 4
+        self.archive_dir=os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira/lira2/data/model_1_samples.h5")
 
     def run_config(self, hps):
         """

@@ -138,7 +138,7 @@ def load_dataset_obj(p_training, p_validation, p_test, archive_dir, output_dims,
         test_data =         whole_normalize_data(test_data, training_data_mean, training_data_std)
     else:
         training_data_mean = 0.0
-        training_data_std = 1.0
+        training_data_std =  1.0
     whole_normalization_data = [training_data_mean, training_data_std]
 
     #Convert ys in each to one hot vectors
