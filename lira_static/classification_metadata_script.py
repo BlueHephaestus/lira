@@ -7,10 +7,9 @@ classifications = ["Healthy Tissue", "Type I - Caseum", "Type II", "Empty Slide"
 colors = [(255, 0, 255), (0, 0, 255), (0, 255, 0), (200, 200, 200), (0, 255, 255), (255, 0, 0), (244,66,143)]
 
 #Write our classification - color matchup metadata for future use
-f = open("classification_metadata.pkl", "w")
+with open("classification_metadata.pkl", "w") as f:
+    pickle.dump(([classifications, colors]), f)
 
-pickle.dump(([classifications, colors]), f)
-
-f = open("classification_metadata.pkl", 'r')
-classification_metadata = pickle.load(f)
-print classification_metadata
+with open("classification_metadata.pkl", 'r') as f:
+    classification_metadata = pickle.load(f)
+    print classification_metadata
