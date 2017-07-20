@@ -2,7 +2,7 @@
 Meta file to make use of the major stages of LIRA in order to do:
     1. Raw Images/Samples -> Sample archive (get_archive.py)
     2. Sample archive -> New trained model (lira2.py / lira2_pre_transfer_learning.py)
-    3. Trained model & Greyscale archive -> Predictions Archive (generate_predictions.py)
+    3. Trained model & Greyscale archive -> Predictions Archive (generate_predictions.py and object_detection_handler.py)
     4. Predictions Archive & Greyscale Archive -> Jpg predictions per image (generate_display_results.py)
 
 We have to set the directories again in the arguments because of where this file is positioned. When we have "../" something in one of our files for the directory, it is relative to the parent file calling that function. When that function is here, i.e. not in the normal place, it messes up stuff sometimes.
@@ -51,13 +51,13 @@ def main(model_title, detection_model_title, img_archive_dir, predictions_archiv
     Train our first model on our samples for this model
     """
     model1 = model + "_model_1"
-    lira2_pre_transfer_learning_mk2.train_model(model1, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/augmented_model_1_samples.h5")
+    #lira2_pre_transfer_learning_mk2.train_model(model1, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/augmented_model_1_samples.h5")
 
     """
     Train our second model on our samples for this model
     """
     model2 = model + "_model_2"
-    lira2_pre_transfer_learning_mk2.train_model(model2, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/augmented_model_2_samples.h5")
+    #lira2_pre_transfer_learning_mk2.train_model(model2, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/augmented_model_2_samples.h5")
 
     """
     From our saved model and greyscales, generate new predictions.h5 file
@@ -76,4 +76,4 @@ def main(model_title, detection_model_title, img_archive_dir, predictions_archiv
     """
     print "Completed! -DE"
 
-main("LIRA MK2.8.1 Upgraded Cooperative Model Classification", "Type1 Detection Model MK5", "lira/lira1/data/images.h5", "lira/lira1/data/test_predictions.h5")
+main("LIRA MK2.8 Cooperative Model Classification", "Type1 Detection Model MK5", "lira/lira1/data/images.h5", "lira/lira1/data/test_predictions.h5")
