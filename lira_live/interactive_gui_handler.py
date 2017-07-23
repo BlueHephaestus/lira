@@ -572,7 +572,7 @@ class InteractiveGUI(object):
 
         """
         Initialize our main canvas with the majority of our screen, and the scroll region as the size of our image,
-        and Initialize our tool canvas with a small portion of the bottom of our screen
+        and Initialize our tool canvas with a small portion of the right of our screen
         """
         main_canvas=Canvas(frame, bg='#000000', width=main_canvas_width, height=main_canvas_height, scrollregion=(0,0,self.np_img.shape[1],self.np_img.shape[0]))
         tool_canvas=Canvas(frame, width=tool_canvas_width, height=tool_canvas_height, scrollregion=(0,screen_height,self.np_img.shape[1],0))
