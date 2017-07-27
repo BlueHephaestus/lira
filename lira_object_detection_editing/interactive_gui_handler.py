@@ -5,7 +5,7 @@ Main functions for displaying the GUI for our Object Detection Editor,
 -Blake Edwards / Dark Element
 """
 
-import Tkinter
+import Tkinter as tk
 from Tkinter import *
 
 import PIL
@@ -20,9 +20,10 @@ class InteractiveGUI(object):
     """
     Our class for an interactive gui for LIRA Live.
     """
-    def __init__(self, dual_monitor):
+    def __init__(self, rect_h, rect_w, dual_monitor):
         """
         Arguments:
+            rect_h, rect_w: The size of our individual detected rectangles in our image.
             dual_monitor: Boolean for if we are using two monitors or not. 
                 Shrinks the width of our display if we are, and leaves normal if not.
 
@@ -31,36 +32,23 @@ class InteractiveGUI(object):
                 There is too much to include here, view individual documentation below.
         """
         """
-        Our main image, and main predictions that we are currently working with. 
+        Our main image, and main rects that we are currently working with. 
+            remember rects must stay a list so we can easily change it's size.
         """
         self.np_img = np.array([-1])
-        self.predictions = np.array([-1])
+        self.rects = [-1]
+
+        """
+        Indicator / Flag value(s) for the status of the session, 
+            so that our main file can know when to get the next image.
+        """
+        self.flag_next = False
 
         """
         Metadata for reference here
         """
-        self.classifications = classifications
-        self.colors = colors
-        self.sub_h = sub_h
-        self.sub_w = sub_w
-
-        """
-        Metadata variables to use after closing our session.
-        """
-        self.alpha = alpha
-        self.zoom = zoom
-
-        """
-        Indicator / Flag values for the status of the session, 
-            so that our main file can know when to:
-            refresh the current image with new parameters,
-            get the next image, 
-            or quit the session and move on,
-            respectively.
-        """
-        self.flag_refresh = False
-        self.flag_next = False
-        self.flag_quit = False
+        self.rect_h = rect_h
+        self.rect_w = rect_w
 
         """
         Variables to store the location where we opened our bulk select rectangle
@@ -69,27 +57,45 @@ class InteractiveGUI(object):
         self.bulk_select_initial_y = 0
 
         """
-        Variables for storing the indices in our predictions matrix for
-            the predictions we currently have selected to update.
-        """
-        self.selected_prediction_i_x1 = 0
-        self.selected_prediction_i_y1 = 0
-        self.selected_prediction_i_x2 = 0
-        self.selected_prediction_i_y2 = 0
-
-        """
-        For configuring the window
+        For configuring the window, you may definitely have to mess with these percentages as I had to mess with them a lot to get reasonable ones for our monitors.
+            I may also figure out a more general way to do this in the future.
         """
         self.screen_height_padding_percentage = 0.20
         if dual_monitor:
-            self.main_canvas_percentage = 0.78
-            self.tool_canvas_percentage = 1-self.main_canvas_percentage - 0.12
-            self.screen_width_padding_percentage = 0.52
+            self.main_canvas_percentage = 1.0
+            self.screen_width_padding_percentage = 0.51
         else:
             self.main_canvas_percentage = 0.85
-            self.tool_canvas_percentage = 1-self.main_canvas_percentage - 0.02
             self.screen_width_padding_percentage = 0.02
 
+        """
+        Initialize a window temporarily to get our screen height and width from it
+        """
+        tmp_window = Tk()
+
+        """
+        Get screen height and width
+        """
+        self.screen_width = tmp_window.winfo_screenwidth()
+        self.screen_height = tmp_window.winfo_screenheight()
+        
+        """
+        And subsequently destroy our window and bury the ashes
+        """
+        tmp_window.destroy()
+
+        """
+        Using our screen width and measurements for main canvas and padding,
+            assign our main canvas to be this size with padding and dual monitor factors factored in.
+        We do this here so that we can use our canvas width and height attributes where our session has been instantiated.
+        """
+        self.main_canvas_width, self.main_canvas_height = self.get_relative_canvas_dimensions(
+                self.screen_width, 
+                self.screen_height, 
+                self.main_canvas_percentage,
+                self.screen_width_padding_percentage,
+                self.screen_height_padding_percentage,
+                relative_dim="w")
 
     def get_relative_coordinates(self, event):
         """
@@ -147,7 +153,6 @@ class InteractiveGUI(object):
         """
         Arguments:
             rect_x1, rect_y1, rect_x2, rect_y2: Two pairs of coordinates for the top left and bottom right corners of a rectangle
-            sub_h, sub_w: The size of our individual subsections in our image.
 
         Returns:
             Two new pairs of coordinates for a new rectangle, 
@@ -155,44 +160,94 @@ class InteractiveGUI(object):
 
         Luckily, this is easily done with a simple modular arithmetic formula I made up.
         """
-        outline_rect_x1 = np.floor(rect_x1/sub_w)*sub_w
-        outline_rect_y1 = np.floor(rect_y1/sub_h)*sub_h
-        outline_rect_x2 = np.ceil(rect_x2/sub_w)*sub_w
-        outline_rect_y2 = np.ceil(rect_y2/sub_h)*sub_h
+        outline_rect_x1 = np.floor(rect_x1/self.rect_w)*self.rect_w
+        outline_rect_y1 = np.floor(rect_y1/self.rect_h)*self.rect_h
+        outline_rect_x2 = np.ceil(rect_x2/self.rect_w)*self.rect_w
+        outline_rect_y2 = np.ceil(rect_y2/self.rect_h)*self.rect_h
 
         return outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2
 
-    def mouse_left_click(self, event):
+    def rect_in_outline_rect(self, rect, outline_rect):
         """
-        Handler for when the left click is pressed
+        Arguments:
+            rect: Rect we are checking, to see if it is inside the outline_rect region.
+                Should be of format [x1, y1, x2, y2]
+            outline_rect: Rect we are checking our rect against, should be >= the area of our rect. 
+                Should be of format [x1, y1, x2, y2]
+
+        Returns:
+            True if our rect is inside our outline_rect region,
+            False if not.
+        """
+        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = outline_rect
+        rect_x1, rect_y1, rect_x2, rect_y2 = rect
+
+        outline_rect_x2 -= self.rect_w
+        outline_rect_y2 -= self.rect_h
+        """
+        If it's in the bounds, return true. We modified our x2, y2 cords of our outline_rect in order to make it so that
+            we only had to worry about the x1, y1 cords of our rect when checking. That way, we could treat the rect as a point,
+            and then check if it was inside or on the boundary of our rectangle specified by our NEW outline_rect cords.
+        So with our modification it became just 4 conditionals in an if statement.
+        """
+        return ((outline_rect_x1 <= rect_x1 and rect_x1 <= outline_rect_x2) and (outline_rect_y1 <= rect_y1 and rect_y1 <= outline_rect_y2))
+
+    def redraw_rects(self, canvas):
+        """
+        Arguments:
+            canvas: Canvas object to redraw rectangles on.
+        Returns:
+            I use canvas as an argument instead of event because this is NOT an event handler. 
+            This is called manually when we need to erase all existing rects from the canvas, 
+                and then draw all rects in our self.rects list to replace them.
+            So when it's done, the canvas will be updated to match our rects list, if it wasn't already.
+        """
+        #Erase all detected / added rects
+        canvas.delete("detected_rect")
+
+        #Loop through and draw all rects in our self.rects list to replace them.
+        for rect in self.rects:
+            x1, y1, x2, y2 = rect
+            canvas.create_rectangle(x1, y1, x2, y2, fill='', outline="red", width=2, tags="detected_rect")
+
+        #That's all folks
+        return
+
+    def mouse_click(self, event):
+        """
+        Handler for when the left or right click is pressed
         """
         """
         Arguments:
             event: The event that triggered this function.
 
         Returns:
-            Deletes the outline rectangle on our canvas if it exists,
             Starts our bulk select rectangle for the user to select multiple classifications at once,
                 by setting the initial x and y coordinates of our bulk select rectangle.
-:           Since we've just pressed down the button, we store the relative coordinates into our class variables for future events 
+            Since we've just pressed down the button, we store the relative coordinates into our class variables for future events 
                 to use in computing where to display the rectangle.
+            Though our clicks have different functions:
+                Left click = add
+                Right click = remove
+            These are not used until the mouse is released, so we can call this function regardless of the mouse button used.
         """
-        print "Left Mouse clicked, opening bulk select rectangle..."
-        canvas = event.widget 
-        canvas.delete("outline_rect")
+        print "Mouse clicked, opening bulk select rectangle..."
         self.bulk_select_initial_x, self.bulk_select_initial_y = self.get_relative_coordinates(event)
 
-    def mouse_left_move(self, event):
+    def mouse_move(self, event):
         """
-        Handler for when the left click is moved while pressed
+        Handler for when the left or right click is moved while pressed
         """
         """
         Arguments:
             event: The event that triggered this function.
 
         Returns:
-            Gets the relative coordinates given our event,
-            Then updates our bulk selection rectangle to our current x and y coordinates.
+            Clicking opens a bulk select rectangle, and moving should update the position of that bulk select rectangle.
+            Since we will be performing either an add or remove operation (depending on the button clicked) after the mouse is released
+                (because it's faster and also because I like the intuitive idea behind it)
+                we will not have the bulk select rectangle move freely - rather it will lock onto the individual selection rectangles as it passes over them.
+            I also like this because the user can easily see what they are selecting, rather than being unsure what rectangles they are selecting.
         """
         rel_x, rel_y = self.get_relative_coordinates(event)
 
@@ -206,87 +261,153 @@ class InteractiveGUI(object):
             we create a new rectangle with a red outline and a tag so we can delete it whenever we need to.
         """
         rect_x1, rect_y1, rect_x2, rect_y2 = self.get_rectangle_coordinates(self.bulk_select_initial_x, self.bulk_select_initial_y, rel_x, rel_y)
-        canvas.delete("bulk_select_rect")
-        canvas.create_rectangle(rect_x1, rect_y1, rect_x2, rect_y2, fill='', outline="red", width=3, tags="bulk_select_rect")
-
-    def mouse_left_release(self, event):
-        """
-        Handler for when the left click is released
-        """
-        """
-        Arguments:
-            event: The event that triggered this function.
-
-        Returns:
-            Gets the relative coordinates given our event,
-            Then gets our new outline rectangle coordinates from our current rectangle coordinates,
-            Draws our full outline rectangle,
-            And gets the appropriate prediction index coordinates
-
-        """
-        print "Left Mouse released, selecting subsections inside bulk select rectangle..."
-        canvas = event.widget
-
-        rel_x, rel_y = self.get_relative_coordinates(event)
-
-        """
-        Now we need to find the subsections that our rectangle encompasses,
-            so we need to find the top left and bottom right corners again.
-        """
-        rect_x1, rect_y1, rect_x2, rect_y2 = self.get_rectangle_coordinates(self.bulk_select_initial_x, self.bulk_select_initial_y, rel_x, rel_y)
 
         """
         Using these, we get new coordinates that outline all the subsections that our bulk select rectangle encompasses.
+            This way, the user can see what rectangles will be selected when they release the mouse.
         """
-        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, self.sub_h, self.sub_w)
+        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, self.rect_h, self.rect_w)
 
         """
-        Then we delete our bulk select rectangle, now that we have the subsections it encompassed.
+        Then we delete our last bulk select rectangle, now that we can draw a new one to replace it.
         """
         canvas.delete("bulk_select_rect")
 
         """
         And we draw our new outline rectangle.
         """
-        canvas.create_rectangle(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2, fill='', outline="darkRed", width=3, tags="outline_rect")
+        canvas.create_rectangle(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2, fill='', outline="darkRed", width=2, tags="bulk_select_rect")
 
+    def mouse_left_release(self, event):
         """
-        Then, using our outline rectangle coordinates, 
-            we get the indices for our predictions matrix,
-            so that we can modify all the predictions in our selected area accordingly once a classification is selected.
-        """
-        self.selected_prediction_i_x1 = int(outline_rect_x1/self.sub_w)
-        self.selected_prediction_i_y1 = int(outline_rect_y1/self.sub_h)
-        self.selected_prediction_i_x2 = int(outline_rect_x2/self.sub_w)
-        self.selected_prediction_i_y2 = int(outline_rect_y2/self.sub_h)
-
-    def mouse_right_click(self, event):
-        """
-        Handler for when the right click is pressed
+        Handler for when the left click is released.
         """
         """
         Arguments:
             event: The event that triggered this function.
 
         Returns:
-            We set a marker for us to use when moving the mouse later.
+            Since this is for the left mouse, we will add rectangles to the entire area inside of our bulk select rectangle.
+            To do this, it will remove all existing rectangles in the area, then go through and add new ones throughout the entire area.
         """
+        print "Left Mouse released, adding rectangles to bulk selection area..."
         canvas = event.widget
-        canvas.scan_mark(event.x, event.y)
 
-    def mouse_right_move(self, event):
         """
-        Handler for when the right click is moved while pressed
+        First, we get the outline_rect coordinates for the last time, the same way we got them in our mouse_move function. 
+        Since it's the same process as that function, i'm not repeating the documentation. 
+        """
+        rel_x, rel_y = self.get_relative_coordinates(event)
+        rect_x1, rect_y1, rect_x2, rect_y2 = self.get_rectangle_coordinates(self.bulk_select_initial_x, self.bulk_select_initial_y, rel_x, rel_y)
+        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, self.rect_h, self.rect_w)
+        canvas.delete("bulk_select_rect")
+        
+        """
+        Since if we drew a rectangle, it would be immediately deleted after this function is finished, 
+            we save the trouble and don't draw a new rectangle.
+        Then, we do our magic. 
+        In order to remove the rectangles, we could sort based on x1 and y1, however this wouldn't save much time since we're dealing with clusters. 
+        So we use our outline_rect coordinates to check each rectangle in our main list to see if it lies inside, and if so remove it.
+        """
+        outline_rect = [outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2]
+
+        """
+        Since we are looping through our rects, and we could remove the rect we are currently testing if a given condition is true, 
+            we have to loop in reverse order so that we don't accidentally skip indices.
+        Since we are looping in reverse order, we also keep track of the index in reverse order. 
+            We need the index so we can still delete elements.
+        """
+        i = len(self.rects)-1
+        for rect in reversed(self.rects):
+            #Check if our rect is inside the outline rect
+            if self.rect_in_outline_rect(rect, outline_rect):
+                #If so, delete.
+                del self.rects[i]
+            #Decrement index since we're going right -> left
+            i-=1
+        
+        """
+        Alright that was easy, now we just fill our outline_rect region with rects of shape (self.rect_h, self.rect_w)
+        We do this by stepping self.rect_w and self.rect_h in our region's boundaries to get the x1 and y1, then add self.rect_w and self.rect_h
+            to x1 and y1 respectively to get x2 and y2.
+            So that x2 = x1 + self.rect_w and y2 = y1 + self.rect_h
+        We then just append them to our main self.rects list.
+        """
+        for x1 in range(int(outline_rect_x1), int(outline_rect_x2), self.rect_w):
+            for y1 in range(int(outline_rect_y1), int(outline_rect_y2), self.rect_h):
+                rect = [x1, y1, x1+self.rect_w, y1+self.rect_h]
+                self.rects.append(rect)
+
+        """
+        Since we've updated our self.rects list, we need to update the rects on our canvas
+            to match, so we redraw the rectangles on that. 
+        """
+        self.redraw_rects(canvas)
+
+        """
+        With that we are done, the entire region has had new rectangles added to it.
+        """
+        return
+
+    def mouse_right_release(self, event):
+        """
+        Handler for when the right click is released.
         """
         """
         Arguments:
             event: The event that triggered this function.
 
         Returns:
-            We drag the screen towards our mouse.
+            Since this is for the right mouse, we will remove rectangles from the entire area inside of our bulk select rectangle.
+            NOTE: This function is almost completely identical to the mouse_left_release function up to the part where that function adds rectangles, 
+                since our function doesn't add in any new rectangles.
         """
+        print "Right Mouse released, adding rectangles to bulk selection area..."
         canvas = event.widget
-        canvas.scan_dragto(event.x, event.y, gain=1)
+
+        """
+        First, we get the outline_rect coordinates for the last time, the same way we got them in our mouse_move function. 
+        Since it's the same process as that function, i'm not repeating the documentation. 
+        """
+        rel_x, rel_y = self.get_relative_coordinates(event)
+        rect_x1, rect_y1, rect_x2, rect_y2 = self.get_rectangle_coordinates(self.bulk_select_initial_x, self.bulk_select_initial_y, rel_x, rel_y)
+        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, self.rect_h, self.rect_w)
+        canvas.delete("bulk_select_rect")
+        
+        """
+        Since if we drew a rectangle, it would be immediately deleted after this function is finished, 
+            we save the trouble and don't draw a new rectangle.
+        Then, we do our magic. 
+        In order to remove the rectangles, we could sort based on x1 and y1, however this wouldn't save much time since we're dealing with clusters. 
+        So we use our outline_rect coordinates to check each rectangle in our main list to see if it lies inside, and if so remove it.
+        """
+        outline_rect = [outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2]
+
+        """
+        Since we are looping through our rects, and we could remove the rect we are currently testing if a given condition is true, 
+            we have to loop in reverse order so that we don't accidentally skip indices.
+        Since we are looping in reverse order, we also keep track of the index in reverse order. 
+            We need the index so we can still delete elements.
+        """
+        i = len(self.rects)-1
+        for rect in reversed(self.rects):
+            #Check if our rect is inside the outline rect
+            if self.rect_in_outline_rect(rect, outline_rect):
+                #If so, delete.
+                del self.rects[i]
+            #Decrement index since we're going right -> left
+            i-=1
+
+        """
+        Since we've updated our self.rects list, we need to update the rects on our canvas
+            to match, so we redraw the rectangles on that. 
+        """
+        self.redraw_rects(canvas)
+        
+        """
+        With that we are done, the entire region has had any existing rectangles removed.
+        """
+        return
 
     def key_press(self, event):
         """
@@ -298,144 +419,49 @@ class InteractiveGUI(object):
 
         Returns:
             Depending on the key pressed, we may either:
-                1. Classify the currently bulk-selected section if we have selected a classification keyboard shortcut,
-                2. Call another event handler if we call a command shortcut, or
-                3. We may do nothing if we have not selected a classification keyboard shortcut
-        """
-        """
-        So we first check if the key pressed is one of our classification keyboard shortcut keys
-            by checking if it is a number key within the range of 1-len(classifications) (inclusive)
+                1. Call another event handler if we call a command shortcut, or
+                2. We may do nothing if we have not selected any valid keyboard shortcut
+            We only have a next image event handler here, so that's all we check for.
         """
         canvas = event.widget
         c = event.char
         print "%s pressed..." % c
-        try:
-            key_num = int(c)
-
-            if (1 <= key_num and key_num <= len(self.classifications)):
-                print "Classifying selected section..."
-                """
-                If so, now we subtract 1 to get the classification index
-                """
-                classification_i = key_num-1
-
-                """
-                And now we re-assign all the values in our predictions matrix within the ranges specified by our bulk-select rectangle.
-                """
-                self.predictions[self.selected_prediction_i_y1:self.selected_prediction_i_y2, self.selected_prediction_i_x1:self.selected_prediction_i_x2] = classification_i
-
-                """
-                Then we delete our bulk select outline rectangle and return
-                """
-                canvas.delete("outline_rect")
-                return
-        except:
+        c = c.upper()
+        if c == 'N':
             """
-            If it wasn't a number, then we check if it is another keybind.
+            Our next keybind, call the associated function handler.
             """
-            c = c.upper()
-            if c == 'R':
-                """
-                Our refresh keybind, call the associated button handler.
-                """
-                self.refresh_session_button_press()
+            self.next_img()
+        elif c == 'Q':
+            """TEMPORARY TO SAVE TIME WHILE DEBUGGING"""
+            print "REMEMBER TO REMOVE THIS FUNCTION"
+            sys.exit()
 
-            elif c == 'N':
-                """
-                Our next keybind, call the associated button handler.
-                """
-                self.next_img_button_press()
-
-            elif c == 'Q':
-                """
-                Our quit keybind, call the associated button handler.
-                """
-                self.quit_session_button_press()
-
-            """
-            Whatever happens, we are done with this now.
-            """
-            return
-
-
-    def refresh_session_button_press(self):
         """
-        Handler for when the REFRESH IMAGE button is pressed
+        Whatever happens, we are done with this handler now.
+        """
+        return
+
+    def next_img(self):
+        """
+        Function for going to the next image, called from our next image keyboard shortcut handler.
         """
         """
         Arguments:
             (none)
 
         Returns:
-            We handle our flags and metadata values for when our refresh button is pressed.
-        """
-
-        print "Refreshing / Reloading session..."
-
-        """
-        We update our class variable to match whatever values we have changed during the session
-        """
-        self.alpha = self.alpha_slider.get()
-        self.zoom = self.zoom_slider.get()
-
-        """
-        We destroy our window and change flag
-        """
-        self.window.destroy()
-        self.flag_refresh = True
-        
-    def next_img_button_press(self):
-        """
-        Handler for when the NEXT IMAGE button is pressed
-        """
-        """
-        Arguments:
-            (none)
-
-        Returns:
-            We handle our flags and metadata values for when our next button is pressed.
+            We destroy our window and change flag,
+                so that our main function (where our InteractiveGUI object has been instantiated)
+                knows to give us a new image or quit if this is the last image, 
+                and also get the updated rects list from our InteractiveGUI object.
         """
         print "Going to next image..."
-
-        """
-        We update our class variable to match whatever values we have changed during the session
-        """
-        self.alpha = self.alpha_slider.get()
-        self.zoom = self.zoom_slider.get()
-
-        """
-        We destroy our window and change flag
-        """
         self.window.destroy()
         self.flag_next = True
 
-    def quit_session_button_press(self):
-        """
-        Handler for when the QUIT SESSION button is pressed
-        """
-        """
-        Arguments:
-            (none)
-
-        Returns:
-            We handle our flags and metadata values for when our quit button is pressed.
-        """
-        print "Ending session..."
-
-        """
-        We update our class variable to match whatever values we have changed during the session
-        """
-        self.alpha = self.alpha_slider.get()
-        self.zoom = self.zoom_slider.get()
-
-        """
-        Then we destroy our window and change flag
-        """
-        self.window.destroy()
-        self.flag_quit = True
-
     @staticmethod
-    def get_relative_canvas_dimensions(screen_width, screen_height, main_canvas_percentage, tool_canvas_percentage, screen_width_padding_percentage, screen_height_padding_percentage, relative_dim):
+    def get_relative_canvas_dimensions(screen_width, screen_height, main_canvas_percentage, screen_width_padding_percentage, screen_height_padding_percentage, relative_dim):
         """
         Arguments:
             screen_width, screen_height: The width and height of our screen
@@ -456,44 +482,39 @@ class InteractiveGUI(object):
         screen_height = screen_height - screen_height_padding_percentage*screen_height
 
         """
-        Then invert these percentages so we don't give the opposite of what we want in our upcoming calculations
+        Then invert this percentage so we don't give the opposite of what we want in our upcoming calculations
         """
         main_canvas_percentage = 1-main_canvas_percentage
-        tool_canvas_percentage = 1-tool_canvas_percentage
 
         """
         Then we give each section it's corresponding percentage of the padded relative dim 
         """
         if relative_dim == "w":
             """
-            Compute the relative width of each
+            Compute the relative width 
             """
             main_canvas_width = screen_width - main_canvas_percentage*screen_width
-            tool_canvas_width = screen_width - tool_canvas_percentage*screen_width
 
             """
-            And assign them the full height
+            And assign the full height
             """
             main_canvas_height = screen_height
-            tool_canvas_height = screen_height
 
         elif relative_dim == "h":
             """
-            Compute the height of each
+            Compute the height
             """
             main_canvas_height = screen_height - main_canvas_percentage*screen_height
-            tool_canvas_height = screen_height - tool_canvas_percentage*screen_height
 
             """
-            And assign them the full width
+            And assign the full width
             """
             main_canvas_width = screen_width
-            tool_canvas_width = screen_width
 
         else:
             sys.exit("Incorrect relative_dim parameter input for get_relative_canvas_dimensions()")
 
-        return main_canvas_width, main_canvas_height, tool_canvas_width, tool_canvas_height
+        return main_canvas_width, main_canvas_height
 
     def start_interactive_session(self):
         """
@@ -505,30 +526,21 @@ class InteractiveGUI(object):
                 There is too much to include here, view individual documentation below.
         """
         """
-        Check if we have an image to display and predictions to update, otherwise exit.
+        Check if we have an image to display and rects to update, otherwise exit.
+            Even if our image doesn't initially have any rects, the list will be set to [], not [-1] as is the default.
+            This way we know we haven't set our rects yet if the list == [-1]
         """
-        if np.all(self.np_img==-1) or np.all(self.predictions == -1):
-            sys.exit("Error: You must assign an image to display and predictions to update before starting an interactive GUI session!")
+        if (np.all(self.np_img==-1) or self.rects == [-1]):
+            sys.exit("Error: You must assign an image to display and rectangles to update before starting an interactive GUI session!")
 
         """
-        Open our main Tkinter window 
+        Initialize our main Tkinter window object, and use that to get our screen width and height.
+            Initializing our window like this doesn't open any new windows, it just initializes the object.
+            We would use the window we used for the screen height and width in our __init__, however due to how Tkinter
+                works with classes I couldn't get it to then display images in the canvas of the window when I initialized
+                the window in a different class function. So we initialize it here.
         """
         self.window = Tk()
-
-        """
-        Get our screen width and height, and assign portions to each of our two main canvases respective of the percentage of the screen we want to give them.
-        """
-        screen_width = self.window.winfo_screenwidth()
-        screen_height = self.window.winfo_screenheight()
-
-        main_canvas_width, main_canvas_height, tool_canvas_width, tool_canvas_height = self.get_relative_canvas_dimensions(
-                screen_width, 
-                screen_height, 
-                self.main_canvas_percentage,
-                self.tool_canvas_percentage,
-                self.screen_width_padding_percentage,
-                self.screen_height_padding_percentage,
-                relative_dim="w")
 
         """
         First convert our np array from BGR to RGB
@@ -537,8 +549,9 @@ class InteractiveGUI(object):
 
         """
         Convert our image from numpy array, to PIL image, then to Tkinter image.
+            Numpy -> PIL -> Tkinter
         """
-        img = ImageTk.PhotoImage(Image.fromarray(self.np_img))
+        self.img = ImageTk.PhotoImage(Image.fromarray(self.np_img))
 
         """
         Initialize our main frame
@@ -548,10 +561,8 @@ class InteractiveGUI(object):
 
         """
         Initialize our main canvas with the majority of our screen, and the scroll region as the size of our image,
-        and Initialize our tool canvas with a small portion of the bottom of our screen
         """
-        main_canvas=Canvas(frame, bg='#000000', width=main_canvas_width, height=main_canvas_height, scrollregion=(0,0,self.np_img.shape[1],self.np_img.shape[0]))
-        tool_canvas=Canvas(frame, width=tool_canvas_width, height=tool_canvas_height, scrollregion=(0,screen_height,self.np_img.shape[1],0))
+        main_canvas=Canvas(frame, bg='#000000', width=self.main_canvas_width, height=self.main_canvas_height, scrollregion=(0,0,self.np_img.shape[1],self.np_img.shape[0]))
 
         """
         Initialize horizontal and vertical scrollbars on main canvas
@@ -567,73 +578,7 @@ class InteractiveGUI(object):
         """
         Add our image to the main canvas, in the upper left corner.
         """
-        main_canvas.create_image(0, 0, image=img, anchor="nw")
-
-        """
-        Add our various UI tools to our tool canvas
-        """
-        """
-        Initialize our slider to change the alpha transparency
-        """
-        self.alpha_slider = Scale(tool_canvas, from_=0, to=1, resolution=0.01, length=tool_canvas_width, orient=HORIZONTAL, label="Alpha / Overlay Transparency")
-        self.alpha_slider.set(self.alpha)
-        self.alpha_slider.pack()
-
-        """
-        Initialize our slider to change the zoom of the image
-            Tkinter does not allow manual setting of ticks, like 20/100/200. 
-            So while this is the zoom we are doing, the values are 1,2,3. This is so that I can look at what value is chosen, and change accordingly.
-        """
-        self.zoom_slider = Scale(tool_canvas, from_=1, to=3, showvalue=0, length=tool_canvas_width, orient=HORIZONTAL, label="Zoom Percentage (%)")
-        self.zoom_slider.set(self.zoom)
-        self.zoom_slider.pack()
-
-        """
-        Generate a header for our classifications, then display them with a color key
-        """
-        classification_header = Label(tool_canvas, text="\nClassification Key") 
-        classification_header.pack(fill=X)
-
-        for i, (classification, color) in enumerate(zip(self.classifications, self.colors)):
-            """
-            Since our colors are in BGR, and tkinter only accepts hex, we have to create a hex string for them, in RGB order.
-            """
-            b, g, r = color
-            hex_color_str = "#%02x%02x%02x" % (r, g, b)
-            
-            """
-            We then check get the color's brightness using the relative luminance algorithm
-                https://en.wikipedia.org/wiki/Relative_luminance
-            """
-            color_brightness = (0.2126*r + 0.7152*g + 0.0722*b)/255;
-            if color_brightness < 0.5:
-                """
-                Dark color, bright font.
-                """
-                text_color = "white"
-            else:
-                """
-                Bright color, dark font.
-                """
-                text_color = "black"
-            
-            """
-            Then we generate our label string to include the keyboard shortcut for this classification
-            """
-            label_str = "Key %i: %s" % (i+1, classification)
-            color_label = Label(tool_canvas, text=label_str, bg=hex_color_str, fg=text_color, anchor="w")
-            color_label.pack(fill=X)
-        
-        """
-        Add our buttons for refreshing, going to the next image, and quitting, respectively.
-        """
-        refresh_session_button = Button(tool_canvas, text="REFRESH SESSION", bg="#0000ff", fg="white", highlightcolor="#0000ff", activebackground="#0000ff", activeforeground="white",command=self.refresh_session_button_press)
-        next_img_button = Button(tool_canvas, text="NEXT IMAGE", bg="#00ff00", fg="black", highlightcolor="#00ff00", activebackground="#00ff00",activeforeground="black", command=self.next_img_button_press)
-        quit_session_button = Button(tool_canvas, text="QUIT SESSION", bg="#ff0000", fg="white", highlightcolor="#ff0000", activebackground="#ff0000", activeforeground="white", command=self.quit_session_button_press)
-
-        refresh_session_button.pack(fill=X, pady=(30, 5))
-        next_img_button.pack(fill=X, pady=(5,5))
-        quit_session_button.pack(fill=X, pady=(5,5))
+        main_canvas.create_image(0, 0, image=self.img, anchor="nw")
 
         """
         Add our event listeners to the main canvas
@@ -641,14 +586,18 @@ class InteractiveGUI(object):
         main_canvas.focus_set()
 
         """
-        Handler for when the left click is pressed
+        Handler for when the left or right click is pressed.
+            These both call the same event handler since we do the same regardless of the button pressed.
         """
-        main_canvas.bind("<Button 1>", self.mouse_left_click)
+        main_canvas.bind("<Button 1>", self.mouse_click)#left
+        main_canvas.bind("<Button 3>", self.mouse_click)#right
 
         """
-        Handler for when the left click is moved while pressed
+        Handler for when the left or right click is moved while pressed
+            These both call the same event handler since we do the same regardless of the button moved while pressed.
         """
-        main_canvas.bind("<B1-Motion>", self.mouse_left_move)
+        main_canvas.bind("<B1-Motion>", self.mouse_move)#left
+        main_canvas.bind("<B3-Motion>", self.mouse_move)#right
 
         """
         Handler for when the left click is released
@@ -656,14 +605,9 @@ class InteractiveGUI(object):
         main_canvas.bind("<ButtonRelease-1>", self.mouse_left_release)
 
         """
-        Handler for when the right click is pressed
+        Handler for when the right click is released
         """
-        main_canvas.bind("<Button 3>", self.mouse_right_click)
-
-        """
-        Handler for when the right click is moved while pressed
-        """
-        main_canvas.bind("<B3-Motion>", self.mouse_right_move)
+        main_canvas.bind("<ButtonRelease-3>", self.mouse_right_release)
 
         """
         Handler for when any key is pressed
@@ -671,10 +615,14 @@ class InteractiveGUI(object):
         main_canvas.bind("<Key>", self.key_press)
 
         """
-        Open our canvases in the main window.
+        Open our canvas in the main window.
         """
         main_canvas.pack(side=LEFT)
-        tool_canvas.pack(side=RIGHT)
+
+        """
+        Draw the rectangles in our self.rects list onto the canvas.
+        """
+        self.redraw_rects(main_canvas)
 
         """
         Initialize main window and main loop.
