@@ -20,10 +20,9 @@ class InteractiveGUI(object):
     """
     Our class for an interactive gui for LIRA Live.
     """
-    def __init__(self, rect_h, rect_w, dual_monitor):
+    def __init__(self, dual_monitor):
         """
         Arguments:
-            rect_h, rect_w: The size of our individual detected rectangles in our image.
             dual_monitor: Boolean for if we are using two monitors or not. 
                 Shrinks the width of our display if we are, and leaves normal if not.
 
@@ -39,16 +38,17 @@ class InteractiveGUI(object):
         self.rects = [-1]
 
         """
+        We also have rect_h and rect_w: The size of our individual detected rectangles in our image.
+            This has to also be changed each image to account for each image having a different resize factor.
+        """
+        self.rect_h = -1
+        self.rect_w = -1
+
+        """
         Indicator / Flag value(s) for the status of the session, 
             so that our main file can know when to get the next image.
         """
         self.flag_next = False
-
-        """
-        Metadata for reference here
-        """
-        self.rect_h = rect_h
-        self.rect_w = rect_w
 
         """
         Variables to store the location where we opened our bulk select rectangle
@@ -202,12 +202,14 @@ class InteractiveGUI(object):
                 and then draw all rects in our self.rects list to replace them.
             So when it's done, the canvas will be updated to match our rects list, if it wasn't already.
         """
+        print self.rects
         #Erase all detected / added rects
         canvas.delete("detected_rect")
 
         #Loop through and draw all rects in our self.rects list to replace them.
         for rect in self.rects:
             x1, y1, x2, y2 = rect
+            print x1,y1,x2,y2
             canvas.create_rectangle(x1, y1, x2, y2, fill='', outline="red", width=2, tags="detected_rect")
 
         #That's all folks
@@ -224,7 +226,7 @@ class InteractiveGUI(object):
         Returns:
             Starts our bulk select rectangle for the user to select multiple classifications at once,
                 by setting the initial x and y coordinates of our bulk select rectangle.
-            Since we've just pressed down the button, we store the relative coordinates into our class variables for future events 
+            Since we've just pressed down the button, we store the relative coordinates into our class variables 
                 to use in computing where to display the rectangle.
             Though our clicks have different functions:
                 Left click = add
@@ -232,7 +234,23 @@ class InteractiveGUI(object):
             These are not used until the mouse is released, so we can call this function regardless of the mouse button used.
         """
         print "Mouse clicked, opening bulk select rectangle..."
+        canvas = event.widget
         self.bulk_select_initial_x, self.bulk_select_initial_y = self.get_relative_coordinates(event)
+
+        """
+        Since it is more user-friendly to immediately open the rectangle even if the user hasn't moved their mouse yet,
+            since they may want to only select one rectangle, and so they might not move it,
+            we draw the bulk select rectangle immediately.
+
+        We use our initial x and y to get new coordinates that outline all the subsections that our bulk select rectangle encompasses.
+            This way, the user can see what rectangles will be selected when they release the mouse.
+        """
+        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(self.bulk_select_initial_x, self.bulk_select_initial_y, self.bulk_select_initial_x, self.bulk_select_initial_y, self.rect_h, self.rect_w)
+
+        """
+        Then we draw our new outline rectangle.
+        """
+        canvas.create_rectangle(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2, fill='', outline="darkRed", width=2, tags="bulk_select_rect")
 
     def mouse_move(self, event):
         """
@@ -526,12 +544,18 @@ class InteractiveGUI(object):
                 There is too much to include here, view individual documentation below.
         """
         """
-        Check if we have an image to display and rects to update, otherwise exit.
+        Check if we have an image to display and rects to update and rect_h and rect_w, otherwise exit.
             Even if our image doesn't initially have any rects, the list will be set to [], not [-1] as is the default.
             This way we know we haven't set our rects yet if the list == [-1]
         """
-        if (np.all(self.np_img==-1) or self.rects == [-1]):
-            sys.exit("Error: You must assign an image to display and rectangles to update before starting an interactive GUI session!")
+        if np.all(self.np_img==-1):
+            sys.exit("Error: You must assign an image to display before starting an interactive GUI session!")
+
+        if self.rects == [-1]:
+            sys.exit("Error: You must assign rectangles to update before starting an interactive GUI session!")
+
+        if (self.rect_h == -1 or self.rect_w == -1):
+            sys.exit("Error: You must assign the individual height and width of your individual rectangles (rect_h and rect_w) before starting an interactive GUI session!")
 
         """
         Initialize our main Tkinter window object, and use that to get our screen width and height.

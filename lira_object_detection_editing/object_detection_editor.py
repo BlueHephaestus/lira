@@ -30,8 +30,8 @@ def main(rect_h=128,
         and get the main canvas height and width from our session.
     We will use this for calculating our resize factor for each image later.
     """
-    interactive_session = InteractiveGUI(rect_h, rect_w, dual_monitor)
-    #canvas_h, canvas_w = interactive_session.main_canvas_height, interactive_session.main_canvas_width
+    interactive_session = InteractiveGUI(dual_monitor)
+    canvas_h, canvas_w = interactive_session.main_canvas_height, interactive_session.main_canvas_width
 
     """
     Construct our entire testcases rects list to match the format it will be in our actual full implementation.
@@ -62,21 +62,38 @@ def main(rect_h=128,
         And we want to preserve the aspect ratio between our image height and width so we apply this ratio to both dimensions.
         """
         img_h = img.shape[0]
-        #resize_factor = canvas_h / float(img_h)
-        #img = cv2.resize(img, (0,0), fx=resize_factor, fy=resize_factor)#Execute resize
-
-        #TEMP
-        rects[i].append([0,0,256,256])
-        #TEMP
+        resize_factor = canvas_h / float(img_h)
 
         """
-        Set our interactive UI's img and rects before starting the session and our main ui loop
+        Using this we resize our image,
         """
-        #interactive_session.np_img = np.floor(np.random.rand(2000,2000,3)*255).astype(np.uint8)
-        #interactive_session.np_img = (np.ones((2000,2000,3))*255).astype(np.uint8)
+        img = cv2.resize(img, (0,0), fx=resize_factor, fy=resize_factor)#Execute resize
+
+        """
+        Convert our rects list for this image into a numpy array so we have easy elementwise multiplication of a 2d list,
+            then resize our rects list via elementwise rects * resize_factor, 
+            then make sure it's an int because we need to draw using these values (e.g. we can't have 1.5 pixels),
+            and convert it back to a list
+        """
+        rects[i] = np.array(rects[i])
+        rects[i] = rects[i] * resize_factor * 0.1
+        rects[i] = rects[i].astype(int)
+        rects[i] = list(rects[i])
+
+        """
+        Set our interactive UI's img, rects, rect_h, and rect_w before starting the session and our main ui loop
+        """
         interactive_session.np_img = img
         interactive_session.rects = rects[i]
+        #These need to be casted to an int because we need to draw using these values
+        interactive_session.rect_h = int(rect_h * resize_factor * 0.1)
+        interactive_session.rect_w = int(rect_w * resize_factor * 0.1)
+
+        #Finally start the session
+        print rects[i]
         interactive_session.start_interactive_session()
+
+        #And finally start the main ui loop
         while True:
             """
             Main loop where we wait for flag(s) from Interactive UI before doing anything else
@@ -90,8 +107,13 @@ def main(rect_h=128,
         """
         Get our final rects list for this image from our InteractiveGUI object, and update our main rects list with the new rects for this image.
             This is why we have our main rects list as a list, so we can just replace the existing list with a new list which may be of completely different size.
+            We also do the same process as earlier - but with 1/resize_factor instead of just resize_factor - to un-resize these rects so that they match the original resolution of the rects.
         """
         rects[i] = interactive_session.rects
+        rects[i] = np.array(rects[i])
+        rects[i] = rects[i] * (1/(resize_factor*0.1))
+        rects[i] = rects[i].astype(int)
+        rects[i] = list(rects[i])
 
         """
         Set our flag back to false now that we are about to go to the next image.
