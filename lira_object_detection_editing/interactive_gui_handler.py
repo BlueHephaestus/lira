@@ -38,11 +38,16 @@ class InteractiveGUI(object):
         self.rects = [-1]
 
         """
-        We also have rect_h and rect_w: The size of our individual detected rectangles in our image.
-            This has to also be changed each image to account for each image having a different resize factor.
+        We also have 
+            rect_h and rect_w: The size of our individual detected rectangles in our image,
+            and step_h and step_w: The size of our step size or stride length between each rectangle in our image.
+                (the minimal distance possible between two rects)
+            These have to also be changed each image to account for each image having a different resize factor.
         """
         self.rect_h = -1
         self.rect_w = -1
+        self.step_h = -1
+        self.step_w = -1
 
         """
         Indicator / Flag value(s) for the status of the session, 
@@ -149,10 +154,12 @@ class InteractiveGUI(object):
             """
             return x2, y2, x1, y1
 
-    def get_outline_rectangle_coordinates(self, rect_x1, rect_y1, rect_x2, rect_y2, sub_h, sub_w):
+    def get_outline_rectangle_coordinates(self, rect_x1, rect_y1, rect_x2, rect_y2, step_h, step_w):
         """
         Arguments:
             rect_x1, rect_y1, rect_x2, rect_y2: Two pairs of coordinates for the top left and bottom right corners of a rectangle
+            step_h, step_w: The size of our step, could be subsections, rectangles, or whatever - just use this to determine intervals for our outline rect.
+                This can also be thought of as the stride length as in convolutional networks.
 
         Returns:
             Two new pairs of coordinates for a new rectangle, 
@@ -160,10 +167,10 @@ class InteractiveGUI(object):
 
         Luckily, this is easily done with a simple modular arithmetic formula I made up.
         """
-        outline_rect_x1 = np.floor(rect_x1/self.rect_w)*self.rect_w
-        outline_rect_y1 = np.floor(rect_y1/self.rect_h)*self.rect_h
-        outline_rect_x2 = np.ceil(rect_x2/self.rect_w)*self.rect_w
-        outline_rect_y2 = np.ceil(rect_y2/self.rect_h)*self.rect_h
+        outline_rect_x1 = np.floor(rect_x1/self.step_w)*self.step_w 
+        outline_rect_y1 = np.floor(rect_y1/self.step_h)*self.step_h
+        outline_rect_x2 = np.ceil(rect_x2/self.step_w)*self.step_w
+        outline_rect_y2 = np.ceil(rect_y2/self.step_h)*self.step_h
 
         return outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2
 
@@ -202,14 +209,13 @@ class InteractiveGUI(object):
                 and then draw all rects in our self.rects list to replace them.
             So when it's done, the canvas will be updated to match our rects list, if it wasn't already.
         """
-        print self.rects
         #Erase all detected / added rects
         canvas.delete("detected_rect")
 
         #Loop through and draw all rects in our self.rects list to replace them.
         for rect in self.rects:
             x1, y1, x2, y2 = rect
-            print x1,y1,x2,y2
+            #print x2 - x1, y2 - y1
             canvas.create_rectangle(x1, y1, x2, y2, fill='', outline="red", width=2, tags="detected_rect")
 
         #That's all folks
@@ -245,11 +251,12 @@ class InteractiveGUI(object):
         We use our initial x and y to get new coordinates that outline all the subsections that our bulk select rectangle encompasses.
             This way, the user can see what rectangles will be selected when they release the mouse.
         """
-        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(self.bulk_select_initial_x, self.bulk_select_initial_y, self.bulk_select_initial_x, self.bulk_select_initial_y, self.rect_h, self.rect_w)
+        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(self.bulk_select_initial_x, self.bulk_select_initial_y, self.bulk_select_initial_x, self.bulk_select_initial_y, self.step_h, self.step_w)
 
         """
         Then we draw our new outline rectangle.
         """
+        print outline_rect_x2 - outline_rect_x1, outline_rect_y2 - outline_rect_y1
         canvas.create_rectangle(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2, fill='', outline="darkRed", width=2, tags="bulk_select_rect")
 
     def mouse_move(self, event):
@@ -284,7 +291,7 @@ class InteractiveGUI(object):
         Using these, we get new coordinates that outline all the subsections that our bulk select rectangle encompasses.
             This way, the user can see what rectangles will be selected when they release the mouse.
         """
-        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, self.rect_h, self.rect_w)
+        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, self.step_h, self.step_w)
 
         """
         Then we delete our last bulk select rectangle, now that we can draw a new one to replace it.
@@ -317,7 +324,7 @@ class InteractiveGUI(object):
         """
         rel_x, rel_y = self.get_relative_coordinates(event)
         rect_x1, rect_y1, rect_x2, rect_y2 = self.get_rectangle_coordinates(self.bulk_select_initial_x, self.bulk_select_initial_y, rel_x, rel_y)
-        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, self.rect_h, self.rect_w)
+        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, self.step_h, self.step_w)
         canvas.delete("bulk_select_rect")
         
         """
@@ -345,16 +352,66 @@ class InteractiveGUI(object):
             i-=1
         
         """
-        Alright that was easy, now we just fill our outline_rect region with rects of shape (self.rect_h, self.rect_w)
-        We do this by stepping self.rect_w and self.rect_h in our region's boundaries to get the x1 and y1, then add self.rect_w and self.rect_h
+        Alright that was easy, now we just fill our outline_rect region with rects of shape (self.rect_h, self.rect_)
+        We do this by stepping self.step_w and self.step_h in our region's boundaries to get the x1 and y1, then add self.rect_w and self.rect_h
             to x1 and y1 respectively to get x2 and y2.
             So that x2 = x1 + self.rect_w and y2 = y1 + self.rect_h
+            And our rects are always of size rect_h x rect_w.
+        Note: we do outline_rect_x2 - self.step_w since we add self.rect_w to our final coordinate pair, and don't want to go outside our bounds when adding new rects.
+            Same for outline_rect_y2
         We then just append them to our main self.rects list.
         """
-        for x1 in range(int(outline_rect_x1), int(outline_rect_x2), self.rect_w):
-            for y1 in range(int(outline_rect_y1), int(outline_rect_y2), self.rect_h):
+        for x1 in range(int(outline_rect_x1), int(outline_rect_x2-self.step_w), self.step_w):
+            for y1 in range(int(outline_rect_y1), int(outline_rect_y2-self.step_h), self.step_h):
                 rect = [x1, y1, x1+self.rect_w, y1+self.rect_h]
                 self.rects.append(rect)
+        """
+        Unfortunately, the above 2 loops don't add any rects if either 
+            int(outline_rect_x2 - self.step_w) == int(outline_rect_x1) 
+                or 
+            int(outline_rect_y2 - self.step_h) == int(outline_rect_y1)
+            are True.
+        The first case is for when our width is step_w, but still < rect_w, 
+        and the second is for when our height is step_h, but still < rect_h.
+
+        AKA the first case is a thin and tall rectangle, and the second is a short and fat rectangle.
+
+        If we only draw a rectangle of size step_h x step_w (if we just click the mouse once),
+            then both these cases will be true. 
+
+        That is the only time both will be true though, otherwise we only have one of the above cases true.
+
+        So there are now 3 different if statements we need:
+            1. Case #1 is true
+            2. Case #2 is true
+            3. Case #1 and Case #2 are true
+
+        Because of the way the loops in the first two if statements are structured,
+            If we have both Case #1 and Case #2 as true we wouldn't add any rectangle
+                in the first and second if statements.
+            Because of this, we need a third for that one last edge case where we have just clicked the mouse
+                and only have a tiny rect of size step_h x step_w
+        """
+        if int(outline_rect_x2 - self.step_w) == int(outline_rect_x1):
+            #thin and tall rectangle, loop through height and add
+            x1 = int(outline_rect_x1)
+            for y1 in range(int(outline_rect_y1), int(outline_rect_y2-self.step_h), self.step_h):
+                rect = [x1, y1, x1+self.rect_w, y1+self.rect_h]
+                self.rects.append(rect)
+
+        if int(outline_rect_y2 - self.step_h) == int(outline_rect_y1):
+            #short and fat rectangle, loop through width and add
+            y1 = int(outline_rect_y1)
+            for x1 in range(int(outline_rect_x1), int(outline_rect_x2-self.step_w), self.step_w):
+                rect = [x1, y1, x1+self.rect_w, y1+self.rect_h]
+                self.rects.append(rect)
+
+        if int(outline_rect_x2 - self.step_w) == int(outline_rect_x1) and int(outline_rect_y2 - self.step_h) == int(outline_rect_y1):
+            #rectangle of smallest possible size, step_h x step_w. So we just add one rectangle here.
+            x1 = int(outline_rect_x1)
+            y1 = int(outline_rect_y1)
+            rect = [x1, y1, x1+self.rect_w, y1+self.rect_h]
+            self.rects.append(rect)
 
         """
         Since we've updated our self.rects list, we need to update the rects on our canvas
@@ -389,7 +446,7 @@ class InteractiveGUI(object):
         """
         rel_x, rel_y = self.get_relative_coordinates(event)
         rect_x1, rect_y1, rect_x2, rect_y2 = self.get_rectangle_coordinates(self.bulk_select_initial_x, self.bulk_select_initial_y, rel_x, rel_y)
-        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, self.rect_h, self.rect_w)
+        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = self.get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, self.step_h, self.step_w)
         canvas.delete("bulk_select_rect")
         
         """
@@ -556,6 +613,9 @@ class InteractiveGUI(object):
 
         if (self.rect_h == -1 or self.rect_w == -1):
             sys.exit("Error: You must assign the individual height and width of your individual rectangles (rect_h and rect_w) before starting an interactive GUI session!")
+
+        if (self.step_h == -1 or self.step_w == -1):
+            sys.exit("Error: You must assign the height and width of your step size / stride length (step_h and step_w) before starting an interactive GUI session!")
 
         """
         Initialize our main Tkinter window object, and use that to get our screen width and height.

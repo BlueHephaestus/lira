@@ -17,14 +17,24 @@ def disp_img_fullscreen(img, name="test"):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def main(rect_h=128, 
-         rect_w=128, 
+def main(rect_h=640, 
+         rect_w=640, 
+         step_h=320,
+         step_w=320,
          dual_monitor=False,
          resize_factor=0.1,
          img_archive_dir="../lira/lira1/data/images.h5",
          rect_archive_dir="",
          dst_img_archive_dir="",
          dst_rect_archive_dir=""):
+    """
+    Make sure that rect_h and rect_w match the resolution on the full res images, not the input to the object detector.
+        This means if you resize your images down to 1/5th their original size before feeding 128x128 windows 
+        into an object detector, you should have rect_h = rect_w = 128 * 5, since when you resize the images back up to 
+        their full resolution you are doing a resize_factor = 1/(1/5) = 5. So your 128x128 rects are now 128*5x128*5 = 640x640.
+    Same goes for step_h and step_w
+    Be careful!
+    """
     """
     Open a new interactive session before starting our loops,
         and get the main canvas height and width from our session.
@@ -52,24 +62,6 @@ def main(rect_h=128,
         img = cv2.imread("testcase_%i.png" % i)
 
         """
-        Our resize factor needs to be such that our final image height is the same as our canvas height, 
-            so that we don't have vertical scroll and only have to worry about going horizontally.
-        Since we want a resize factor r such that
-            r * image height = canvas height, 
-        We get r via
-            r = (canvas height) / (image height)
-
-        And we want to preserve the aspect ratio between our image height and width so we apply this ratio to both dimensions.
-        """
-        img_h = img.shape[0]
-        resize_factor = canvas_h / float(img_h)
-
-        """
-        Using this we resize our image,
-        """
-        img = cv2.resize(img, (0,0), fx=resize_factor, fy=resize_factor)#Execute resize
-
-        """
         Convert our rects list for this image into a numpy array so we have easy elementwise multiplication of a 2d list,
             then resize our rects list via elementwise rects * resize_factor, 
             then make sure it's an int because we need to draw using these values (e.g. we can't have 1.5 pixels),
@@ -85,12 +77,15 @@ def main(rect_h=128,
         """
         interactive_session.np_img = img
         interactive_session.rects = rects[i]
+
         #These need to be casted to an int because we need to draw using these values
         interactive_session.rect_h = int(rect_h * resize_factor * 0.1)
         interactive_session.rect_w = int(rect_w * resize_factor * 0.1)
+        interactive_session.step_h = int(step_h * resize_factor * 0.1)
+        interactive_session.step_w = int(step_w * resize_factor * 0.1)
+
 
         #Finally start the session
-        print rects[i]
         interactive_session.start_interactive_session()
 
         #And finally start the main ui loop
@@ -143,4 +138,4 @@ for (x1,y1,x2,y2) in rects:
 #disp_img_fullscreen(img)
 #now display rects on img with rectangle method
 
-main(rect_h=128, rect_w=128, img_archive_dir="../lira/lira1/data/images.h5", dual_monitor=True)
+main(rect_h=640, rect_w=640, step_h=320, step_w=320, resize_factor=1.0, img_archive_dir="../lira/lira1/data/images.h5", dual_monitor=True)
