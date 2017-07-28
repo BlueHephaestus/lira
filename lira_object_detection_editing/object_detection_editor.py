@@ -119,6 +119,7 @@ def main(rect_h=640,
     Now that we are finished with every image + rects, 
         we save all our updated data to the specified destination directories.
     """
+
     """
     Since I don't yet have this figured out, we are done. woot, woot.
     """

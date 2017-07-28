@@ -712,3 +712,4 @@ class InteractiveGUI(object):
         Initialize main window and main loop.
         """
         self.window.mainloop()
+
