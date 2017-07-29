@@ -256,7 +256,6 @@ class InteractiveGUI(object):
         """
         Then we draw our new outline rectangle.
         """
-        print outline_rect_x2 - outline_rect_x1, outline_rect_y2 - outline_rect_y1
         canvas.create_rectangle(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2, fill='', outline="darkRed", width=2, tags="bulk_select_rect")
 
     def mouse_move(self, event):
