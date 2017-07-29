@@ -49,7 +49,7 @@ def main(rect_h=640,
     """
     rects = []
     for i in range(8):
-        with open("%i.pkl" % i, "r") as f:
+        with open("new_%i.pkl" % i, "r") as f:
             img_rects = pickle.load(f)
         img_rects = list(img_rects)
         rects.append(img_rects)
@@ -58,6 +58,7 @@ def main(rect_h=640,
     loop through and load each test case
     """
     for i in range(8):
+        #MAKE A PRINT STATEMENT FOR PROGRESS HERE
         print i
         img = cv2.imread("testcase_%i.png" % i)
 
@@ -119,10 +120,9 @@ def main(rect_h=640,
     Now that we are finished with every image + rects, 
         we save all our updated data to the specified destination directories.
     """
-
-    """
-    Since I don't yet have this figured out, we are done. woot, woot.
-    """
+    for i in range(8):
+        with open("new_%i.pkl" % i, "w") as f:
+            pickle.dump(rects[i], f)
 
 
 
