@@ -25,10 +25,11 @@ import lira2_pre_transfer_learning_mk2
 
 sys.path.append("lira_static")
 
+import generate_detected_objects
 import generate_predictions
 import generate_display_results
 
-def main(model_title, detection_model_title, img_archive_dir, predictions_archive_dir):
+def main(model_title, detection_model_title, img_archive_dir, predictions_archive_dir, rects_archive_dir):
     """
     Get filename of nn from title
     """
@@ -60,7 +61,17 @@ def main(model_title, detection_model_title, img_archive_dir, predictions_archiv
     #lira2_pre_transfer_learning_mk2.train_model(model2, model_dir="lira/lira2/saved_networks", archive_dir="lira/lira2/data/augmented_model_2_samples.h5")
 
     """
-    From our saved model and greyscales, generate new predictions.h5 file
+    Get our detected objects/rects on our images, using our object detection model.
+    """
+    print "Generating Bounding Rects..."
+    generate_detected_objects.generate_detected_objects(detection_model, model_dir="lira/lira2/saved_networks", img_archive_dir=img_archive_dir, rects_archive_dir=rects_archive_dir)
+
+    """
+    Present detected objects/rects to user, so that they can correct any mistakes using our UI tool.
+    """
+
+    """
+    From our saved model and images, generate new predictions.h5 file
     """
     print "Generating Predictions..."
     generate_predictions.generate_predictions(model1, model2, detection_model, model_dir = "lira/lira2/saved_networks", img_archive_dir = img_archive_dir, predictions_archive_dir = predictions_archive_dir, classification_metadata_dir = "lira_static/classification_metadata.pkl", rgb=True)
@@ -76,4 +87,4 @@ def main(model_title, detection_model_title, img_archive_dir, predictions_archiv
     """
     print "Completed! -DE"
 
-main("LIRA MK2.8 Cooperative Model Classification", "Type1 Detection Model MK5", "lira/lira1/data/images.h5", "lira/lira1/data/test_predictions.h5")
+main("LIRA MK2.8 Cooperative Model Classification", "Type1 Detection Model MK5", "lira/lira1/data/images.h5", "lira/lira1/data/test_predictions.h5", "lira/lira1/data/bounding_rects.pkl")
