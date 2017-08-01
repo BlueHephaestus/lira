@@ -23,6 +23,10 @@ sys.path.append("lira/lira2/src")
 import get_archive
 import lira2_pre_transfer_learning_mk2
 
+sys.path.append("lira_object_detection_editing")
+
+import object_detection_editor
+
 sys.path.append("lira_static")
 
 import generate_detected_objects
@@ -69,12 +73,13 @@ def main(model_title, detection_model_title, img_archive_dir, predictions_archiv
     """
     Present detected objects/rects to user, so that they can correct any mistakes using our UI tool.
     """
+    #object_detection_editor
 
     """
     From our saved model and images, generate new predictions.h5 file
     """
     print "Generating Predictions..."
-    generate_predictions.generate_predictions(model1, model2, detection_model, model_dir = "lira/lira2/saved_networks", img_archive_dir = img_archive_dir, predictions_archive_dir = predictions_archive_dir, classification_metadata_dir = "lira_static/classification_metadata.pkl", rgb=True)
+    generate_predictions.generate_predictions(model1, model2, model_dir = "lira/lira2/saved_networks", img_archive_dir = img_archive_dir, predictions_archive_dir = predictions_archive_dir, classification_metadata_dir = "lira_static/classification_metadata.pkl", rgb=True)
 
     """
     From our new predictions.h5 and greyscales, generate easily accessible images for viewing.
