@@ -1,6 +1,7 @@
 import sys, os, time
 import numpy as np
 import h5py, pickle
+import cv2
 
 import static_config
 from static_config import StaticConfig
@@ -11,22 +12,21 @@ from img_handler import *
 import object_detection_handler
 from object_detection_handler import ObjectDetector
 
-def generate_predictions(model_1, model_2, object_detection_model, model_dir,  img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", rgb=False):
+def generate_predictions(model_1, model_2, model_dir="../lira/lira2/saved_networks", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", rects_archive_dir = "../lira/lira1/data/bounding_rects.pkl", classification_metadata_dir = "classification_metadata.pkl", rgb=False):
     """
     Arguments:
         model_1: String containing the filename of where our first model is stored, to be used for classifying type 1 images and obtaining predictions
         model_2: String containing the filename of where our second model is stored, to be used for classifying type 2 and 3 images and obtaining predictions
-        object_detection_model: String containing the filename of where our detection model is stored, to be used for detecting Type 1 Classifications in our images, 
-            and drawing bounding rectangles on them.
         model_dir: Directory of where all our models are stored. Will be used with `model_1`, `model_2`, and `object_detection_model` to obtain where the model is now located 
         img_archive_dir: a string filepath of the .h5 file where the images / greyscales are stored.
+        rects_archive_dir: a string filepath of the .pkl file where the detected rects are stored.
         predictions_archive_dir: a string filepath of the .h5 file where the model's predictions on the images/greyscales will be stored.
         classification_metadata_dir: a string filepath of the .pkl file where the model's classification strings and color key for each classification will be stored.
         rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
 
     Returns:
+        Loads bounding rectangles for detected Type 1 classifications,
         Goes through each image, 
-            Gets bounding rectangles on any detected Type 1 classifications,
         Then goes through all the individual subsections of size sub_hxsub_w in the image.
         If a subsection is inside a bounding rectangle, it is classified with the first classification model,
             otherwise it is classified with the second classification model.
@@ -91,8 +91,14 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
     """
     Write our classification - color matchup metadata for future use
     """
-    f = open(classification_metadata_dir, "w")
-    pickle.dump(([classifications, colors]), f)
+    with open(classification_metadata_dir, "w") as f:
+        pickle.dump(([classifications, colors]), f)
+
+    """
+    Load all our bounding rects
+    """
+    with open(rects_archive_dir, "r") as f:
+        rects = pickle.load(f)
 
     """
     Open our saved models
@@ -101,11 +107,6 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
     """
     classifier_1 = StaticConfig(model_1, model_dir)
     classifier_2 = StaticConfig(model_2, model_dir)
-
-    """
-    Open our saved object detection model
-    """
-    object_detector = ObjectDetector(object_detection_model, model_dir)
 
     """
     We open our image file, where each image is stored as a dataset with a key of it's index (e.g. '0', '1', ...)
@@ -178,10 +179,9 @@ def generate_predictions(model_1, model_2, object_detection_model, model_dir,  i
                 predictions = np.zeros((prediction_h*prediction_w, len(classifications)))
 
                 """
-                Get all bounding rectangles for type 1 classifications using our detection model, on our entire image.
-                    (parameters for this model are defined in the object_detection_handler.py file, because this is a very problem-specific addition to this file)
+                Get our bounding rectangles for this image
                 """
-                img_detected_bounding_rects = object_detector.generate_bounding_rects(img)
+                img_detected_bounding_rects = rects[img_i]
 
                 """
                 We only do any of this if we actually have some bounding rectangles on our image,
