@@ -73,7 +73,7 @@ def main(model_title, detection_model_title, img_archive_dir, predictions_archiv
     """
     Present detected objects/rects to user, so that they can correct any mistakes using our UI tool.
     """
-    #object_detection_editor
+    #object_detection_editor.edit_detected_objects(rect_h=640, rect_w=640, step_h=320, step_w=320, resize_factor=0.1, img_archive_dir="../lira/lira1/data/images.h5", rects_archive_dir="../lira/lira1/data/bounding_rects.pkl", dual_monitor=True)
 
     """
     From our saved model and images, generate new predictions.h5 file
