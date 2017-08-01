@@ -58,7 +58,8 @@ def main(rect_h=640,
     loop through and load each test case
     """
     for i in range(8):
-        #MAKE A PRINT STATEMENT FOR PROGRESS HERE
+        #MAKE A PRINT STATEMENT FOR PROGRESS HERE IN THE FULL IMPLEMENTATION
+        print "Image %i/%i" % (i, 
         print i
         img = cv2.imread("testcase_%i.png" % i)
 
@@ -69,7 +70,7 @@ def main(rect_h=640,
             and convert it back to a list
         """
         rects[i] = np.array(rects[i])
-        rects[i] = rects[i] * resize_factor * 0.1
+        rects[i] = rects[i] * resize_factor
         rects[i] = rects[i].astype(int)
         rects[i] = list(rects[i])
 
@@ -80,10 +81,10 @@ def main(rect_h=640,
         interactive_session.rects = rects[i]
 
         #These need to be casted to an int because we need to draw using these values
-        interactive_session.rect_h = int(rect_h * resize_factor * 0.1)
-        interactive_session.rect_w = int(rect_w * resize_factor * 0.1)
-        interactive_session.step_h = int(step_h * resize_factor * 0.1)
-        interactive_session.step_w = int(step_w * resize_factor * 0.1)
+        interactive_session.rect_h = int(rect_h * resize_factor)
+        interactive_session.rect_w = int(rect_w * resize_factor)
+        interactive_session.step_h = int(step_h * resize_factor)
+        interactive_session.step_w = int(step_w * resize_factor)
 
 
         #Finally start the session
@@ -107,7 +108,7 @@ def main(rect_h=640,
         """
         rects[i] = interactive_session.rects
         rects[i] = np.array(rects[i])
-        rects[i] = rects[i] * (1/(resize_factor*0.1))
+        rects[i] = rects[i] * (1/(resize_factor))
         rects[i] = rects[i].astype(int)
         rects[i] = list(rects[i])
 
@@ -128,15 +129,23 @@ def main(rect_h=640,
 
 
 
-
-
-#img = cv2.resize(img, (0,0), fx=resize_factor, fy=resize_factor)
 """
-for (x1,y1,x2,y2) in rects:
-    cv2.rectangle(img, (x1,y1),(x2,y2), (0,0,255), 2)
-#At this point image is ready for disp
-"""
-#disp_img_fullscreen(img)
-#now display rects on img with rectangle method
+Pre-conditions for calling this function
+    called after we have our images, AND RECTS.
+    we know where our object_detection_handler is.
+    We loop through images in our archive,
+    loop through their associated rects,
+    resize each image down by a constant amount resize_factor(in this case we'd set this to 0.1), 
+    resize each rects down by the same factor,
+    then go on with the rest of our code.
+    Each iteration of the loop we get the next image and rects.
+    then 
 
-main(rect_h=640, rect_w=640, step_h=320, step_w=320, resize_factor=1.0, img_archive_dir="../lira/lira1/data/images.h5", dual_monitor=True)
+So our pre conditions are that we have an .h5 for our images,
+    and a .pkl for our rects.
+So we need a script to put our images through for getting the detected objects.
+Probably should put this in our object_detection_handler, if we can.
+K we handled it, needed a new script for it.
+But anyways now we have both images and rects.
+"""
+main(rect_h=640, rect_w=640, step_h=320, step_w=320, resize_factor=0.1, img_archive_dir="../lira/lira1/data/images.h5", rects_archive_dir="../lira/lira1/data/bounding_rects.pkl", dual_monitor=True)
