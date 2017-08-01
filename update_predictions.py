@@ -2,8 +2,10 @@
 Meta file to make use of the major stages of LIRA in order to do:
     1. Raw Images/Samples -> Sample archive (get_archive.py)
     2. Sample archive -> New trained model (lira2.py / lira2_pre_transfer_learning.py)
-    3. Trained model & Greyscale archive -> Predictions Archive (generate_predictions.py and object_detection_handler.py)
-    4. Predictions Archive & Greyscale Archive -> Jpg predictions per image (generate_display_results.py)
+    3. Sample archive -> Detected Objects (generate_detected_objects.py)
+    4. Sample archive + Detected Objects -> Human-checked and Edited Detected Objects (object_detection_editor.py)
+    5. Trained model + Image archive + Detected Objects -> Predictions Archive (generate_predictions.py and object_detection_handler.py)
+    6. Predictions Archive + Image Archive -> Jpg predictions per image (generate_display_results.py)
 
 We have to set the directories again in the arguments because of where this file is positioned. When we have "../" something in one of our files for the directory, it is relative to the parent file calling that function. When that function is here, i.e. not in the normal place, it messes up stuff sometimes.
 
