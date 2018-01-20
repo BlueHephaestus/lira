@@ -1,7 +1,16 @@
-import object_detection_handler
+"""
+The main function for this file is generate_detected_objects(), so the bulk of the documentation for this file lies there.
+
+-Blake Edwards / Dark Element
+"""
+import numpy as np
+import pickle
 import h5py
 
-def generate_detected_objects(object_detection_model, model_dir, img_archive_dir="../lira/lira1/data/images.h5", rects_archive_dir="../lira/lira1/data/bounding_rects.pkl")
+import object_detection_handler
+from object_detection_handler import *
+
+def generate_detected_objects(object_detection_model, model_dir="../lira/lira2/saved_networks", img_archive_dir="../lira/lira1/data/images.h5", rects_archive_dir="../lira/lira1/data/bounding_rects.pkl"):
     """
     Arguments:
         object_detection_model: String containing the filename of where our detection model is stored, to be used for detecting Type 1 Classifications in our images, 
@@ -82,6 +91,8 @@ def generate_detected_objects(object_detection_model, model_dir, img_archive_dir
             Now that we have our img_rects (which is a np array, btw), add them to the rects with a simple append.
             """
             rects.append(img_rects)
+            if img_i >= 26:
+                break
 
     """
     Finally write all our detected rects to our rects_archive_dir

@@ -12,7 +12,6 @@ import numpy as np
 import img_handler
 from img_handler import *
 
-sys.path.append(os.path.expanduser("~/programming/machine_learning/tuberculosis_project/lira_live/"))
 import post_processing
 
 def generate_display_results(img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", classification_metadata_dir = "classification_metadata.pkl", results_dir = "results", alpha=.33, sub_h=80, sub_w=145, neighbor_weight=0.8, rgb=False):

@@ -81,15 +81,8 @@ def create_archive(data_dir, archive_dir, rgb=False):
                 img = cv2.imread(sample_path, 0)
 
             """
-            Pad our image with necessary zeros so that we never have partial edge problems with the far edges
-            """
-            img = pad_img(img.shape[0], img.shape[1], sub_h, sub_w, img, rgb=rgb)
-
-            """
             Archive img
             """
             hf.create_dataset(str(sample_i), data=img)
 
     print ""#flush formatting
-
-#create_archive("../data/test_slides", "../data/greyscales.h5", rgb=True)

@@ -1,6 +1,4 @@
 import os
-import pickle
-import numpy as np
 import keras
 from keras.models import load_model
 
@@ -12,31 +10,16 @@ class StaticConfig(object):
             model_dir: filepath of our model
 
         Returns:
-            Initialises class variables mean, std, and model.
-            We load the metadata for mean and std,
-            Then initialise the model using our Keras method.
+            We initialise the model using our Keras method, as a class variable.
         """
 
         """
-        Get our absolute filepaths for model and metadata from our filename and source filepath
+        Get our absolute filepaths for model from our filename and source filepath
         """
-        metadata_dir = "%s%s%s_metadata.pkl" % (model_dir, os.sep, model)
         model_dir = "%s%s%s.h5" % (model_dir, os.sep, model)
 
         """
-        Load metadata from .pkl file
-        """
-        with open(metadata_dir, 'rb') as f:
-            metadata = pickle.load(f)
-
-        """
-        Assign class attributes to necessary metadata
-        """
-        self.mean = metadata[0]
-        self.std = metadata[1]
-        
-        """
-        Finally, load our Keras model.
+        Load our Keras model.
         """
         self.model = load_model(model_dir)
 

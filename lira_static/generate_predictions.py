@@ -9,8 +9,10 @@ from static_config import StaticConfig
 import img_handler
 from img_handler import *
 
-import object_detection_handler
-from object_detection_handler import ObjectDetector
+"""
+TEMP
+"""
+import post_processing
 
 def generate_predictions(model_1, model_2, model_dir="../lira/lira2/saved_networks", img_archive_dir = "../lira/lira1/data/greyscales.h5", predictions_archive_dir = "../lira/lira1/data/predictions.h5", rects_archive_dir = "../lira/lira1/data/bounding_rects.pkl", classification_metadata_dir = "classification_metadata.pkl", rgb=False):
     """
@@ -170,6 +172,7 @@ def generate_predictions(model_1, model_2, model_dir="../lira/lira2/saved_networ
                 img_w = img.shape[1]
                 prediction_h = img_h // sub_h
                 prediction_w = img_w // sub_w
+                prediction_n = float(prediction_h*prediction_w)#So we don't compute this every time we want to print progress
 
                 """
                 Generate matrix to store predictions as we loop through our subsections, which we can later reshape to a 3-tensor.
@@ -306,10 +309,6 @@ def generate_predictions(model_1, model_2, model_dir="../lira/lira2/saved_networ
                     we write some blank space to clear the screen of any previous text before writing any of our progress indicator
                 """
                 sys.stdout.write("\r                                       ")
-                """
-                sys.stdout.write("\rIMAGE %i" % (img_i))
-                sys.stdout.flush()
-                """
 
                 """
                 We now loop through the sub references for each classifier by mini batch size, 
@@ -319,7 +318,10 @@ def generate_predictions(model_1, model_2, model_dir="../lira/lira2/saved_networ
                     divisible (with no remainder) by our mini batch size
                 """
                 for sub_i in range(0, classifier_1_sub_references.shape[0], mb_n):
-                    sys.stdout.write("\r%.2f" % (float(sub_i)/classifier_1_sub_references.shape[0]))
+                    """
+                    Print progress, using fancy formatting to avoid multiplying by 100 each time to print a percentage
+                    """
+                    sys.stdout.write("\rImage {} -> {:.2%} Complete".format(img_i, sub_i/(prediction_n)))
                     sys.stdout.flush()
 
                     """
@@ -362,7 +364,11 @@ def generate_predictions(model_1, model_2, model_dir="../lira/lira2/saved_networ
                 Now we do the same for the other classifier
                 """
                 for sub_i in range(0, classifier_2_sub_references.shape[0], mb_n):
-                    sys.stdout.write("\r%.2f" % (float(sub_i)/classifier_2_sub_references.shape[0]))
+                    """
+                    Print progress, using fancy formatting to avoid multiplying by 100 each time to print a percentage. 
+                    We also add the # of classifier_1_sub_references to get the correct total percentage progress, continued from our previous loop.
+                    """
+                    sys.stdout.write("\rImage {} -> {:.2%} Complete".format(img_i, (sub_i+classifier_1_sub_references.shape[0])/(prediction_n)))
                     sys.stdout.flush()
 
                     """
@@ -406,6 +412,12 @@ def generate_predictions(model_1, model_2, model_dir="../lira/lira2/saved_networ
                 predictions = np.reshape(predictions, (img_h//sub_h, img_w//sub_w, len(classifications)))
 
                 """
+                TEMP
+                We then denoise our predictions, now that all the predictions are loaded for this image.
+                """
+                predictions = post_processing.denoise_predictions(predictions, .8)
+
+                """
                 Then we store it in our dataset
                 """
                 predictions_hf.create_dataset(str(img_i), data=predictions)
@@ -415,6 +427,10 @@ def generate_predictions(model_1, model_2, model_dir="../lira/lira2/saved_networ
                 """
                 end_time = time.time() - start_time
                 if print_times:
-                    print "Took %f seconds (%f minutes) to execute on image %i." % (end_time, end_time/60.0, img_i)
+                    #\n added to ensure proper print formatting with sys.stdout between loops
+                    print "\nTook %f seconds (%f minutes) to execute on image %i." % (end_time, end_time/60.0, img_i)
+                else:
+                    #Ensure proper print formatting with sys.stdout between loops
+                    print ""
 
 

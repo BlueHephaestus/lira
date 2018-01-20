@@ -13,46 +13,31 @@ import cv2
 def get_subsections(sub_h, sub_w, img, rgb=False):
     """
     Arguments:
-        sub_h, sub_w: The size of each subsection that our image will be divided into when finished
-        img: a np array of shape (h, w, ...) where h % sub_h == 0 and w % sub_w == 0
+        sub_h, sub_w: The size of each subsection to be obtianed from our img argument.
+        img: a np array of shape (h, w, 3) or (h, w) depending on the value of rgb
         rgb: Boolean for if we are handling rgb images (True), or grayscale images (False).
 
     Returns:
         Loops through the img by row and column according to the sizes of our subsection,
-            and places (sub_h, sub_w) size subsections into the resulting subs array.
-        Returns a subs array of shape (h//sub_h, w//sub_w, sub_h, sub_w), 
-            a matrix where each entry is the subsection at that location in the image.
+            and returns a (sub_h, sub_w) size subsection each iteration.
+        This function is a generator, and returns the subsequent subsection each iteration,
+            in the order left-right, top-bottom.
     """
     """
-    Initialize our subs array to size (h//sub_h, w//sub_w, sub_h, sub_w) for storing our subsections
+    Use python's step in the range function to loop through our rows and columns by subsection height and width.
+    We do img.shape[0]-sub_h because we will be obtaining the sub via row:row+sub_h and col:col_sub_w
     """
-    if rgb:
-        subs = np.zeros(shape=(img.shape[0]//sub_h, img.shape[1]//sub_w, sub_h, sub_w, 3))
-    else:
-        subs = np.zeros(shape=(img.shape[0]//sub_h, img.shape[1]//sub_w, sub_h, sub_w))
-
-    """
-    Use python's step in the range function to loop through our rows and columns by subsection height and width
-    """
-    for row in range(0, img.shape[0], sub_h):
-        for col in range(0, img.shape[1], sub_w):
+    for row in range(0, img.shape[0]-sub_h, sub_h):
+        for col in range(0, img.shape[1]-sub_w, sub_w):
             """
             Get the subsection specified by our loops
             """
             sub = img[row:row+sub_h, col:col+sub_w]
 
             """
-            Get the subsection-relative numbers. We don't need to bother with edge handling, because we already do so before this gets called.
+            Yield this subsection
             """
-            row_i = row/sub_h
-            col_i = col/sub_w
-
-            """
-            Place our subsection at our new row_i and col_i in our subs array
-            """
-            subs[row_i][col_i] = sub
-
-    return subs
+            yield sub
 
 def get_next_subsection(row_i, col_i, img_h, img_w, sub_h, sub_w, img, img_divide_factor):
     """
@@ -149,9 +134,9 @@ def add_weighted_overlay(img, overlay, alpha, rgb=False):
     overlay = overlay.astype(np.uint8)
 
     """
-    Add our overlay to the img
+    Add our overlay to the img and return the result
     """
-    return cv2.addWeighted(overlay, alpha, img, 1-alpha, 0, img)
+    return cv2.addWeighted(overlay, alpha, img, 1-alpha, 0)
 
 def clear_dir(dir):
     """
