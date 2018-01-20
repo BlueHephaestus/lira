@@ -1,0 +1,205 @@
+dataset = Dataset()
+    init all attributes
+    load all images
+
+dataset.detect_type_ones()
+    detects type 1 lesions, puts it in our dataset
+    suppresses type 1 detections, updates the one in our dataset
+    saves data 
+    shows results to humans via ui
+    saves data
+    
+dataset.predict_grids()
+    predicts a grid, puts it in our dataset
+      saves this grid by itself
+    shows results to humans via ui
+      saves the data by itself
+
+#dataset.obtain_data_stats()#<-- not yet implemented / optional
+/*
+Not actually needed, each of them saves by themselves.
+dataset.save()
+    saves all data to intermediate
+    saves output stats if it exists
+*/
+
+
+Dataset()
+
+  init()
+  Images()
+
+  detect_type_ones()
+  TypeOneDetections()
+
+  predict_grids()
+  PredictionGrids()
+  
+
+TypeOne UI changes
+  arrow keys for navigation
+  some final way to ask "are you sure" and exit
+    have q button for this
+
+  once they press q, query on prompt to see if they would like to continue?
+  We can have it autosave on the next/previous and quit actions
+  On q:
+    "Your edits have been saved. Would you like to continue? Once you continue, your edits can not be undone. [Y/N]: "
+
+    We decided we're not going to let them go between phases, as this would be such a fucking pain.
+      Leaving it up to them to ensure they do it right the first time.
+
+    if Y
+      go to generate predictions
+    if N
+      sys.exit
+
+      how do we resume progress for a user...
+        we can save it all in a json
+
+        {
+          "type_one_finished_editing": False
+          "type_one_image": 3
+          "prediction_grid_finished_editing": False
+          "prediction_grid_image": 0
+        }
+
+        OR
+        {
+          "type_one_finished_editing": True
+          "type_one_image": n-1
+          "prediction_grid_finished_editing": False
+          "prediction_grid_image": 5
+        }
+
+        OR
+        {
+          "type_one_finished_editing": True
+          "type_one_image": n-1
+          "prediction_grid_finished_editing": True
+          "prediction_grid_image": n-1
+        }
+
+        its that simple. we store this in data/user_progress/{uid}.json
+          our dataset object loads it in init
+          and updates it
+          it checks this before executing the main functions
+          e.g. detect_type_ones
+            if finished editing
+              detect
+            else 
+              start from type_one_image
+            
+UserProgress
+  uid
+  has dictionary
+  can easily load it into memory
+  when does it save? only on an exit?
+  it costs .04 to read+write, that's cheap enough and used cheap enough that im' ok with it.
+    treat it like the other guys
+
+
+
+We're going to accept the loss and assume that the chance of two users trying to load and save simultaneously will not occur.
+So no Session Progress, we just load the images once for every user, and for every user
+  when starting we check to see if they are in the middle of a classification, and if they are, then we don't 
+  reload the images since the user already has them, and presumably didn't quit midway though.
+
+  What if they did quit midway through?
+
+  We ask them in the beginning "would you like to reset your classification progress and restart from the beginning? (This will re-load all images)"
+  That handles the midway problem, and now we only save new archives if we are just starting on a user, which is very uncommon. So I think our chances are good.
+
+  So every user starts by getting queried:
+    if Y
+      Images(reload=True)
+    if N (else)
+      if editing_in_progress(uid)
+        Images(reload=False)
+      else
+        Images(reload=True)
+        
+  
+  
+  editing_in_progress(uid)
+
+
+TypeOneDetections.generate()
+  1
+    resize img down
+    detect bounding rects on img
+    suppress bounding rects
+    resize bounding rects up 
+
+  2
+    resize img down
+    detect bounding rects
+      for window in img
+        get prediction
+        if positive
+          append rect coordinates
+
+    suppress bounding rects by cluster size
+      theirs is recursive but we can do much better by doing something iterative or simpler
+
+      list of list of rects, the lists of rects being clusters?
+      we have a list of rectangles, we need to get a list of clusters.
+
+      input number of rects is same as output number of rects
+
+      Should we make an adjacency list? That would require n^2 though
+
+      checked_rects = {}
+      not checked = not in checked_rects
+      for rect not checked in rects:
+        append to checked rects
+        for check_rect not rect and not checked in rects:
+          append to checked rects
+          if check rect connected to rect
+            append new cluster
+
+      we could do the rock paper scissors tournament idea?
+
+      def get_rect_clusters(rects):
+        connected = {}
+        clusters = []
+        for rect in rects:
+          if rect not in connected
+            clusters.append(get_rect_cluster(rect), connected)
+            
+      def get_rect_cluster(rect, connected)
+        cluster = [rect]
+        #after this function we will be done with rect
+        connected.add(rect)
+        for candidate_rect not rect and not in connected#rects that aren't part of a cluster yet
+          if candidate_rect connected to rect
+            cluster.append(rect)
+            cluster.extend(get_rect_cluster(rect), connected)#subclusters are part of this cluster
+            
+            
+      
+
+      
+    resize bounding rects up 
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
