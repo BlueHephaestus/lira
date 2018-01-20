@@ -16,7 +16,6 @@ class Images(object):
         self.img_dir = "../../Input Images/"#where image files are stored
         self.archive_dir = "../data/images/"#where we will create and store the .npy archive files
         self.archives = []#where we will store list of full filepaths for each archive in our archive_dir
-        self.max_shape = [0,0,0]#maximum dimensions of all images
 
         if restart:
             """
@@ -30,11 +29,7 @@ class Images(object):
                 #Read src, Check max shape, Create archive at dst, add dst to archive list
                 src_fpath = os.path.join(self.img_dir, fname)
                 dst_fpath = os.path.join(self.archive_dir, "{}.npy".format(i))
-                img = cv2.imread(src_fpath)
-                for i, dim in enumerate(img.shape):
-                    if dim > self.max_shape[i]:
-                        self.max_shape[i] = dim
-                np.save(dst_fpath, img)
+                np.save(dst_fpath, cv2.imread(src_fpath))
                 self.archives.append(dst_fpath)
 
             sys.stdout.flush()
@@ -57,3 +52,14 @@ class Images(object):
 
     def __len__(self):
         return len(self.archives)
+
+    def max_shape(self):
+        max_shape = [0,0,0]#maximum dimensions of all images
+
+        #load with mmap mode so we can just get the shape
+        for archive in self.archives:
+            img = np.load(archive, mmap_mode='r')
+            for i, dim in enumerate(img.shape):
+                if dim > max_shape[i]:
+                    max_shape[i] = dim
+        return max_shape
