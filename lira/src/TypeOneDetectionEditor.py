@@ -41,7 +41,7 @@ class TypeOneDetectionEditor(object):
 
         #Img + Event listeners
         self.canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img))#Literally because tkinter can't handle references properly and needs this.
-        self.canvas.create_image(0, 0, image=self.canvas.image, anchor="nw")
+        self.canvas_image_config = self.canvas.create_image(0, 0, image=self.canvas.image, anchor="nw")
         self.canvas.focus_set()
         self.canvas.bind("<Button 1>", self.mouse_click)#left
         self.canvas.bind("<Button 3>", self.mouse_click)#right
@@ -156,15 +156,32 @@ class TypeOneDetectionEditor(object):
         if self.dataset.progress["type_ones_image"] > 0:
             #Change current editing image
             self.dataset.progress["type_ones_image"]-=1
+
+            #Reload self.img and self.detections
             self.reload_img_and_detections()
+
+            #Reload image displayed on canvas and detections displayed on canvas with self.img and self.detections
+            self.canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img))#Literally because tkinter can't handle references properly and needs this.
+            self.canvas.itemconfig(self.canvas_image_config, image=self.canvas.image)
+            self.canvas.delete("selection")
+            self.canvas.delete("detection")
+            self.update_detections()
 
     def right_arrow_key_press(self, event):
         #Move to the image with index i+1, unless i = img #-1, in which case we do nothing. AKA the next image.
-
-        if self.dataset.progress["type_ones_image"] > 0:
+        if self.dataset.progress["type_ones_image"] < len(self.dataset.imgs)-1:
             #Change current editing image
             self.dataset.progress["type_ones_image"]+=1
+
+            #Reload self.img and self.detections
             self.reload_img_and_detections()
+
+            #Reload image displayed on canvas and detections displayed on canvas with self.img and self.detections
+            self.canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img))#Literally because tkinter can't handle references properly and needs this.
+            self.canvas.itemconfig(self.canvas_image_config, image=self.canvas.image)
+            self.canvas.delete("selection")
+            self.canvas.delete("detection")
+            self.update_detections()
 
     def q_key_press(self, event):
         #(Quit) We close the editor and prompt them for if they are finished with editing or not. If they're not finished we do nothing.
@@ -190,9 +207,11 @@ class TypeOneDetectionEditor(object):
         self.dataset.type_one_detections.after_editing[self.dataset.progress["type_ones_image"]] = np.array(self.detections)/self.editor_resize_factor
 
     def reload_img_and_detections(self):
-        #Updates the self.img and self.detections attributes
+        #Updates the self.img and self.detections attributes. 
         self.img = cv2.resize(self.dataset.imgs[self.dataset.progress["type_ones_image"]], (0,0), 
                 fx=self.editor_resize_factor,
                 fy=self.editor_resize_factor)
         self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)#We need to convert so it will display the proper colors
         self.detections = list(self.dataset.type_one_detections.after_editing[self.dataset.progress["type_ones_image"]]*self.editor_resize_factor)#Make list so we can append
+
+
