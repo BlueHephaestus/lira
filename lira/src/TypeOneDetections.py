@@ -5,6 +5,7 @@ from keras.models import load_model
 
 from base import *
 from EditingDataset import EditingDataset
+from TypeOneDetectionEditor import TypeOneDetectionEditor
 
 class TypeOneDetections(object):
     def __init__(self, dataset, uid):
@@ -70,8 +71,7 @@ class TypeOneDetections(object):
         print("")
 
     def edit(self):
-        """
-        displays, edits, saves
+        #Displays detections on all images and allows the user to edit them until they are finished. The editor handles the saving of edits.
+        editor = TypeOneDetectionEditor(self.dataset)
+        #editor.start_editing()
 
-        """
-        pass
