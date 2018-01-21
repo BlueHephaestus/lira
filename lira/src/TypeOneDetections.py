@@ -46,7 +46,7 @@ class TypeOneDetections(object):
                 #If classifier predicts positive (we use nparray to add one dimension to make 4d instead of 3d)
                 if np.argmax(self.detection_classifier.predict(np.array([window]))):
                     #Add window as detection in format [x1, y1, x2, y2]
-                    detections.append([col_i, row_i, col_i+self.detection_window_shape[1], row_i+self.detection_window_shape[0] ])
+                    detections.append([col_i, row_i, col_i+self.detection_window_shape[1], row_i+self.detection_window_shape[0]])
 
             if self.detection_suppression:
                 #suppress detections for this image based on rectangle cluster size

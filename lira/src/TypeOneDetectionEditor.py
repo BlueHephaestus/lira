@@ -8,17 +8,16 @@ from gui_base import *
 class TypeOneDetectionEditor(object):
     def __init__(self, dataset):
         #Initialize our editor on this user's last edited image
+        self.dataset = dataset
 
         #Editor Parameters
         self.editor_resize_factor = 0.1#amount to resize images for display
-        self.rect_h = 64#Height of each rectangle when displayed
-        self.rect_w = 64#Width of each rectangle when displayed
-        self.step_h = 32#Height of each step when selecting rectangles
-        self.step_w = 32#Width of each step when selecting rectangles
+        self.rect_h = int(self.dataset.type_one_detections.detection_window_shape[0]*(self.editor_resize_factor/self.dataset.type_one_detections.detection_resize_factor))#Height of each rectangle when displayed
+        self.rect_w = int(self.dataset.type_one_detections.detection_window_shape[1]*(self.editor_resize_factor/self.dataset.type_one_detections.detection_resize_factor))#Width of each rectangle when displayed
+        self.step_h = int(self.rect_h/2.)#Height of each step when selecting rectangles
+        self.step_w = int(self.rect_w/2.)#Width of each step when selecting rectangles
 
         #Img + Detections
-        self.dataset = dataset
-
         self.img = cv2.resize(self.dataset.imgs[self.dataset.progress["type_ones_image"]], (0,0), 
                 fx=self.editor_resize_factor,
                 fy=self.editor_resize_factor)
@@ -54,6 +53,8 @@ class TypeOneDetectionEditor(object):
         self.canvas.bind("<B3-Motion>", self.mouse_move)#right
         self.canvas.bind("<ButtonRelease-1>", self.mouse_left_release)
         self.canvas.bind("<ButtonRelease-3>", self.mouse_right_release)
+        self.canvas.bind_all("<Button-4>", self.mouse_scroll)#Scrollwheel for entire editor
+        self.canvas.bind_all("<Button-5>", self.mouse_scroll)#Scrollwheel for entire editor
         self.canvas.bind("<Key>", self.key_press)
         self.canvas.pack(side=LEFT)
 
@@ -71,7 +72,7 @@ class TypeOneDetectionEditor(object):
 
         #Get coordinates for a rectangle outline with this point as both top-left and bot-right of the rectangle and draw it
         outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = get_outline_rectangle_coordinates(self.selection_x1, self.selection_y1, self.selection_x1, self.selection_y1, self.step_h, self.step_w)
-        canvas.create_rectangle(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2, fill='', outline="darkRed", width=2, tags="bulk_select_rect")
+        self.canvas.create_rectangle(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2, fill='', outline="darkRed", width=2, tags="selection")
 
     def mouse_move(self, event):
         #Do the same thing for left/right move, move the selection rect.
@@ -89,6 +90,14 @@ class TypeOneDetectionEditor(object):
         #Our rectangle selections can only be made up of small rectangles of size step_h*step_w, so that we lock on to areas in these step sizes to allow easier rectangle selection.
         pass
 
+    def mouse_scroll(self, event):
+        if event.num == 4:
+            #scroll down
+            self.canvas.yview_scroll(-1, "units")
+        elif event.num == 5:
+            #scroll up
+            self.canvas.yview_scroll(1, "units")
+
     def key_press(self, event):
         #Either q - quit, left arrow - previous image, or right arrow - next image.
         pass
@@ -98,6 +107,5 @@ class TypeOneDetectionEditor(object):
         #Put all our detections for the current image as rectangles on the current canvas image. 
         self.canvas.delete("detection")
         for detection in self.detections:
-            print(detection)
             self.canvas.create_rectangle(detection[0], detection[1], detection[2], detection[3], fill='', outline="red", width=2, tags="detection")
 
