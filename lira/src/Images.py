@@ -39,6 +39,9 @@ class Images(object):
             for fname in fnames(self.archive_dir):
                 self.archives.append(os.path.join(self.archive_dir, fname))
 
+        #Regardless of this we sort the result, since it depends on the nondeterministic ordering of the os.walk generator in fnames()
+        self.archives = sorted(self.archives)
+
     def __iter__(self):
         for archive in self.archives:
             img = np.load(archive)
