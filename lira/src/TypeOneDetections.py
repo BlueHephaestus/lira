@@ -61,8 +61,9 @@ class TypeOneDetections(object):
             #Convert to np array and resize detections to match original image, and cast to int.
             detections = (np.array(detections)/self.detection_resize_factor).astype(int)
 
-            #Save these detections to the before editing dataset.
+            #Save these detections to both the before and after editing datasets, since we initialize them to be the same.
             self.before_editing[i] = detections
+            self.after_editing[i] = detections
 
             #Now that we've finished generating, we've started editing, so we update user progress.
             self.dataset.progress["type_ones_started_editing"] = True
