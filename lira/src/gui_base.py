@@ -48,3 +48,13 @@ def get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, step_h
 
     return outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2
 
+def detection_in_rect(detection, rect, rect_h, rect_w):
+    #Check if the given detection is inside our rect.
+    detection_x1, detection_y1, detection_x2, detection_y2 = detection
+    rect_x1, rect_y1, rect_x2, rect_y2 = rect
+
+    #So that we only check if a rect's top-left corner is inside our outline rect, not the entire rect. I've found this to be more intuitive.
+    rect_x2 -= rect_w
+    rect_y2 -= rect_h
+
+    return ((rect_x1 <= detection_x1 and detection_x1 <= rect_x2) and (rect_y1 <= detection_y1 and detection_y1 <= rect_y2))
