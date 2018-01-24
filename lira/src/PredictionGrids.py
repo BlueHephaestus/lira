@@ -63,7 +63,6 @@ class PredictionGrids(object):
                 detections = detections.astype(np.uint16)
                 for i, detection in enumerate(detections):
                     classifier_reference[detection[1]:detection[3], detection[0]:detection[2]] = True
-            continue
 
             #Then reshape back to 1d so we can check each subsection against it easily
             classifier_reference = np.reshape(classifier_reference, (prediction_n,))
