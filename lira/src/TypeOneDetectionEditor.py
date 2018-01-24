@@ -1,3 +1,4 @@
+import sys
 import cv2
 
 from tkinter import *
@@ -189,6 +190,9 @@ class TypeOneDetectionEditor(object):
         if input("Your type one detection editing session has been ended. Would you like to continue? Once you continue, your edits can not be undone. [Y\\N]: ").upper()=='Y':
             #save this user's progress as finished editing so that we will stop the type one detection editing phase for this user.
             self.dataset.progress["type_ones_finished_editing"] = True
+        else:
+            #Otherwise they wanna quit so quit
+            sys.exit("Exiting...")
 
     def key_press(self, event):
         #Hub for all key press events.
@@ -203,8 +207,8 @@ class TypeOneDetectionEditor(object):
         for detection in self.detections:
             self.canvas.create_rectangle(detection[0], detection[1], detection[2], detection[3], fill='', outline="red", width=2, tags="detection")
 
-        #Convert our local detections copy back into a np array, scale it back up, and update the stored detections.
-        self.dataset.type_one_detections.after_editing[self.dataset.progress["type_ones_image"]] = np.array(self.detections)/self.editor_resize_factor
+        #Convert our local detections copy back into a np array, scale it back up, cast it to int, and update the stored detections.
+        self.dataset.type_one_detections.after_editing[self.dataset.progress["type_ones_image"]] = (np.array(self.detections)/self.editor_resize_factor).astype(int)
 
     def reload_img_and_detections(self):
         #Updates the self.img and self.detections attributes. 
