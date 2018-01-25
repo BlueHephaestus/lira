@@ -1,9 +1,12 @@
+#For unit testing the PredictionGrids.generate() method.
 import time
 
 import cv2
+import numpy as np
 
 from Dataset import Dataset
 from classify import classify
+from base import *
 
 #Classify then get images for the resulting predictions
 start = time.time()
@@ -25,7 +28,7 @@ for i, (img, prediction_grid) in enumerate(zip(dataset.imgs, dataset.prediction_
     img = cv2.resize(img, (0,0), fx=fx, fy=fy)
    
     #Argmax our predictions
-    predictions = np.argmax(predictions, axis=2)
+    prediction_grid = np.argmax(prediction_grid, axis=2)
 
     #Make overlay to store prediction rectangles on before overlaying on top of image
     prediction_overlay = np.zeros_like(img)

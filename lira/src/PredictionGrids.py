@@ -6,6 +6,7 @@ from keras.models import load_model
 from base import *
 from EditingDataset import EditingDataset
 from ImageSubsections import ImageSubsections
+from post_processing import denoise_predictions
 
 class PredictionGrids(object):
     def __init__(self, dataset, uid):
@@ -22,7 +23,8 @@ class PredictionGrids(object):
         self.class_n = 7
         self.sub_h = 80
         self.sub_w = 145
-        self.mb_n = 42#Mini batch size
+        self.mb_n = 24#Optimal Mini batch size
+        self.denoising_weight = 0.8#Amount to denoise, 0 <= denoising_weight <= 1. Higher means more denoising.
 
         #Classifiers
         self.type_one_classifier = load_model("../classifiers/type_one_classifier.h5")#For type-one classification
@@ -114,9 +116,19 @@ class PredictionGrids(object):
                 prediction_grid[non_type_one_subsection_batch_indices, 0] = non_type_one_predictions[:, 0]
                 prediction_grid[non_type_one_subsection_batch_indices, 2:5] = non_type_one_predictions[:, 1:]
 
-            #Reshape prediction grid to 2d now that we have all predictions, and save
-            self.before_editing[img_i] = np.reshape(prediction_grid, (prediction_h, prediction_w, self.class_n))
-            #self.after_editing[img_i] = np.reshape(prediction_grid, (prediction_h, prediction_w, self.class_n))
+
+            #Reshape prediction grid to 2d now that we have all predictions, and denoise them.
+            prediction_grid = np.reshape(prediction_grid, (prediction_h, prediction_w, self.class_n))
+            prediction_grid = denoise_predictions(prediction_grid, self.denoising_weight)
+
+            #Once denoised, save the predictions
+            self.before_editing[img_i] = prediction_grid
+            self.after_editing[img_i] = prediction_grid
+
+            #TEMPORARY
+            if img_i == 2:
+                break
+            #TEMPORARY
 
             sys.stdout.flush()
             print("")
