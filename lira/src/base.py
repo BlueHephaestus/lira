@@ -60,4 +60,6 @@ def windows(img, step_size, win_shape):
             if row_i + win_shape[0] <= img.shape[0] and col_i + win_shape[1] <= img.shape[1]:
                 yield (row_i, col_i, img[row_i:row_i + win_shape[0], col_i:col_i + win_shape[1]])
 
-
+def weighted_overlay(img, overlay, alpha):
+    #Overlays our overlay onto our img with alpha transparency, and returns the resulting combined img
+    return cv2.addWeighted(overlay.astype(np.uint8), alpha, img, 1-alpha, 0)
