@@ -126,12 +126,17 @@ class PredictionGrids(object):
             self.after_editing[img_i] = prediction_grid
 
             #TEMPORARY
-            if img_i == 2:
+            if img_i == 0:
                 break
             #TEMPORARY
 
-            sys.stdout.flush()
-            print("")
+        sys.stdout.flush()
+        print("")
+
+        #Now that we've finished generating, we've started editing, so we update user progress.
+        self.dataset.progress["prediction_grids_started_editing"] = True
+
+        
 
 
 

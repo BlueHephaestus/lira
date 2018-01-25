@@ -9,13 +9,15 @@ from classify import classify
 from base import *
 
 #Classify then get images for the resulting predictions
-start = time.time()
-dataset = classify()
-print(time.time() - start)
+dataset = Dataset()
+dataset.detect_type_ones()
+dataset.progress["prediction_grids_started_editing"] = False#Change this back so that we can keep unit testing even with user progress fully implemented
+dataset.predict_grids()
 
 #Loop through predictions and images, creating a resized image for each of them.
 resize_factor = 1/30
 color_key = [(255, 0, 255), (0, 0, 255), (0, 255, 0), (200, 200, 200), (0, 255, 255), (255, 0, 0), (244,66,143)]
+alpha = 0.33
 for i, (img, prediction_grid) in enumerate(zip(dataset.imgs, dataset.prediction_grids.before_editing)):
     #Since our image and predictions would be slightly misalgned from each other due to rounding,
     #We recompute the sub_h and sub_w and img resize factors to make them aligned.
@@ -29,6 +31,9 @@ for i, (img, prediction_grid) in enumerate(zip(dataset.imgs, dataset.prediction_
    
     #Argmax our predictions
     prediction_grid = np.argmax(prediction_grid, axis=2)
+    print(prediction_grid)
+    print(prediction_grid.shape)
+    print(np.all(prediction_grid==prediction_grid[0,0]))
 
     #Make overlay to store prediction rectangles on before overlaying on top of image
     prediction_overlay = np.zeros_like(img)
