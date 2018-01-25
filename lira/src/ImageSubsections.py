@@ -1,3 +1,5 @@
+import numpy as np
+
 class ImageSubsections(object):
     """
     Given an image and a subsection height and width, this class 
@@ -14,17 +16,19 @@ class ImageSubsections(object):
         #Loop through subsections of size sub_hxsub_w in our image.
         for row_i in range(0, self.img.shape[0]-self.sub_h, self.sub_h):
             for col_i in range(0, self.img.shape[1]-self.sub_w, self.sub_w):
-                yield img[row_i:row_i+sub_h, col_i:col_i+sub_w]
+                yield self.img[row_i:row_i+self.sub_h, col_i:col_i+self.sub_w]
 
-    def __getitem__(self, i):
-        row_i = i // self.img.shape[1]
-        col_i = i % self.img.shape[1]
-        return img[row_i:row_i+sub_h, col_i:col_i+sub_w]
+    def __getitem__(self, indices):
+        #Handle indexing with lists only, since that's the only type of indexing we use with this class.
+        #We return a 4d np array 
+        row_indices = indices // (self.img.shape[1]//self.sub_w)
+        col_indices = indices % (self.img.shape[1]//self.sub_w)
+        return np.array([self.img[row_i:row_i+self.sub_h, col_i:col_i+self.sub_w] for (row_i, col_i) in zip(row_indices, col_indices)])
 
     def __setitem__(self, i, data):
         row_i = i // self.img.shape[1]
         col_i = i % self.img.shape[1]
-        img[row_i:row_i+sub_h, col_i:col_i+sub_w] = data
+        self.img[row_i:row_i+self.sub_h, col_i:col_i+self.sub_w] = data
 
     def __len__(self):
         return (self.img.shape[0]//self.sub_h)*(self.img.shape[1]//self.sub_w)
