@@ -1,8 +1,14 @@
+import time
+
+import cv2
+
 from Dataset import Dataset
 from classify import classify
 
 #Classify then get images for the resulting predictions
+start = time.time()
 dataset = classify()
+print(time.time() - start)
 
 #Loop through predictions and images, creating a resized image for each of them.
 resize_factor = 1/30
