@@ -23,12 +23,12 @@ class ImageSubsections(object):
         #We return a 4d np array 
         row_indices = indices // (self.img.shape[1]//self.sub_w)
         col_indices = indices % (self.img.shape[1]//self.sub_w)
-        return np.array([self.img[row_i:row_i+self.sub_h, col_i:col_i+self.sub_w] for (row_i, col_i) in zip(row_indices, col_indices)])
 
-    def __setitem__(self, i, data):
-        row_i = i // self.img.shape[1]
-        col_i = i % self.img.shape[1]
-        self.img[row_i:row_i+self.sub_h, col_i:col_i+self.sub_w] = data
+        #We scale them up from subsection resolution to match our image resolution now that we have the 2d cords.
+        row_indices = row_indices * self.sub_h
+        col_indices = col_indices * self.sub_w
+
+        return np.array([self.img[row_i:row_i+self.sub_h, col_i:col_i+self.sub_w] for (row_i, col_i) in zip(row_indices, col_indices)])
 
     def __len__(self):
         return (self.img.shape[0]//self.sub_h)*(self.img.shape[1]//self.sub_w)
