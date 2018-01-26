@@ -43,7 +43,7 @@ class PredictionGrids(object):
             prediction_n = (img.shape[0]//self.sub_h)*(img.shape[1]//self.sub_w)
             
             #Where predictions are stored for image. Starts as 1d for easier reference
-            prediction_grid = np.zeros((prediction_n, self.class_n), dtype=np.uint8)
+            prediction_grid = np.zeros((prediction_n, self.class_n), dtype=np.float32)
             
             #Class to interface with the image as if it were a vector of subsections of size self.sub_hxself.sub_w, without actually dividing the image as doing so would require too much storage.
             img_subsections = ImageSubsections(img, self.sub_h, self.sub_w)
@@ -124,11 +124,6 @@ class PredictionGrids(object):
             #Once denoised, save the predictions
             self.before_editing[img_i] = prediction_grid
             self.after_editing[img_i] = prediction_grid
-
-            #TEMPORARY
-            if img_i == 0:
-                break
-            #TEMPORARY
 
         sys.stdout.flush()
         print("")
