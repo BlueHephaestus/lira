@@ -1,5 +1,7 @@
 #Collection of miscellaneous helpers for the LIRA project.
 import os
+import cv2
+import numpy as np
 
 def fnames(dir):
     """
@@ -63,3 +65,10 @@ def windows(img, step_size, win_shape):
 def weighted_overlay(img, overlay, alpha):
     #Overlays our overlay onto our img with alpha transparency, and returns the resulting combined img
     return cv2.addWeighted(overlay.astype(np.uint8), alpha, img, 1-alpha, 0)
+
+def is_float(x):
+    try:
+        float(x)
+        return True
+    except ValueError:
+        return False
