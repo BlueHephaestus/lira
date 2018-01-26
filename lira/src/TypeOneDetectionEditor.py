@@ -42,7 +42,7 @@ class TypeOneDetectionEditor(object):
 
         #Img + Event listeners
         self.canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img))#Literally because tkinter can't handle references properly and needs this.
-        self.canvas_image_config = self.canvas.create_image(0, 0, image=self.canvas.image, anchor="nw")
+        self.canvas_image_config = self.canvas.create_image(0, 0, image=self.canvas.image, anchor="nw")#So we can change the image later
         self.canvas.focus_set()
         self.canvas.bind("<Button 1>", self.mouse_click)#left
         self.canvas.bind("<Button 3>", self.mouse_click)#right
