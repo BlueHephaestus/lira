@@ -131,13 +131,5 @@ class PredictionGrids(object):
         #Now that we've finished generating, we've started editing, so we update user progress.
         self.dataset.progress["prediction_grids_started_editing"] = True
 
-        
-
-
-
-
-
-
-
     def edit(self):
         pass
