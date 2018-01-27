@@ -6,6 +6,7 @@ from keras.models import load_model
 from base import *
 from EditingDataset import EditingDataset
 from ImageSubsections import ImageSubsections
+from PredictionGridEditor import PredictionGridEditor
 from post_processing import denoise_predictions
 
 class PredictionGrids(object):
@@ -121,9 +122,9 @@ class PredictionGrids(object):
             prediction_grid = np.reshape(prediction_grid, (prediction_h, prediction_w, self.class_n))
             prediction_grid = denoise_predictions(prediction_grid, self.denoising_weight)
 
-            #Once denoised, save the predictions
-            self.before_editing[img_i] = prediction_grid
-            self.after_editing[img_i] = prediction_grid
+            #Once denoised, save the predictions as argmaxed since we no longer need the full output
+            self.before_editing[img_i] = np.argmax(prediction_grid, axis=2)
+            self.after_editing[img_i] = np.argmax(prediction_grid, axis=2)
 
         sys.stdout.flush()
         print("")
@@ -132,4 +133,5 @@ class PredictionGrids(object):
         self.dataset.progress["prediction_grids_started_editing"] = True
 
     def edit(self):
-        pass
+        #Displays predictions on all images and allows the user to edit them until they are finished. The editor handles the saving of edits.
+        editor = PredictionGridEditor(self.dataset)
