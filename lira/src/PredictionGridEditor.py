@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 from tkinter import *
 from PIL import ImageTk, Image
+from threading import Thread
 
 from gui_base import *
 from base import *
@@ -191,8 +192,8 @@ class PredictionGridEditor(object):
 
 
     def mouse_right_release(self, event):
-        #Remove all detections from the area in this rectangle selection, Then update the detections.
-        #Our rectangle selections can only be made up of small rectangles of size step_h*step_w, so that we lock on to areas in these step sizes to allow easier rectangle selection.
+        #Set the selection rect and open up the selected area in a separate window at full resolution.
+        #Our rectangle selections can only be made up of small rectangles of size sub_h*sub_w, so that we lock on to areas in these step sizes to allow easier rectangle selection.
 
         #Get coordinates on canvas for the end of this selection, (x2, y2)
         self.selection_x2, self.selection_y2 = get_canvas_coordinates(event)
@@ -201,18 +202,16 @@ class PredictionGridEditor(object):
         rect_x1, rect_y1, rect_x2, rect_y2 = get_rectangle_coordinates(self.selection_x1, self.selection_y1, self.selection_x2, self.selection_y2)
 
         #Get coordinates for a new rectangle outline with this new rectangle
-        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, self.step_h, self.step_w)
+        outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2 = get_outline_rectangle_coordinates(rect_x1, rect_y1, rect_x2, rect_y2, self.sub_h, self.sub_w)
 
-        #Delete old selection rectangle along with all detection rectangles in this new selection rectangle.
-        self.canvas.delete("selection")
+        #Delete old selection rectangle and draw new finalized selection rectangle at this position
+        self.main_canvas.delete("view_selection")
+        self.main_canvas.create_rectangle(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2, fill='', outline="blue", width=2, tags="view_selection")
+
+        #In a new thread, open up a separate window and display the full-resolution version of the selection
+        Thread(target=self.display_image_section_thread, args=(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2,)).start()
+
         
-        for i, detection in reversed(list(enumerate(self.detections))):
-            if detection_in_rect(detection, [outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2], self.rect_h, self.rect_w):
-                del self.detections[i]
-
-        #Finally update all detections
-        self.update_detections()
-
     def mouse_scroll(self, event):
         if event.num == 4:
             #scroll down
@@ -259,10 +258,10 @@ class PredictionGridEditor(object):
 
         #Since our image and predictions would be slightly misalgned from each other due to rounding,
         #We compute the fx and fy img resize factors according to sub_h and sub_w to make them aligned.
-        fy = (self.prediction_grid.shape[0]*self.sub_h)/self.img.shape[0]
-        fx = (self.prediction_grid.shape[1]*self.sub_w)/self.img.shape[1]
+        self.fy = (self.prediction_grid.shape[0]*self.sub_h)/self.img.shape[0]
+        self.fx = (self.prediction_grid.shape[1]*self.sub_w)/self.img.shape[1]
         
-        self.img = cv2.resize(self.img, (0,0), fx=fx, fy=fy)#Resize img
+        self.img = cv2.resize(self.img, (0,0), fx=self.fx, fy=self.fy)#Resize img
 
         #Make overlay to store prediction rectangles on before overlaying on top of image
         self.prediction_overlay = np.zeros_like(self.img)
@@ -275,5 +274,27 @@ class PredictionGridEditor(object):
 
         self.img = weighted_overlay(self.img, self.prediction_overlay, self.editor_transparency_factor)#Overlay prediction grid onto image
         self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)#We need to convert so it will display the proper colors
+
+    def display_image_section_thread(self, x1, y1, x2, y2):
+        #Given coordinates for an image section on the current resized image, get the coordinates for an image section on the full-resolution / non-resized image,
+        #Then get this section on the full resolution image and display it on a new window.
+
+        #Get updated coordinates
+        x1 = int(x1/self.fx)
+        y1 = int(y1/self.fy)
+        x2 = int(x2/self.fx)
+        y2 = int(y2/self.fy)
+
+        #Get image section
+        self.img_section = self.dataset.imgs[self.dataset.progress["prediction_grids_image"]][y1:y2, x1:x2]
+        
+        #Display image section and suppress stderr because opencv prints lots of errors when displaying an image in a thread, due to problems with opencv.
+        cv2.imshow("Full Resolution Image Section",self.img_section)
+        cv2.waitKey(1)
+        #cv2.destroyAllWindows()
+        cv2.destroyWindow("Full Resolution Image Section")
+
+        #Once user closes it, we remove the view_selection rectangle.
+        self.main_canvas.delete("view_selection")
 
 

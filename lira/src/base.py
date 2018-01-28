@@ -72,3 +72,32 @@ def is_float(x):
         return True
     except ValueError:
         return False
+
+class suppress_stderr(object):
+    """
+    A context manager for doing a "deep suppression" of stderr in 
+    Python, i.e. will suppress all print, even if the print originates in a 
+    compiled C/Fortran sub-function.
+       This will not suppress raised exceptions, since exceptions are printed
+    to stderr just before a script exits, and after the context manager has
+    exited (at least, I think that is why it lets exceptions through).      
+
+    Credit goes to: https://stackoverflow.com/questions/11130156/suppress-stdout-stderr-print-from-python-functions
+        They're a lifesaver.
+    """
+    def __init__(self):
+        # Open a null file
+        self.null_fd =  os.open(os.devnull,os.O_RDWR)
+        # Save the actual stderr (2) file descriptor.
+        self.save_fd = os.dup(2)
+
+    def __enter__(self):
+        # Assign the null pointer to stderr.
+        os.dup2(self.null_fd,2)
+
+    def __exit__(self, *_):
+        # Re-assign the real stderr back to (2)
+        os.dup2(self.save_fd,2)
+        # Close file descriptor
+        os.close(self.null_fd)
+        os.close(self.save_fd)
