@@ -91,6 +91,18 @@ class PredictionGridEditor(object):
         self.main_canvas.bind("<Left>", self.left_arrow_key_press)
         self.main_canvas.bind("<Right>", self.right_arrow_key_press)
         self.main_canvas.bind("<Key>", self.key_press)
+
+        #TEMPORARY
+        import random
+        #c = [(255, 0, 255), (0, 0, 255), (0, 255, 0), (200, 200, 200), (0, 255, 255), (255, 0, 0), (244,66,143)]
+        c = ["#FF00FF", "#0000FF", "#00FF00", "#C8C8C8", "#00FF00", "#FF0000", "#F4428F"]
+        for x in range(20, 20**2, 20):
+            for y in range(20, 20**2, 20):
+                r = c[random.randint(0, len(c)-1)]
+                self.main_canvas.create_rectangle(x, y, x+20, y+20, fill=r, stipple="gray50")
+
+
+
         self.main_canvas.pack(side=TOP)
 
         #Side Canvas
@@ -325,6 +337,8 @@ class PredictionGridEditor(object):
         self.img = weighted_overlay(self.img, self.prediction_overlay, self.editor_transparency_factor)#Overlay prediction grid onto image
         self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)#We need to convert so it will display the proper colors
 
+
+
     def display_image_section(self, x1, y1, x2, y2):
         #Given coordinates for an image section on the current resized image, get the coordinates for an image section on the full-resolution / non-resized image,
         #Then get this section on the full resolution image and display it on a new window.
@@ -346,6 +360,17 @@ class PredictionGridEditor(object):
         canvas = Canvas(frame, bg="#000000", width=self.img_section.shape[1], height=self.img_section.shape[0])
         canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img_section))#Literally because tkinter can't handle references properly and needs this.
         canvas.create_image(0, 0, image=canvas.image, anchor="nw")
+        """
+        canvas.create_rectangle(200, 175, 400, 325, fill="blue", stipple="gray75")
+        canvas.create_rectangle(200, 375, 400, 525, fill="blue", stipple="gray50")
+        canvas.create_rectangle(200, 575, 400, 725, fill="blue", stipple="gray25")
+        canvas.create_rectangle(200, 775, 400, 925, fill="blue", stipple="gray12")
+
+        canvas.create_rectangle(400, 175, 600, 325, fill="yellow", stipple="gray75")
+        canvas.create_rectangle(400, 375, 600, 525, fill="yellow", stipple="gray50")
+        canvas.create_rectangle(400, 575, 600, 725, fill="yellow", stipple="gray25")
+        canvas.create_rectangle(400, 775, 600, 925, fill="yellow", stipple="gray12")
+        """
         canvas.pack()
 
 
