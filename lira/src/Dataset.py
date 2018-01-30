@@ -7,15 +7,23 @@ from PredictionGrids import PredictionGrids
 class Dataset(object):
     #To store all our subdatasets throughout our pipeline and manage progress throughout pipeline
 
-    def __init__(self):
-        #Get uid
-        self.uid = input("Input your Unique/User ID for this Dataset: ")
+    def __init__(self, uid=None, restart=None):
+        #Get uid if needed
+        if uid != None:
+            self.uid = uid
+        else:
+            self.uid = input("Input your Unique/User ID for this Dataset: ")
 
         #Initialize user progress to existing progress if it exists and default starting progress otherwise
         self.progress = UserProgress(self.uid)
 
-        #Check whether to reload the imgs archive, and possibly reset our progress
-        if input("Would you like to reset your classification progress and restart from the beginning? (This will re-load all images) [Y\\N]: ").upper()=="Y":
+        #Check whether to reload the imgs archive, and possibly restart our progress
+        if restart != None:
+            self.restart = restart
+        else:
+            self.restart = input("Would you like to reset your classification progress and restart from the beginning? (This will re-load all images) [Y\\N]: ").upper()=="Y"
+
+        if self.restart:
             #User wants to restart, both imgs and progress
             self.imgs = Images(restart=True)
             self.progress.restart()
