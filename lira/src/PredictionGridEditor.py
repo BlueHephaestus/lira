@@ -208,9 +208,8 @@ class PredictionGridEditor(object):
         self.main_canvas.delete("view_selection")
         self.main_canvas.create_rectangle(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2, fill='', outline="blue", width=2, tags="view_selection")
 
-        #In a new thread, open up a separate window and display the full-resolution version of the selection
-        Thread(target=self.display_image_section_thread, args=(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2,)).start()
-
+        #Open up a separate window and display the full-resolution version of the selection
+        self.display_image_section(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2)
         
     def mouse_scroll(self, event):
         if event.num == 4:
@@ -275,7 +274,7 @@ class PredictionGridEditor(object):
         self.img = weighted_overlay(self.img, self.prediction_overlay, self.editor_transparency_factor)#Overlay prediction grid onto image
         self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)#We need to convert so it will display the proper colors
 
-    def display_image_section_thread(self, x1, y1, x2, y2):
+    def display_image_section(self, x1, y1, x2, y2):
         #Given coordinates for an image section on the current resized image, get the coordinates for an image section on the full-resolution / non-resized image,
         #Then get this section on the full resolution image and display it on a new window.
 
@@ -288,13 +287,16 @@ class PredictionGridEditor(object):
         #Get image section
         self.img_section = self.dataset.imgs[self.dataset.progress["prediction_grids_image"]][y1:y2, x1:x2]
         
-        #Display image section and suppress stderr because opencv prints lots of errors when displaying an image in a thread, due to problems with opencv.
-        cv2.imshow("Full Resolution Image Section",self.img_section)
-        cv2.waitKey(1)
-        #cv2.destroyAllWindows()
-        cv2.destroyWindow("Full Resolution Image Section")
+        #Display image section on a new tkinter window
+        top = Toplevel()
+        top.title("Full Resolution Image Section")
+        frame = Frame(top, bd=5, relief=SUNKEN)
+        frame.grid(row=0,column=0)
+        canvas = Canvas(frame, bg="#000000", width=self.img_section.shape[1], height=self.img_section.shape[0])
+        canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img_section))#Literally because tkinter can't handle references properly and needs this.
+        canvas.create_image(0, 0, image=canvas.image, anchor="nw")
+        canvas.pack()
 
-        #Once user closes it, we remove the view_selection rectangle.
-        self.main_canvas.delete("view_selection")
+
 
 
