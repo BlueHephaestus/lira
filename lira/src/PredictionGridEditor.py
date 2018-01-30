@@ -91,18 +91,6 @@ class PredictionGridEditor(object):
         self.main_canvas.bind("<Left>", self.left_arrow_key_press)
         self.main_canvas.bind("<Right>", self.right_arrow_key_press)
         self.main_canvas.bind("<Key>", self.key_press)
-
-        #TEMPORARY
-        import random
-        #c = [(255, 0, 255), (0, 0, 255), (0, 255, 0), (200, 200, 200), (0, 255, 255), (255, 0, 0), (244,66,143)]
-        c = ["#FF00FF", "#0000FF", "#00FF00", "#C8C8C8", "#00FF00", "#FF0000", "#F4428F"]
-        for x in range(20, 20**2, 20):
-            for y in range(20, 20**2, 20):
-                r = c[random.randint(0, len(c)-1)]
-                self.main_canvas.create_rectangle(x, y, x+20, y+20, fill=r, stipple="gray50")
-
-
-
         self.main_canvas.pack(side=TOP)
 
         #Side Canvas
@@ -135,6 +123,12 @@ class PredictionGridEditor(object):
         #Keeping track of which mouse button is currently held down
         self.left_mouse = False
         
+        #So that if the user tries to insert classifications before they've selected any we will not do anything
+        self.prediction_rect_x1 = 0
+        self.prediction_rect_y1 = 0
+        self.prediction_rect_x2 = 0
+        self.prediction_rect_y2 = 0
+
         #Predictions and start
         self.window.mainloop()
 
@@ -203,7 +197,6 @@ class PredictionGridEditor(object):
         self.prediction_rect_y1 = int(outline_rect_y1/self.sub_h)
         self.prediction_rect_x2 = int(outline_rect_x2/self.sub_w)
         self.prediction_rect_y2 = int(outline_rect_y2/self.sub_h)
-
 
     def mouse_right_release(self, event):
         #Set the selection rect and open up the selected area in a separate window at full resolution.
@@ -279,12 +272,36 @@ class PredictionGridEditor(object):
             self.window.title(self.title)
 
     def classification_key_press(self, event):
-        #Change currently selected area to this classification (if selected)
+        #Change currently selected area to this classification. 
+        #We update the prediction grid, but we also update the display by extracting the selected section and updating the overlay of only that section, because updating the entire image is very expensive and should be avoided.
         #First get the classification index
-        i = int(event.char)
+        i = int(event.char)-1
 
-        #Delete the selection
+        #Update predictions referenced by our current classification_selection rectangle to this index and get the prediction grid section that was updated
+        self.prediction_grid[self.prediction_rect_y1:self.prediction_rect_y2, self.prediction_rect_x1:self.prediction_rect_x2] = i
+        self.prediction_grid_section = self.prediction_grid[self.prediction_rect_y1:self.prediction_rect_y2, self.prediction_rect_x1:self.prediction_rect_x2]
 
+        #Load the resized image section (without any overlay) referenced by our current classification_selection rectangle (no need to cast to int b/c int*int = int)
+        self.img_section = self.resized_img[self.prediction_rect_y1*self.sub_h:self.prediction_rect_y2*self.sub_h, self.prediction_rect_x1*self.sub_w:self.prediction_rect_x2*self.sub_w]
+
+        #Create new overlay on this resized image section with the prediction grid section
+        self.prediction_overlay_section = np.zeros_like(self.img_section)
+        for row_i, row in enumerate(self.prediction_grid_section):
+            for col_i, col in enumerate(row):
+                color = self.color_key[col]
+                #draw rectangles of the resized sub_hxsub_w size on it
+                cv2.rectangle(self.prediction_overlay_section, (col_i*self.sub_w, row_i*self.sub_h), (col_i*self.sub_w+self.sub_w, row_i*self.sub_h+self.sub_h), color, -1)
+
+        #Combine the overlay section and the image section
+        self.img_section = weighted_overlay(self.img_section, self.prediction_overlay_section, self.editor_transparency_factor)
+        self.img_section = cv2.cvtColor(self.img_section, cv2.COLOR_BGR2RGB)#We need to convert so it will display the proper colors
+
+        #Insert the now-updated image section back into the full image
+        self.img[self.prediction_rect_y1*self.sub_h:self.prediction_rect_y2*self.sub_h, self.prediction_rect_x1*self.sub_w:self.prediction_rect_x2*self.sub_w] = self.img_section
+
+        #And finally update the canvas
+        self.main_canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img))#Literally because tkinter can't handle references properly and needs this.
+        self.main_canvas.itemconfig(self.main_canvas_image_config, image=self.main_canvas.image)
 
 
     def q_key_press(self, event):
@@ -298,7 +315,7 @@ class PredictionGridEditor(object):
         else:
             #Check if a classification key
             try:
-                if (1 <= int(c) and int(c) <= len(self.classifications)):
+                if (1 <= int(c) and int(c) <= len(self.classification_key)):
                     #Is a valid classification key, call handler
                     self.classification_key_press(event)
             except:
@@ -324,6 +341,7 @@ class PredictionGridEditor(object):
         self.fx = (self.prediction_grid.shape[1]*self.sub_w)/self.img.shape[1]
         
         self.img = cv2.resize(self.img, (0,0), fx=self.fx, fy=self.fy)#Resize img
+        self.resized_img = self.img#Save this so we don't have to resize later
 
         #Make overlay to store prediction rectangles on before overlaying on top of image
         self.prediction_overlay = np.zeros_like(self.img)
@@ -360,17 +378,6 @@ class PredictionGridEditor(object):
         canvas = Canvas(frame, bg="#000000", width=self.img_section.shape[1], height=self.img_section.shape[0])
         canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img_section))#Literally because tkinter can't handle references properly and needs this.
         canvas.create_image(0, 0, image=canvas.image, anchor="nw")
-        """
-        canvas.create_rectangle(200, 175, 400, 325, fill="blue", stipple="gray75")
-        canvas.create_rectangle(200, 375, 400, 525, fill="blue", stipple="gray50")
-        canvas.create_rectangle(200, 575, 400, 725, fill="blue", stipple="gray25")
-        canvas.create_rectangle(200, 775, 400, 925, fill="blue", stipple="gray12")
-
-        canvas.create_rectangle(400, 175, 600, 325, fill="yellow", stipple="gray75")
-        canvas.create_rectangle(400, 375, 600, 525, fill="yellow", stipple="gray50")
-        canvas.create_rectangle(400, 575, 600, 725, fill="yellow", stipple="gray25")
-        canvas.create_rectangle(400, 775, 600, 925, fill="yellow", stipple="gray12")
-        """
         canvas.pack()
 
 
