@@ -233,18 +233,6 @@ class PredictionGridEditor(object):
         pass
 
     #The following functions are helper functions specific to this editor. All other GUI helpers are in the gui_base.py file.
-    """
-    def update_predictions(self):
-        #Put all our predictions for the current image as colored rectangles on the current canvas image. 
-        #DO WE NOT NEED THIS ANYMORE???
-        self.canvas.delete("prediction")
-        for detection in self.detections:
-            self.canvas.create_rectangle(detection[0], detection[1], detection[2], detection[3], fill='', outline="red", width=2, tags="detection")
-
-        #Convert our local detections copy back into a np array, scale it back up, cast it to int, and update the stored detections.
-        self.dataset.type_one_detections.after_editing[self.dataset.progress["type_ones_image"]] = (np.array(self.detections)/self.editor_resize_factor).astype(int)
-    """
-
     def reload_img_and_predictions(self):
         #Updates the self.img and self.predictions attributes. 
 
