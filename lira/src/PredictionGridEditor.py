@@ -266,12 +266,34 @@ class PredictionGridEditor(object):
             #Indicate finished loading
             self.window.title(self.title)
 
+    def classification_key_press(self, event):
+        #Change currently selected area to this classification (if selected)
+        #First get the classification index
+        i = int(event.char)
+
+        #Delete the selection
+
+
+
     def q_key_press(self, event):
         pass
 
     def key_press(self, event):
+        #Hub for all key press events.
+        c = event.char.upper()
+        if c == "Q":
+            self.q_key_press(event)
+        else:
+            #Check if a classification key
+            try:
+                if (1 <= int(c) and int(c) <= len(self.classifications)):
+                    #Is a valid classification key, call handler
+                    self.classification_key_press(event)
+            except:
+                #Not an int
+                pass
+
         #Classification keys should remove the rectangle
-        pass
 
     #The following functions are helper functions specific to this editor. All other GUI helpers are in the gui_base.py file.
     def reload_img_and_predictions(self):
