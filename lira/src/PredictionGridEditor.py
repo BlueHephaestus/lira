@@ -4,7 +4,6 @@ import cv2
 import numpy as np
 from tkinter import *
 from PIL import ImageTk, Image
-from threading import Thread
 
 from gui_base import *
 from base import *
@@ -47,6 +46,7 @@ class PredictionGridEditor(object):
         #Parameters
         self.classification_key = ["Healthy Tissue", "Type I - Caseum", "Type II", "Empty Slide", "Type III", "Type I - Rim", "Unknown/Misc."]
         self.color_key = [(255, 0, 255), (0, 0, 255), (0, 255, 0), (200, 200, 200), (0, 255, 255), (255, 0, 0), (244,66,143)]
+        self.title = "LIRA Prediction Grid Editing"
 
         #Img + Predictions
         self.reload_img_and_predictions()
@@ -72,6 +72,9 @@ class PredictionGridEditor(object):
         vbar.pack(side=RIGHT,fill=Y)
         vbar.config(command=self.main_canvas.yview)
         self.main_canvas.config(xscrollcommand=hbar.set, yscrollcommand=vbar.set)
+
+        #Title
+        self.window.title(self.title)
 
         #Img + Event listeners
         self.main_canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img))#Literally because tkinter can't handle references properly and needs this.
@@ -121,7 +124,6 @@ class PredictionGridEditor(object):
         self.left_mouse = False
         
         #Predictions and start
-        #self.update_predictions()
         self.window.mainloop()
 
     #The following functions are event handlers for our editing window. 
@@ -220,10 +222,49 @@ class PredictionGridEditor(object):
             self.main_canvas.yview_scroll(1, "units")
 
     def left_arrow_key_press(self, event):
-        pass
+        #Move to the image with index i-1, unless i = 0, in which case we do nothing. AKA the previous image.
+
+        if self.dataset.progress["prediction_grids_image"] > 0:
+            #Change current editing image
+            self.dataset.progress["prediction_grids_image"]-=1
+
+            #Indicate Loading
+            self.window.title("{} - Loading...".format(self.title))
+            self.window.update()
+
+            #Reload self.img and self.prediction_grid
+            self.reload_img_and_predictions()
+
+            #Reload image displayed on canvas and predictions displayed on canvas with self.img and self.prediction_grids
+            self.main_canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img))#Literally because tkinter can't handle references properly and needs this.
+            self.main_canvas.itemconfig(self.main_canvas_image_config, image=self.main_canvas.image)
+            self.main_canvas.delete("view_selection")
+            self.main_canvas.delete("classification_selection")
+
+            #Indicate finished loading
+            self.window.title(self.title)
 
     def right_arrow_key_press(self, event):
-        pass
+        #Move to the image with index i+1, unless i = img #-1, in which case we do nothing. AKA the next image.
+        if self.dataset.progress["prediction_grids_image"] < len(self.dataset.imgs)-1:
+            #Change current editing image
+            self.dataset.progress["prediction_grids_image"]+=1
+
+            #Indicate Loading
+            self.window.title("{} - Loading...".format(self.title))
+            self.window.update()
+
+            #Reload self.img and self.prediction_grid
+            self.reload_img_and_predictions()
+
+            #Reload image displayed on canvas and predictions displayed on canvas with self.img and self.prediction_grids
+            self.main_canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img))#Literally because tkinter can't handle references properly and needs this.
+            self.main_canvas.itemconfig(self.main_canvas_image_config, image=self.main_canvas.image)
+            self.main_canvas.delete("view_selection")
+            self.main_canvas.delete("classification_selection")
+
+            #Indicate finished loading
+            self.window.title(self.title)
 
     def q_key_press(self, event):
         pass
