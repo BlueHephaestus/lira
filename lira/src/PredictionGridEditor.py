@@ -230,6 +230,9 @@ class PredictionGridEditor(object):
         #Move to the image with index i-1, unless i = 0, in which case we do nothing. AKA the previous image.
 
         if self.dataset.progress["prediction_grids_image"] > 0:
+            #Save current predictions
+            self.dataset.prediction_grids.after_editing[self.dataset.progress["prediction_grids_image"]] = self.prediction_grid
+
             #Change current editing image
             self.dataset.progress["prediction_grids_image"]-=1
 
@@ -252,6 +255,9 @@ class PredictionGridEditor(object):
     def right_arrow_key_press(self, event):
         #Move to the image with index i+1, unless i = img #-1, in which case we do nothing. AKA the next image.
         if self.dataset.progress["prediction_grids_image"] < len(self.dataset.imgs)-1:
+            #Save current predictions
+            self.dataset.prediction_grids.after_editing[self.dataset.progress["prediction_grids_image"]] = self.prediction_grid
+
             #Change current editing image
             self.dataset.progress["prediction_grids_image"]+=1
 
@@ -281,6 +287,8 @@ class PredictionGridEditor(object):
         self.prediction_grid[self.prediction_rect_y1:self.prediction_rect_y2, self.prediction_rect_x1:self.prediction_rect_x2] = i
         self.prediction_grid_section = self.prediction_grid[self.prediction_rect_y1:self.prediction_rect_y2, self.prediction_rect_x1:self.prediction_rect_x2]
 
+        #Save updated predictions
+        self.dataset.prediction_grids.after_editing[self.dataset.progress["prediction_grids_image"]] = self.prediction_grid
         #Load the resized image section (without any overlay) referenced by our current classification_selection rectangle (no need to cast to int b/c int*int = int)
         self.img_section = self.resized_img[self.prediction_rect_y1*self.sub_h:self.prediction_rect_y2*self.sub_h, self.prediction_rect_x1*self.sub_w:self.prediction_rect_x2*self.sub_w]
 
@@ -305,7 +313,14 @@ class PredictionGridEditor(object):
 
 
     def q_key_press(self, event):
-        pass
+        #(Quit) We close the editor and prompt them for if they are finished with editing or not. If they're not finished we do nothing.
+        self.window.destroy()
+        if input("Your prediction grid editing session has been ended. Would you like to continue? Once you continue, your edits can not be undone. [Y\\N]: ").upper()=='Y':
+            #save this user's progress as finished editing so that we will stop the prediction grid editing phase for this user.
+            self.dataset.progress["prediction_grids_finished_editing"] = True
+        else:
+            #Otherwise they wanna quit so quit
+            sys.exit("Exiting...")
 
     def key_press(self, event):
         #Hub for all key press events.
