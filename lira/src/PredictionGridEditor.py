@@ -151,7 +151,6 @@ class PredictionGridEditor(object):
             self.left_click=False
             self.main_canvas.create_rectangle(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2, fill='', outline="darkBlue", width=2, tags="view_selection")
 
-
     def mouse_move(self, event):
         #Move the selection rect.
         #Our rectangle selections can only be made up of small rectangles of size sub_h*sub_w, so that we lock on to areas in these step sizes to allow easier rectangle selection.
@@ -173,7 +172,6 @@ class PredictionGridEditor(object):
         else:
             self.main_canvas.delete("view_selection")
             self.main_canvas.create_rectangle(outline_rect_x1, outline_rect_y1, outline_rect_x2, outline_rect_y2, fill='', outline="darkBlue", width=2, tags="view_selection")
-
 
     def mouse_left_release(self, event):
         #Set the selection rect and save its location for referencing our prediction grid.
@@ -310,7 +308,6 @@ class PredictionGridEditor(object):
         #And finally update the canvas
         self.main_canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img))#Literally because tkinter can't handle references properly and needs this.
         self.main_canvas.itemconfig(self.main_canvas_image_config, image=self.main_canvas.image)
-
 
     def q_key_press(self, event):
         #(Quit) We close the editor and prompt them for if they are finished with editing or not. If they're not finished we do nothing.

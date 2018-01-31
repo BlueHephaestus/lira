@@ -18,6 +18,8 @@ class UserProgress(object):
           "prediction_grids_started_editing": False,#Equivalent to finished_generating
           "prediction_grids_finished_editing": False,
           "prediction_grids_image": 0,
+          "prediction_grids_transparency_factor": 0.33,#Default value
+          "prediction_grids_resize_factor": 0.1,#Default value
         }
 
         #Get archive fpath

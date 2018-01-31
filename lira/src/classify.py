@@ -7,3 +7,5 @@ def classify():
     dataset.predict_grids()
     return dataset
 
+classify()
+
