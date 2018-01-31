@@ -1,5 +1,5 @@
 #Collection of miscellaneous helpers for the LIRA project.
-import os
+import os, shutil
 import cv2
 import numpy as np
 
@@ -72,4 +72,21 @@ def is_float(x):
         return True
     except ValueError:
         return False
+
+def clear_dir(d, f=None):
+    #Removes all files and subdirectories from directory d if they match the given condition f
+    for fname in os.listdir(d):
+        fpath = os.path.join(d, fname)
+        try: 
+            if f!=None:
+                #ensure the condition is true otherwise skip
+                if not f(fpath):
+                    continue
+
+            if os.path.isfile(fpath):
+                os.unlink(fpath)
+            elif os.path.isdir(fpath): 
+                shutil.rmtree(fpath)
+        except:
+            pass
 

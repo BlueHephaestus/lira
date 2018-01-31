@@ -22,6 +22,9 @@ class Images(object):
             Loop through all images in img_dir, create enumerated archives for them in archive_dir,
                 and add each enumerated archive filepath to our archives list.
             """
+            #Delete all files in the archive directory if restarting
+            clear_dir(self.archive_dir)
+
             for i, fname in enumerate(fnames(self.img_dir)):
                 #Progress indicator
                 sys.stdout.write("\rArchiving Image {}/{}...".format(i, len([fname for fname in fnames(self.img_dir)])-1))

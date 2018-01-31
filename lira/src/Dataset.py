@@ -27,19 +27,22 @@ class Dataset(object):
             #User wants to restart, both imgs and progress
             self.imgs = Images(restart=True)
             self.progress.restart()
+            self.type_one_detections = TypeOneDetections(self, self.uid, restart=True)
+            self.prediction_grids = PredictionGrids(self, self.uid, restart=True)
+
         else:
             #User does not want to restart. Defaults to this if they didn't put in "Y"
             if self.progress.editing_started():
                 #If they were already editing these images, resume progress
                 self.imgs = Images(restart=False)
+                self.type_one_detections = TypeOneDetections(self, self.uid, restart=False)
+                self.prediction_grids = PredictionGrids(self, self.uid, restart=False)
             else:
                 #If they weren't already editing these images (i.e. they haven't started editing), load the images.
                 #No need to restart our progress since it's already the initial value.
                 self.imgs = Images(restart=True)
-
-        #Initialize remaining data subsets
-        self.type_one_detections = TypeOneDetections(self, self.uid)#Initialized empty
-        self.prediction_grids = PredictionGrids(self, self.uid)#Initialized empty
+                self.type_one_detections = TypeOneDetections(self, self.uid, restart=True)
+                self.prediction_grids = PredictionGrids(self, self.uid, restart=True)
 
     def detect_type_ones(self):
         #Detect type ones, suppress them, and allow human-in-the-loop editing.

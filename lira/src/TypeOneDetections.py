@@ -8,16 +8,17 @@ from EditingDataset import EditingDataset
 from TypeOneDetectionEditor import TypeOneDetectionEditor
 
 class TypeOneDetections(object):
-    def __init__(self, dataset, uid):
+    def __init__(self, dataset, uid, restart=False):
         self.dataset = dataset#for reference, do not modify
         self.imgs = self.dataset.imgs
         self.uid = uid
+        self.restart = restart
 
         #Our two attributes for detections before and after editing.
         self.archive_dir_before_editing = "../data/type_one_detections_before_editing/"#Where we'll store the .npy files for our detections before editing
         self.archive_dir_after_editing = "../data/type_one_detections_after_editing/"#Where we'll store the .npy files for our detections after editing
-        self.before_editing = EditingDataset(self.dataset, self.uid, self.archive_dir_before_editing)
-        self.after_editing = EditingDataset(self.dataset, self.uid, self.archive_dir_after_editing)
+        self.before_editing = EditingDataset(self.dataset, self.uid, self.archive_dir_before_editing, restart=self.restart)
+        self.after_editing = EditingDataset(self.dataset, self.uid, self.archive_dir_after_editing, restart=self.restart)
 
         #Detection parameters and classifier
         self.detection_resize_factor = 0.2
