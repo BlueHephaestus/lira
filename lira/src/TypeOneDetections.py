@@ -30,7 +30,7 @@ class TypeOneDetections(object):
 
     def generate(self):
         #Generates detections and suppresses them for each image, saving each detection array to self.before_editing.
-        sys.setrecursionlimit(4000)#Set limit larger due to recursive nature of this program
+        sys.setrecursionlimit(8000)#Set limit larger due to recursive nature of this program
 
         #Generate for each image
         for i, img in enumerate(self.imgs):
