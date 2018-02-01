@@ -13,6 +13,7 @@ class PredictionGrids(object):
     def __init__(self, dataset, uid, restart=False):
         self.dataset = dataset#for reference, do not modify
         self.uid = uid
+        self.restart = restart
 
         #Our two attributes for predictions before and after editing.
         self.archive_dir_before_editing = "../data/prediction_grids_before_editing/"#Where we'll store the .npy files for our predictions before editing
