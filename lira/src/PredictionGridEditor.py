@@ -74,7 +74,7 @@ class PredictionGridEditor(object):
         self.main_canvas.config(xscrollcommand=hbar.set, yscrollcommand=vbar.set)
 
         #Title
-        self.window.title(self.title)
+        self.window.title("{} - Image {}/{}".format(self.title, self.dataset.progress["prediction_grids_image"]+1, len(self.dataset.prediction_grids.before_editing)))
 
         #Img + Event listeners
         self.main_canvas.image = ImageTk.PhotoImage(Image.fromarray(self.img))#Literally because tkinter can't handle references properly and needs this.
@@ -235,7 +235,7 @@ class PredictionGridEditor(object):
             self.dataset.progress["prediction_grids_image"]-=1
 
             #Indicate Loading
-            self.window.title("{} - Loading...".format(self.title))
+            self.window.title("{} - Image {}/{} - Loading...".format(self.title, self.dataset.progress["prediction_grids_image"]+1, len(self.dataset.prediction_grids.before_editing)))
             self.window.update()
 
             #Reload self.img and self.prediction_grid
@@ -248,7 +248,7 @@ class PredictionGridEditor(object):
             self.main_canvas.delete("classification_selection")
 
             #Indicate finished loading
-            self.window.title(self.title)
+            self.window.title("{} - Image {}/{}".format(self.title, self.dataset.progress["prediction_grids_image"]+1, len(self.dataset.prediction_grids.before_editing)))
 
     def right_arrow_key_press(self, event):
         #Move to the image with index i+1, unless i = img #-1, in which case we do nothing. AKA the next image.
@@ -260,7 +260,7 @@ class PredictionGridEditor(object):
             self.dataset.progress["prediction_grids_image"]+=1
 
             #Indicate Loading
-            self.window.title("{} - Loading...".format(self.title))
+            self.window.title("{} - Image {}/{} - Loading...".format(self.title, self.dataset.progress["prediction_grids_image"]+1, len(self.dataset.prediction_grids.before_editing)))
             self.window.update()
 
             #Reload self.img and self.prediction_grid
@@ -273,7 +273,7 @@ class PredictionGridEditor(object):
             self.main_canvas.delete("classification_selection")
 
             #Indicate finished loading
-            self.window.title(self.title)
+            self.window.title("{} - Image {}/{}".format(self.title, self.dataset.progress["prediction_grids_image"]+1, len(self.dataset.prediction_grids.before_editing)))
 
     def classification_key_press(self, event):
         #Change currently selected area to this classification. 
@@ -312,7 +312,7 @@ class PredictionGridEditor(object):
     def q_key_press(self, event):
         #(Quit) We close the editor and prompt them for if they are finished with editing or not. If they're not finished we do nothing.
         self.window.destroy()
-        if input("Your prediction grid editing session has been ended. Would you like to continue? Once you continue, your edits can not be undone. [Y\\N]: ").upper()=='Y':
+        if input("Your prediction grid editing session has been ended. Would you like to save and continue to the next section? Once you continue, your edits can not be undone. [Y\\N]: ").upper()=='Y':
             #save this user's progress as finished editing so that we will stop the prediction grid editing phase for this user.
             self.dataset.progress["prediction_grids_finished_editing"] = True
         else:
