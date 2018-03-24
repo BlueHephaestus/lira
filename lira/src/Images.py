@@ -43,7 +43,8 @@ class Images(object):
                 self.archives.append(os.path.join(self.archive_dir, fname))
 
         #Regardless of this we sort the result, since it depends on the nondeterministic ordering of the os.walk generator in fnames()
-        self.archives = sorted(self.archives)
+        #We have to get the filename integer number, since otherwise we will end up with stuff like 0, 10, 11, 1 instead of 0, 1, 10, 11
+        self.archives = sorted(self.archives, key=lambda x: int(x.split(os.sep)[-1][:-4]))
 
     def __iter__(self):
         for archive in self.archives:
