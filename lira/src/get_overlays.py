@@ -14,7 +14,9 @@ dataset = Dataset(uid=sys.argv[1], restart=False)
 resize_factor = 1/int(sys.argv[2])
 color_key = [(255, 0, 255), (0, 0, 255), (0, 255, 0), (200, 200, 200), (0, 255, 255), (255, 0, 0), (244,66,143)]
 alpha = 0.33
-for i, (img, prediction_grid) in enumerate(tqdm(zip(dataset.imgs, dataset.prediction_grids.before_editing), total=len(dataset.imgs))):
+#k = {0:6, 1:5, 2:4, 3:0, 4:2, 5:1, 6:3}#TEMPORARY
+for i, (img, prediction_grid) in enumerate(tqdm(zip(dataset.imgs, dataset.prediction_grids.after_editing), total=len(dataset.imgs))):
+    #prediction_grid = dataset.prediction_grids.after_editing[k[i]]#TEMPORARY
     #Since our image and predictions would be slightly misalgned from each other due to rounding,
     #We recompute the sub_h and sub_w and img resize factors to make them aligned.
     sub_h = int(resize_factor*dataset.prediction_grids.sub_h)
