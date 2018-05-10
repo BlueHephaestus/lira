@@ -5,6 +5,7 @@ def classify():
     dataset = Dataset()
     dataset.detect_type_ones()
     dataset.predict_grids()
+    dataset.get_stats()
     return dataset
 
 classify()
