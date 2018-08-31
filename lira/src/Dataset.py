@@ -1,4 +1,6 @@
 import sys
+import numpy as np
+import cv2
 
 from base import *
 from UserProgress import UserProgress
@@ -74,58 +76,85 @@ class Dataset(object):
         #Once we're sure the user's session is complete:
         if self.progress["prediction_grids_finished_editing"]:
 
-            #Generate a CSV, with several statistics detailed below. The data for the CSV is first created in a (len(self.imgs)+1, 8) shape numpy array.
-            #This is because we have one extra column to store the number of type one clusters per image, 
-            #   one extra column for the row titles,
-            #   minus one column since we don't include empty slide,
-            #   and one extra row for the average across all images for all columns.
-            stats = np.zeros((len(self.imgs)+1, 8), dtype="U20")
+            #Generate a CSV with raw counts of each classification on each image,
+            #   with the percentages each classification takes up of the image,
+            #   not including empty slide,
+            #   and the number of type one lesions detected on each image.
+            with open("../../Output Stats/{}_stats.csv".format(self.uid), "w") as f:
+                #Write Header line
+                f.write("Image,Healthy Tissue,Type I - Caseum,Type II,Type III,Type I - Rim,Unknown/Misc,\
+                        ,Healthy Tissue,Type I - Caseum,Type II,Type III,Type I - Rim,Unknown/Misc,\
+                        ,Number of Type One Lesions\n")
 
-            #Additional array to keep track of classification counts (not including empty slide) so we can compute average percentages later
-            classification_counts = np.zeros((6))
+                #Iterate through predictions and detections
+                for i, (prediction_grid, detections) in enumerate(zip(self.prediction_grids.after_editing, self.type_one_detections.after_editing)):
+                    sys.stdout.write("\rGenerating Stats on Image {}/{}...".format(i, len(self.imgs)-1))
 
-            #To keep track of detection counts to compute normal averages
-            detection_counts = 0
+                    #Get counts of each classification type, excluding empty slide
+                    prediction_counts = np.zeros((6))
+                    classification_i=0
+                    for classification in range(7):
+                        if classification!=3:
+                            prediction_counts[classification_i]=np.sum(prediction_grid==classification)
+                            classification_i+=1
 
-            #Loop through each image predictions and detections, inserting stats computed as we go along 
-            for i, (prediction_grid, detections) in enumerate(zip(self.prediction_grids.after_editing, self.type_one_detections.after_editing)):
-                sys.stdout.write("\rGenerating Stats on Image {}/{}...".format(i, len(self.imgs)-1))
+                    #Get total number of classifications for this image
+                    prediction_n = np.sum(prediction_counts)
 
-                #Set Image number
-                stats[i][0] = i+1
+                    #Get percentage each classification takes up of the total classifications
+                    prediction_avgs = prediction_counts/prediction_n
 
-                #Increment counts and get percentages of each classification on this image
-                col_i = 0
-                valid_prediction_n = np.sum(prediction_grid!=3)
-                for classification in range(7):
-                    #Don't include empty slide in any of our calculations
-                    if classification!=3:
-                        count = np.sum(prediction_grid==classification)
-                        classification_counts[col_i]+=count
-                        stats[i][col_i+1] = "%.8f%%" % (count/valid_prediction_n*100)
-                        col_i+=1
+                    #Get the number of Type One Lesions / Type One Detection Clusters in this image
+                    detection_count = len(get_rect_clusters(detections))
 
-                #Get and Insert the number of Type One Lesions / Type One Detection Clusters in this image
-                detection_count = len(get_rect_clusters(detections))
-                detection_counts+=detection_count
-                stats[i][-1] = detection_count
+                    #Write 
+                    f.write("{},{},,{},,{}\n".format(i+1, ",".join(map(str,list(prediction_counts))), ",".join(map(str,list(prediction_avgs))), detection_count))
 
-            #For the final row, use our classification_counts array to insert the average percentage of each classification type across all images
-            stats[-1][0] = "Average"
-            col_i = 0
-            for classification in range(7):
-                if classification != 3:
-                    stats[-1][col_i+1] = "%.8f%%" % (classification_counts[col_i]/np.sum(classification_counts)*100)
-                    col_i+=1
+                sys.stdout.flush()
+                print("")
 
-            #Also insert the average number of Type One Lesions / Type One Detection Clusters in this image using our counter
-            stats[-1][-1] = detection_counts/len(self.imgs)
+            #Generate a displayable image of the predictions overlaid, for each image.
+            resize_factor = 1/8
+            color_key = [(255, 0, 255), (0, 0, 255), (0, 255, 0), (200, 200, 200), (0, 255, 255), (255, 0, 0), (244,66,143)]
+            alpha = 0.33
+            for i, (img, prediction_grid) in enumerate(zip(self.imgs, self.prediction_grids.after_editing)):
+                sys.stdout.write("\rGenerating Displayable Results for Image {}/{}...".format(i, len(self.imgs)-1))
 
-            #Save it to a CSV with the appropriate header / column names in the "Output Stats" directory
-            np.savetxt("../../Output Stats/{}_stats.csv".format(self.uid), stats, fmt="%s,%s,%s,%s,%s,%s,%s,%s",
-                    header="Image,Healthy Tissue,Type I - Caseum,Type II,Type III,Type I - Rim,Unknown/Misc,Number of Type One Lesions", comments="")
+                #Since our image and predictions would be slightly misalgned from each other due to rounding,
+                #We recompute the sub_h and sub_w and img resize factors to make them aligned.
+                sub_h = int(resize_factor*self.prediction_grids.sub_h)
+                sub_w = int(resize_factor*self.prediction_grids.sub_w)
+                fy = (prediction_grid.shape[0]*sub_h)/img.shape[0]
+                fx = (prediction_grid.shape[1]*sub_w)/img.shape[1]
+
+                #Then resize the image with these new factors
+                img = cv2.resize(img, (0,0), fx=fx, fy=fy)
+               
+                #Make overlay to store prediction rectangles on before overlaying on top of image
+                prediction_overlay = np.zeros_like(img)
+
+                for row_i, row in enumerate(prediction_grid):
+                    for col_i, col in enumerate(row):
+                        color = color_key[col]
+                        #draw rectangles of the resized sub_hxsub_w size on it
+                        cv2.rectangle(prediction_overlay, (col_i*sub_w, row_i*sub_h), (col_i*sub_w+sub_w, row_i*sub_h+sub_h), color, -1)
+
+                #Add overlay to image to get resulting image
+                display_img = weighted_overlay(img, prediction_overlay, alpha)
+
+                #Write img
+                cv2.imwrite("../../Output Stats/{}_overlay_{}.png".format(self.uid, i+1), display_img)
 
             sys.stdout.flush()
             print("")
+
+
+
+                
+
+
+
+
+
 
 
