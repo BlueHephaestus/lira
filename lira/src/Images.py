@@ -42,12 +42,8 @@ class Images(object):
             for fname in fnames(self.archive_dir):
                 self.archives.append(os.path.join(self.archive_dir, fname))
 
-
         #Initialize to the original list of images ordered in the input images folder
         self.fnames = [fname for fname in fnames(self.img_dir)]
-
-        #Sort it the same way that self.archives is about to be sorted, so that the destination folder and source folder relation is maintained
-        self.fnames = [fname for _,fname in sorted(zip(self.archives, self.fnames), key=lambda x: int(x[0].split(os.sep)[-1][:-4]))]
 
         #Regardless of this we sort the result, since it depends on the nondeterministic ordering of the os.walk generator in fnames()
         #We have to get the filename integer number, since otherwise we will end up with stuff like 0, 10, 11, 1 instead of 0, 1, 10, 11
