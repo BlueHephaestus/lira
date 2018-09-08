@@ -108,7 +108,7 @@ class Dataset(object):
                     detection_count = len(get_rect_clusters(detections))
 
                     #Write 
-                    f.write("{},{},,{},,{}\n".format(i+1, ",".join(map(str,list(prediction_counts))), ",".join(map(str,list(prediction_avgs))), detection_count))
+                    f.write("{},{},,{},,{}\n".format(self.imgs.fnames[i], ",".join(map(str,list(prediction_counts))), ",".join(map(str,list(prediction_avgs))), detection_count))
 
                 sys.stdout.flush()
                 print("")
@@ -143,7 +143,7 @@ class Dataset(object):
                 display_img = weighted_overlay(img, prediction_overlay, alpha)
 
                 #Write img
-                cv2.imwrite("../../Output Stats/{}_overlay_{}.png".format(self.uid, i+1), display_img)
+                cv2.imwrite("../../Output Stats/{}_overlay_{}.png".format(self.uid, self.imgs.fnames[i]), display_img)
 
             sys.stdout.flush()
             print("")
