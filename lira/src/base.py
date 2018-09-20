@@ -2,7 +2,7 @@
 import os, shutil
 import cv2
 import numpy as np
-from tco import *
+import sys
 
 def fnames(dir):
     """
@@ -40,8 +40,7 @@ def get_rect_clusters(rects):
             clusters.append(get_rect_cluster(rect, rects, connected))#add this rect's cluster to list of clusters
     return clusters
     
-@with_continuations()
-def get_rect_cluster(rect, rects, connected, self=None):
+def get_rect_cluster(rect, rects, connected):
     #Recursive function used by get_rect_clusters. Gets a cluster of rects from the given rect.
 
     #Resulting list of rects for our cluster
@@ -54,7 +53,7 @@ def get_rect_cluster(rect, rects, connected, self=None):
         if str(candidate_rect) not in connected:#Rects that are not part of a cluster yet 
             if rects_connected(rect, candidate_rect):#These two rects are connected
                 cluster.append(candidate_rect)
-                cluster.extend(self(candidate_rect, rects, connected))#Extend this cluster to include all subclusters of this candidate rect
+                cluster.extend(get_rect_cluster(candidate_rect, rects, connected))#Extend this cluster to include all subclusters of this candidate rect
     return cluster
 
 def windows(img, step_size, win_shape):

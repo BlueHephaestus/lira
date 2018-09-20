@@ -21,7 +21,7 @@ class TypeOneDetections(object):
         self.after_editing = EditingDataset(self.dataset, self.uid, self.archive_dir_after_editing, restart=self.restart)
 
         #Detection parameters and classifier
-        self.detection = False
+        self.detection = True
         self.detection_resize_factor = 0.2
         self.detection_suppression = True
         self.detection_step_size = 64
@@ -31,7 +31,7 @@ class TypeOneDetections(object):
 
     def generate(self):
         #Generates detections and suppresses them for each image, saving each detection array to self.before_editing.
-        sys.setrecursionlimit(8000)#Set limit larger due to recursive nature of this program
+        sys.setrecursionlimit(16000)#Set limit larger due to recursive nature of this program
 
         #Generate for each image
         for i, img in enumerate(self.imgs):
