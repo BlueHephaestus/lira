@@ -21,17 +21,34 @@ class TypeOneDetections(object):
         self.after_editing = EditingDataset(self.dataset, self.uid, self.archive_dir_after_editing, restart=self.restart)
 
         #Detection parameters and classifier
-        self.detection = True
-        self.detection_resize_factor = 0.2
-        self.detection_suppression = True
-        self.detection_step_size = 64
-        self.detection_window_shape = (128, 128)#On the RESIZED image
-        self.detection_cluster_threshold = 30#For suppression
-        self.detection_classifier = load_model("../classifiers/type_one_detection_classifier.h5")#For detection
+        self.detection = False
+
+        #Size of each side of the cross
+        side_size = 2000
+
+        #Stride to move the cross each iteration
+        cross_stride = 500
+
+        #Size of each lengthwise segment 
+        segment_size = 200
+
+        #Stride of our segment blocks for each check
+        segment_stride = 100
+
+        #Scalar to weight our standard deviations by before applying operations to them.
+        stdw = 0.5
+
+        #Threshold to ensure we don't scan segments across empty slide
+        empty_slide_threshold = 210
+
+        #Threshold for how high the mean of a detection is allowed to be
+        intensity_threshold = 140
+
+        #Kernel for our Gaussian Blur
+        gaussian_kernel = (7,7)
 
     def generate(self):
-        #Generates detections and suppresses them for each image, saving each detection array to self.before_editing.
-        sys.setrecursionlimit(16000)#Set limit larger due to recursive nature of this program
+        #Generates detections for each image, saving each detection array to self.before_editing.
 
         #Generate for each image
         for i, img in enumerate(self.imgs):
@@ -43,29 +60,73 @@ class TypeOneDetections(object):
             detections = []
 
             if self.detection:
-                #resize img down for detection
-                img = cv2.resize(img, (0,0), fx=self.detection_resize_factor, fy=self.detection_resize_factor)
+                #Get only the green channel and apply our gaussian blur to it
+                img = cv2.GaussianBlur(img[:,:,1],gaussian_kernel,0)
 
+                h,w = img.shape[0],img.shape[1]
 
-                #scan model input window across our now resized image
-                for (row_i, col_i, window) in windows(img, self.detection_step_size, self.detection_window_shape):
-                    #If classifier predicts positive (we use nparray to add one dimension to make 4d instead of 3d)
-                    if np.argmax(self.detection_classifier.predict(np.array([window]))):
-                        #Add window as detection in format [x1, y1, x2, y2]
-                        detections.append([col_i, row_i, col_i+self.detection_window_shape[1], row_i+self.detection_window_shape[0]])
+                #Iterate through crosses (not doing multiple scales yet)
+                for y in range(side_size,h-side_size,cross_stride):
+                    for x in range(side_size,w-side_size,cross_stride):
+                        bot =   img[y:y+side_size, x] 
+                        top =   img[max(0,y-side_size):y, x][::-1]#Reverse this so we iterate through it from the origin outwards
+                        right = img[y, x:x+side_size]
+                        left =  img[y, max(0,x-side_size):x][::-1]#Reverse this so we iterate through it from the origin outwards
 
-                if self.detection_suppression:
-                    #suppress detections for this image based on rectangle cluster size
-                    detections = get_rect_clusters(detections)
+                        cross = [top,right,bot,left]
+                        detection = [False,False,False,False]#Will be rectangle coordinates, x1, y1, x2, y2
 
-                    #Remove clusters < detection_cluster_threshold 
-                    detections = [cluster for cluster in detections if not len(cluster) < self.detection_cluster_threshold]
+                        #Iterate through the 4 sides as independent vectors
+                        for i, side in enumerate(cross):
+                            #Slide our segment window across the side with our size and stride
+                            n = len(range(0, len(side)-2*segment_size, segment_stride))
+                            for segment_step in range(0, len(side)-2*segment_size, segment_stride):
+                                #Get mean and std of all 3 segments
+                                segments = [
+                                            side[segment_step+0*segment_size:segment_step+1*segment_size], 
+                                            side[segment_step+1*segment_size:segment_step+2*segment_size], 
+                                            side[segment_step+2*segment_size:segment_step+3*segment_size]
+                                           ]
+                                means = [np.mean(segment) for segment in segments]
+                                stds = [np.std(segment)*stdw for segment in segments]
 
-                    #Reshape list of clusters of rects into list of rects nx4 
-                    detections = [rect[:] for cluster in detections for rect in cluster]
+                                #Ensure we don't have empty slide stuff
+                                if max(means[0],means[2]) < empty_slide_threshold:
+                                    #If both means are within the smallest std of the two from each other
+                                    if dist(means[0],means[2]) < max(stds[0],stds[2]):
+                                        #And the middle mean's range is below their combined std ranges
+                                        if means[1] < min(means[0]-stds[0], means[2]-stds[2]):
+                                            #We have a detection here, mark it for this side and end our loop here
+                                            detection[i] = segment_step+3*segment_size
+                                            break
 
-                #Convert to np array and resize detections to match original image, and cast to int.
-                detections = (np.array(detections)/self.detection_resize_factor).astype(int)
+                        #If we have at least 3 that detect a rim
+                        c = 0
+                        for side in detection:
+                            if side:
+                                c+=1
+                        if c >= 3:
+                            #If we have exactly 3 that detect a rim but not 4
+                            if c == 3:
+                                #Set the 4th to be the mirror of it's adjacent side
+                                if not detection[0]:
+                                    detection[0] = detection[2]
+                                elif not detection[1]:
+                                    detection[1] = detection[3]
+                                elif not detection[2]:
+                                    detection[2] = detection[0]
+                                elif not detection[3]:
+                                    detection[3] = detection[1]
+                            
+                            #Create detection rectangle coordinates from our cross coordinates
+                            x1 = x-detection[3]
+                            y1 = y-detection[0]
+                            x2 = x+detection[1]
+                            y2 = y+detection[2]
+                            #If this detection's mean is below the intensity threshold
+                            if np.mean(img[y1:y2,x1:x2]) < intensity_threshold:
+                                detection = [x1,y1,x2,y2]
+                                detections.append(detection)
 
             #Save these detections to both the before and after editing datasets, since we initialize them to be the same.
             self.before_editing[i] = detections
@@ -81,4 +142,5 @@ class TypeOneDetections(object):
         #Displays detections on all images and allows the user to edit them until they are finished. The editor handles the saving of edits.
         editor = TypeOneDetectionEditor(self.dataset)
         #editor.start_editing()
+
 
