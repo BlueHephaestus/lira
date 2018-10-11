@@ -13,8 +13,8 @@ class TypeOneDetectionEditor(object):
 
         #Editor Parameters
         self.editor_resize_factor = 0.1#amount to resize images for display
-        self.rect_h = int(self.dataset.type_one_detections.detection_window_shape[0]*(self.editor_resize_factor/self.dataset.type_one_detections.detection_resize_factor))#Height of each rectangle when displayed
-        self.rect_w = int(self.dataset.type_one_detections.detection_window_shape[1]*(self.editor_resize_factor/self.dataset.type_one_detections.detection_resize_factor))#Width of each rectangle when displayed
+        self.rect_h = 64#Height of each rectangle when displayed
+        self.rect_w = 64#Width of each rectangle when displayed
         self.step_h = int(self.rect_h/2.)#Height of each step when selecting rectangles
         self.step_w = int(self.rect_w/2.)#Width of each step when selecting rectangles
 
