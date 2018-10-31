@@ -32,6 +32,7 @@ def rects_connected(rect1, rect2):
             ((rect1_x2 >= rect2_x1 and rect1_x2 <= rect2_x2) and (rect1_y2 >= rect2_y1 and rect1_y2 <= rect2_y2))
 
 def get_rect_clusters(rects):
+    sys.setrecursionlimit(16000)
     #Get all rect clusters as a list of clusters, where each cluster is a list of rects in the cluster.
     connected = set()#For reference and avoiding infinite recursion
     clusters = []
